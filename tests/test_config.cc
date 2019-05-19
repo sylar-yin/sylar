@@ -213,6 +213,9 @@ void test_log() {
     std::cout << "=============" << std::endl;
     std::cout << root << std::endl;
     SYLAR_LOG_INFO(system_log) << "hello system" << std::endl;
+
+    system_log->setFormatter("%d - %m%n");
+    SYLAR_LOG_INFO(system_log) << "hello system" << std::endl;
 }
 
 int main(int argc, char** argv) {
