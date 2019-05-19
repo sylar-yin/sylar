@@ -2,18 +2,15 @@ logs:
     - name: root
       level: info
       formatter: '%d%T%m%n'
-      appender:
+      appenders:
           - type: FileLogAppender
-            file: log.txt
+            file: root.txt
           - type: StdoutLogAppender
     - name: system
       level: debug
       formatter: '%d%T%m%n'
-      appender:
+      appenders:
           - type: FileLogAppender
-            path: log.txt
+            file: system.txt
+            formatter: '%d%T[%p]%T%m%n'
           - type: StdoutLogAppender
-
-system:
-    port: 9900
-    value: 15
