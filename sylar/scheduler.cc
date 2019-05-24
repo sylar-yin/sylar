@@ -20,7 +20,7 @@ Scheduler::Scheduler(size_t threads, bool use_caller, const std::string& name)
         SYLAR_ASSERT(GetThis() == nullptr);
         t_scheduler = this;
 
-        m_rootFiber.reset(new Fiber(std::bind(&Scheduler::run, this)));
+        m_rootFiber.reset(new Fiber(std::bind(&Scheduler::run, this), 0, true));
         sylar::Thread::SetName(m_name);
 
         t_fiber = m_rootFiber.get();
@@ -144,6 +144,7 @@ void Scheduler::run() {
 
                 ft = *it;
                 m_fibers.erase(it);
+                break;
             }
         }
 
@@ -152,7 +153,7 @@ void Scheduler::run() {
         }
 
         if(ft.fiber && (ft.fiber->getState() != Fiber::TERM
-                        || ft.fiber->getState() != Fiber::EXCEPT)) {
+                        && ft.fiber->getState() != Fiber::EXCEPT)) {
             ++m_activeThreadCount;
             ft.fiber->swapIn();
             --m_activeThreadCount;
@@ -194,7 +195,7 @@ void Scheduler::run() {
             idle_fiber->swapIn();
             --m_idleThreadCount;
             if(idle_fiber->getState() != Fiber::TERM
-                    || idle_fiber->getState() != Fiber::EXCEPT) {
+                    && idle_fiber->getState() != Fiber::EXCEPT) {
                 idle_fiber->m_state = Fiber::HOLD;
             }
         }
