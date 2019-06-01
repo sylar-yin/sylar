@@ -11,8 +11,11 @@ include_directories(/apps/sylar/include)
 link_directories(/apps/sylar/lib)
 
 set(LIB_SRC
+    sylar/address.cc
     sylar/config.cc
+    sylar/fd_manager.cc
     sylar/fiber.cc
+    sylar/hook.cc
     sylar/iomanager.cc
     sylar/log.cc
     sylar/scheduler.cc
@@ -29,11 +32,13 @@ force_redefine_file_macro_for_sources(sylar) #__FILE__
 find_library(YAMLCPP yaml-cpp)
 find_library(PTHREAD pthread)
 #set(LIBS ${LIBS} sylar)
+#set(LIBS ${LIBS} dl)
 #set(LIBS ${LIBS} ${YAMLCPP})
 #set(LIBS ${LIBS} ${PTHREAD})
 
 set(LIBS
         sylar
+        dl
         pthread
         yaml-cpp)
 
@@ -73,6 +78,17 @@ add_executable(test_iomanager tests/test_iomanager.cc)
 add_dependencies(test_iomanager sylar)
 force_redefine_file_macro_for_sources(test_iomanager) #__FILE__
 target_link_libraries(test_iomanager ${LIBS})
+
+add_executable(test_hook tests/test_hook.cc)
+add_dependencies(test_hook sylar)
+force_redefine_file_macro_for_sources(test_hook) #__FILE__
+target_link_libraries(test_hook ${LIBS})
+
+add_executable(test_address tests/test_address.cc)
+add_dependencies(test_address sylar)
+force_redefine_file_macro_for_sources(test_address) #__FILE__
+target_link_libraries(test_address ${LIBS})
+
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
