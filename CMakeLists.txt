@@ -16,6 +16,7 @@ set(LIB_SRC
     sylar/config.cc
     sylar/fd_manager.cc
     sylar/fiber.cc
+    sylar/http/http.cc
     sylar/hook.cc
     sylar/iomanager.cc
     sylar/log.cc
