@@ -17,11 +17,15 @@ set(LIB_SRC
     sylar/fd_manager.cc
     sylar/fiber.cc
     sylar/http/http.cc
+    sylar/http/http_parser.cc
+    sylar/http/http11_parser.rl.cc
+    sylar/http/httpclient_parser.rl.cc
     sylar/hook.cc
     sylar/iomanager.cc
     sylar/log.cc
     sylar/scheduler.cc
     sylar/socket.cc
+    sylar/tcp_server.cc
     sylar/timer.cc
     sylar/thread.cc
     sylar/util.cc
@@ -101,6 +105,27 @@ add_executable(test_bytearray tests/test_bytearray.cc)
 add_dependencies(test_bytearray sylar)
 force_redefine_file_macro_for_sources(test_bytearray) #__FILE__
 target_link_libraries(test_bytearray ${LIBS})
+
+add_executable(test_http tests/test_http.cc)
+add_dependencies(test_http sylar)
+force_redefine_file_macro_for_sources(test_http) #__FILE__
+target_link_libraries(test_http ${LIBS})
+
+add_executable(test_http_parser tests/test_http_parser.cc)
+add_dependencies(test_http_parser sylar)
+force_redefine_file_macro_for_sources(test_http_parser) #__FILE__
+target_link_libraries(test_http_parser ${LIBS})
+
+add_executable(test_tcp_server tests/test_tcp_server.cc)
+add_dependencies(test_tcp_server sylar)
+force_redefine_file_macro_for_sources(test_tcp_server) #__FILE__
+target_link_libraries(test_tcp_server ${LIBS})
+
+add_executable(echo_server examples/echo_server.cc)
+add_dependencies(echo_server sylar)
+force_redefine_file_macro_for_sources(echo_server) #__FILE__
+target_link_libraries(echo_server ${LIBS})
+
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

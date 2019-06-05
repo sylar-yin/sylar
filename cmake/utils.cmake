@@ -1,8 +1,3 @@
-# This function will overwrite the standard predefined macro "__FILE__".
-# "__FILE__" expands to the name of the current input file, but cmake
-# input the absolute path of source file, any code using the macro 
-# would expose sensitive information, such as MORDOR_THROW_EXCEPTION(x),
-# so we'd better overwirte it with filename.
 function(force_redefine_file_macro_for_sources targetname)
     get_target_property(source_files "${targetname}" SOURCES)
     foreach(sourcefile ${source_files})
@@ -20,3 +15,27 @@ function(force_redefine_file_macro_for_sources targetname)
             )
     endforeach()
 endfunction()
+
+function(ragelmaker src_rl outputlist includedir)
+    #Create a custom build step that will call ragel on the provided src_rl file.
+    #The output .cpp file will be appended to the variable name passed in outputlist.
+
+    get_filename_component(src_file ${src_rl} NAME_WE)
+
+    set(rl_out ${CMAKE_CURRENT_BINARY_DIR}/${src_file}.cc)
+
+    #adding to the list inside a function takes special care, we cannot use list(APPEND...)
+    #because the results are local scope only
+    set(${outputlist} ${${outputlist}} ${rl_out} PARENT_SCOPE)
+
+    #Warning: The " -S -M -l -C -T0  --error-format=msvc" are added to match existing window invocation
+    #we might want something different for mac and linux
+    add_custom_command(
+        OUTPUT ${rl_out}
+        COMMAND cd ${includedir}
+        COMMAND ragel ${CMAKE_CURRENT_SOURCE_DIR}/${src_rl} -o ${rl_out} -I ${includedir} -l -C -T0  --error-format=msvc
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${src_rl}
+        )
+    set_source_files_properties(${rl_out} PROPERTIES GENERATED TRUE)
+endfunction(ragelmaker)
+
