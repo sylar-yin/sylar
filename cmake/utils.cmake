@@ -16,13 +16,13 @@ function(force_redefine_file_macro_for_sources targetname)
     endforeach()
 endfunction()
 
-function(ragelmaker src_rl outputlist includedir)
+function(ragelmaker src_rl outputlist outputdir)
     #Create a custom build step that will call ragel on the provided src_rl file.
     #The output .cpp file will be appended to the variable name passed in outputlist.
 
     get_filename_component(src_file ${src_rl} NAME_WE)
 
-    set(rl_out ${CMAKE_CURRENT_BINARY_DIR}/${src_file}.cc)
+    set(rl_out ${outputdir}/${src_file}.rl.cc)
 
     #adding to the list inside a function takes special care, we cannot use list(APPEND...)
     #because the results are local scope only
@@ -32,10 +32,16 @@ function(ragelmaker src_rl outputlist includedir)
     #we might want something different for mac and linux
     add_custom_command(
         OUTPUT ${rl_out}
-        COMMAND cd ${includedir}
-        COMMAND ragel ${CMAKE_CURRENT_SOURCE_DIR}/${src_rl} -o ${rl_out} -I ${includedir} -l -C -T0  --error-format=msvc
+        COMMAND cd ${outputdir}
+        COMMAND ragel ${CMAKE_CURRENT_SOURCE_DIR}/${src_rl} -o ${rl_out} -l -C -G2  --error-format=msvc
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${src_rl}
         )
     set_source_files_properties(${rl_out} PROPERTIES GENERATED TRUE)
 endfunction(ragelmaker)
 
+function(sylar_add_executable targetname srcs depends libs)
+    add_executable(${targetname} ${srcs})
+    add_dependencies(${targetname} ${depends})
+    force_redefine_file_macro_for_sources(${targetname})
+    target_link_libraries(${targetname} ${libs})
+endfunction()
