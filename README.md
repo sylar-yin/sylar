@@ -1,6 +1,7 @@
 # sylar
 
 ## 视频教程地址
+0. [C++高级教程-从零开始开发服务器框架(sylar)](https://www.bilibili.com/video/av53602631/ "")
 1. [C++服务器框架01_日志系统01](https://www.bilibili.com/video/av52778994/?from=www.sylar.top "")
 2. [C++服务器框架02_日志系统02_logger](https://www.bilibili.com/video/av52906685/?from=www.sylar.top "")
 3. [C++服务器框架03_日志系统03_appender](https://www.bilibili.com/video/av52906934/?from=www.sylar.top "")
@@ -24,6 +25,7 @@
 Centos7
 gcc 9.1
 cmake
+ragel
 
 ## 项目路径
 bin  -- 二进制
