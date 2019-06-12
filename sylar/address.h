@@ -158,21 +158,21 @@ public:
 
     /**
      * @brief 获取该地址的广播地址
-     * @param[in] prefix_len, 子网掩码位数
+     * @param[in] prefix_len 子网掩码位数
      * @return 调用成功返回IPAddress,失败返回nullptr
      */
     virtual IPAddress::ptr broadcastAddress(uint32_t prefix_len) = 0;
 
     /**
      * @brief 获取该地址的网段
-     * @param[in] prefix_len, 子网掩码位数
+     * @param[in] prefix_len 子网掩码位数
      * @return 调用成功返回IPAddress,失败返回nullptr
      */
     virtual IPAddress::ptr networdAddress(uint32_t prefix_len) = 0;
 
     /**
      * @brief 获取子网掩码地址
-     * @param[in] prefix_len, 子网掩码位数
+     * @param[in] prefix_len 子网掩码位数
      * @return 调用成功返回IPAddress,失败返回nullptr
      */
     virtual IPAddress::ptr subnetMask(uint32_t prefix_len) = 0;

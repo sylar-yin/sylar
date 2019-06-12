@@ -4,7 +4,7 @@
  * @author sylar.yin
  * @email 564628276@qq.com
  * @date 2019-06-05
- * @license Copyright (c) 2019年 sylar.yin All rights reserved (www.sylar.top)
+ * @copyright Copyright (c) 2019年 sylar.yin All rights reserved (www.sylar.top)
  */
 #ifndef __SYLAR_BYTEARRAY_H__
 #define __SYLAR_BYTEARRAY_H__
@@ -345,7 +345,7 @@ public:
 
     /**
      * @brief 写入size长度的数据
-     * @param[in] buff 内存缓存指针
+     * @param[in] buf 内存缓存指针
      * @param[in] size 数据大小
      * @post m_position += size, 如果m_position > m_size 则 m_size = m_position
      */
@@ -353,7 +353,7 @@ public:
 
     /**
      * @brief 读取size长度的数据
-     * @param[out] buff 内存缓存指针
+     * @param[out] buf 内存缓存指针
      * @param[in] size 数据大小
      * @post m_position += size, 如果m_position > m_size 则 m_size = m_position
      * @exception 如果getReadSize() < size 则抛出 std::out_of_range
@@ -362,7 +362,7 @@ public:
 
     /**
      * @brief 读取size长度的数据
-     * @param[out] buff 内存缓存指针
+     * @param[out] buf 内存缓存指针
      * @param[in] size 数据大小
      * @param[in] position 读取开始位置
      * @exception 如果 (m_size - position) < size 则抛出 std::out_of_range

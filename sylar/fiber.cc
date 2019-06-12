@@ -95,7 +95,7 @@ Fiber::~Fiber() {
 }
 
 //重置协程函数，并重置状态
-//INIT，TERM
+//INIT，TERM, EXCEPT
 void Fiber::reset(std::function<void()> cb) {
     SYLAR_ASSERT(m_stack);
     SYLAR_ASSERT(m_state == TERM
@@ -186,23 +186,23 @@ uint64_t Fiber::TotalFibers() {
 void Fiber::MainFunc() {
     Fiber::ptr cur = GetThis();
     SYLAR_ASSERT(cur);
-    //try {
+    try {
         cur->m_cb();
         cur->m_cb = nullptr;
         cur->m_state = TERM;
-    //} catch (std::exception& ex) {
-    //    cur->m_state = EXCEPT;
-    //    SYLAR_LOG_ERROR(g_logger) << "Fiber Except: " << ex.what()
-    //        << " fiber_id=" << cur->getId()
-    //        << std::endl
-    //        << sylar::BacktraceToString();
-    //} catch (...) {
-    //    cur->m_state = EXCEPT;
-    //    SYLAR_LOG_ERROR(g_logger) << "Fiber Except"
-    //        << " fiber_id=" << cur->getId()
-    //        << std::endl
-    //        << sylar::BacktraceToString();
-    //}
+    } catch (std::exception& ex) {
+        cur->m_state = EXCEPT;
+        SYLAR_LOG_ERROR(g_logger) << "Fiber Except: " << ex.what()
+            << " fiber_id=" << cur->getId()
+            << std::endl
+            << sylar::BacktraceToString();
+    } catch (...) {
+        cur->m_state = EXCEPT;
+        SYLAR_LOG_ERROR(g_logger) << "Fiber Except"
+            << " fiber_id=" << cur->getId()
+            << std::endl
+            << sylar::BacktraceToString();
+    }
 
     auto raw_ptr = cur.get();
     cur.reset();

@@ -1,3 +1,11 @@
+/**
+ * @file bytearray.h
+ * @brief 二进制数组(序列化/反序列化)
+ * @author sylar.yin
+ * @email 564628276@qq.com
+ * @date 2019-06-03
+ * @copyright Copyright (c) 2019年 sylar.yin All rights reserved (www.sylar.top)
+ */
 #ifndef http11_parser_h
 #define http11_parser_h
 

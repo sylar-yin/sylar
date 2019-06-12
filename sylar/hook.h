@@ -1,3 +1,12 @@
+/**
+ * @file hook.h
+ * @brief hook函数封装
+ * @author sylar.yin
+ * @email 564628276@qq.com
+ * @date 2019-06-02
+ * @copyright Copyright (c) 2019年 sylar.yin All rights reserved (www.sylar.top)
+ */
+
 #ifndef __SYLAR_HOOK_H__
 #define __SYLAR_HOOK_H__
 
@@ -10,7 +19,13 @@
 #include <unistd.h>
 
 namespace sylar {
+    /**
+     * @brief 当前线程是否hook
+     */
     bool is_hook_enable();
+    /**
+     * @brief 设置当前线程的hook状态
+     */
     void set_hook_enable(bool flag);
 }
 
