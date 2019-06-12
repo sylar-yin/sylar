@@ -182,6 +182,11 @@ int httpclient_parser_init(httpclient_parser *parser)  {
 /** exec **/
 int httpclient_parser_execute(httpclient_parser *parser, const char *buffer, size_t len, size_t off)  
 {
+    parser->nread = 0;
+    parser->mark = 0;
+    parser->field_len = 0;
+    parser->field_start = 0;
+
     const char *p, *pe;
     int cs = parser->cs;
 
