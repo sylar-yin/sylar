@@ -38,9 +38,9 @@ IPAddress::ptr Address::LookupAnyIPAddress(const std::string& host,
                                 int family, int type, int protocol) {
     std::vector<Address::ptr> result;
     if(Lookup(result, host, family, type, protocol)) {
-        for(auto& i : result) {
-            std::cout << i->toString() << std::endl;
-        }
+        //for(auto& i : result) {
+        //    std::cout << i->toString() << std::endl;
+        //}
         for(auto& i : result) {
             IPAddress::ptr v = std::dynamic_pointer_cast<IPAddress>(i);
             if(v) {
@@ -97,7 +97,7 @@ bool Address::Lookup(std::vector<Address::ptr>& result, const std::string& host,
     if(error) {
         SYLAR_LOG_ERROR(g_logger) << "Address::Lookup getaddress(" << host << ", "
             << family << ", " << type << ") err=" << error << " errstr="
-            << strerror(errno);
+            << gai_strerror(error);
         return false;
     }
 

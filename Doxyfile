@@ -1624,7 +1624,7 @@ LATEX_EXTRA_FILES      =
 # The default value is: YES.
 # This tag requires that the tag GENERATE_LATEX is set to YES.
 
-PDF_HYPERLINKS         = YES
+PDF_HYPERLINKS         = NO
 
 # If the LATEX_PDFLATEX tag is set to YES, doxygen will use pdflatex to generate
 # the PDF file directly from the LaTeX files. Set this option to YES to get a
@@ -1632,7 +1632,7 @@ PDF_HYPERLINKS         = YES
 # The default value is: YES.
 # This tag requires that the tag GENERATE_LATEX is set to YES.
 
-USE_PDFLATEX           = YES
+USE_PDFLATEX           = NO
 
 # If the LATEX_BATCHMODE tag is set to YES, doxygen will add the \batchmode
 # command to the generated LaTeX files. This will instruct LaTeX to keep running
@@ -2186,7 +2186,7 @@ DIRECTORY_GRAPH        = YES
 # The default value is: png.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-DOT_IMAGE_FORMAT       = png
+DOT_IMAGE_FORMAT       = svg
 
 # If DOT_IMAGE_FORMAT is set to svg, then this option can be set to YES to
 # enable generation of interactive SVG images that allow zooming and panning.

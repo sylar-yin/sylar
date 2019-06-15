@@ -135,7 +135,9 @@
 
   pct_encoded   = ( "%" xdigit xdigit ) ;
 
-  pchar         = ( unreserved | pct_encoded | sub_delims | ":" | "@" ) ;
+# pchar         = ( unreserved | pct_encoded | sub_delims | ":" | "@" ) ;
+# add (any -- ascii) support chinese
+  pchar         = ( (any -- ascii) | unreserved | pct_encoded | sub_delims | ":" | "@" ) ;
 
   fragment      = ( ( pchar | "/" | "?" )* ) >mark %fragment ;
 
