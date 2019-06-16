@@ -5,8 +5,11 @@ static sylar::Logger::ptr g_logger = SYLAR_LOG_ROOT();
 
 #define XX(...) #__VA_ARGS__
 
+
+sylar::IOManager::ptr woker;
 void run() {
     g_logger->setLevel(sylar::LogLevel::INFO);
+    //sylar::http::HttpServer::ptr server(new sylar::http::HttpServer(true, woker.get(), sylar::IOManager::GetThis()));
     sylar::http::HttpServer::ptr server(new sylar::http::HttpServer(true));
     sylar::Address::ptr addr = sylar::Address::LookupAnyIPAddress("0.0.0.0:8020");
     while(!server->bind(addr)) {
@@ -51,7 +54,8 @@ void run() {
 }
 
 int main(int argc, char** argv) {
-    sylar::IOManager iom(4);
+    sylar::IOManager iom(1, true, "main");
+    woker.reset(new sylar::IOManager(3, false, "worker"));
     iom.schedule(run);
     return 0;
 }

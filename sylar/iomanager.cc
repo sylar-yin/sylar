@@ -273,6 +273,7 @@ bool IOManager::stopping() {
 }
 
 void IOManager::idle() {
+    SYLAR_LOG_DEBUG(g_logger) << "idle";
     epoll_event* events = new epoll_event[64]();
     std::shared_ptr<epoll_event> shared_events(events, [](epoll_event* ptr){
         delete[] ptr;

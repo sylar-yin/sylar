@@ -176,7 +176,7 @@ void Fiber::YieldToReady() {
 void Fiber::YieldToHold() {
     Fiber::ptr cur = GetThis();
     SYLAR_ASSERT(cur->m_state == EXEC);
-    cur->m_state = HOLD;
+    //cur->m_state = HOLD;
     cur->swapOut();
 }
 
