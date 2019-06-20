@@ -84,6 +84,7 @@ sylar_add_executable(echo_server "examples/echo_server.cc" sylar "${LIBS}")
 sylar_add_executable(test_http_server "tests/test_http_server.cc" sylar "${LIBS}")
 sylar_add_executable(test_http_connection "tests/test_http_connection.cc" sylar "${LIBS}")
 sylar_add_executable(test_uri "tests/test_uri.cc" sylar "${LIBS}")
+sylar_add_executable(my_http_server "samples/my_http_server.cc" sylar "${LIBS}")
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
