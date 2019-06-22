@@ -17,6 +17,8 @@ Socket::ptr Socket::CreateTCP(sylar::Address::ptr address) {
 
 Socket::ptr Socket::CreateUDP(sylar::Address::ptr address) {
     Socket::ptr sock(new Socket(address->getFamily(), UDP, 0));
+    sock->newSock();
+    sock->m_isConnected = true;
     return sock;
 }
 
@@ -27,6 +29,8 @@ Socket::ptr Socket::CreateTCPSocket() {
 
 Socket::ptr Socket::CreateUDPSocket() {
     Socket::ptr sock(new Socket(IPv4, UDP, 0));
+    sock->newSock();
+    sock->m_isConnected = true;
     return sock;
 }
 
@@ -37,6 +41,8 @@ Socket::ptr Socket::CreateTCPSocket6() {
 
 Socket::ptr Socket::CreateUDPSocket6() {
     Socket::ptr sock(new Socket(IPv6, UDP, 0));
+    sock->newSock();
+    sock->m_isConnected = true;
     return sock;
 }
 

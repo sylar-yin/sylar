@@ -86,5 +86,8 @@ sylar_add_executable(test_http_connection "tests/test_http_connection.cc" sylar 
 sylar_add_executable(test_uri "tests/test_uri.cc" sylar "${LIBS}")
 sylar_add_executable(my_http_server "samples/my_http_server.cc" sylar "${LIBS}")
 
+sylar_add_executable(echo_server_udp "examples/echo_server_udp.cc" sylar "${LIBS}")
+sylar_add_executable(echo_udp_client "examples/echo_udp_client.cc" sylar "${LIBS}")
+
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
