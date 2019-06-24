@@ -18,7 +18,8 @@ void run() {
 
     sylar::Socket::ptr sock = sylar::Socket::CreateUDP(addr);
 
-    sylar::IOManager::GetThis()->schedule([addr, sock](){
+    sylar::IOManager::GetThis()->schedule([sock](){
+            sylar::Address::ptr addr(new sylar::IPv4Address);
             SYLAR_LOG_INFO(g_logger) << "begin recv";
             while(true) {
                 char buff[1024];

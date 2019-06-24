@@ -19,10 +19,16 @@ if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
 endif()
 
+#find_package(Protobuf REQUIRED)
+#if(Protobuf_FOUND)
+#    include_directories(${Protobuf_INCLUDE_DIRS})
+#endif()
+
 set(LIB_SRC
     sylar/address.cc
     sylar/bytearray.cc
     sylar/config.cc
+    sylar/daemon.cc
     sylar/fd_manager.cc
     sylar/fiber.cc
     sylar/http/http.cc
@@ -48,6 +54,11 @@ ragelmaker(sylar/http/http11_parser.rl LIB_SRC ${CMAKE_CURRENT_SOURCE_DIR}/sylar
 ragelmaker(sylar/http/httpclient_parser.rl LIB_SRC ${CMAKE_CURRENT_SOURCE_DIR}/sylar/http)
 ragelmaker(sylar/uri.rl LIB_SRC ${CMAKE_CURRENT_SOURCE_DIR}/sylar)
 
+#PROTOBUF_GENERATE_CPP(PB_SRCS PB_HDRS sylar/test.proto)
+#list(APPEND LIB_SRC ${PB_SRCS})
+#
+#message(STATUS ${LIB_SRC})
+
 add_library(sylar SHARED ${LIB_SRC})
 force_redefine_file_macro_for_sources(sylar) #__FILE__
 #add_library(sylar_static STATIC ${LIB_SRC})
@@ -65,6 +76,8 @@ set(LIBS
         dl
         pthread
         yaml-cpp)
+
+#${PROTOBUF_LIBRARIES})
 
 sylar_add_executable(test1 "tests/test.cc" sylar "${LIBS}")
 sylar_add_executable(test_config "tests/test_config.cc" sylar "${LIBS}")
@@ -88,6 +101,8 @@ sylar_add_executable(my_http_server "samples/my_http_server.cc" sylar "${LIBS}")
 
 sylar_add_executable(echo_server_udp "examples/echo_server_udp.cc" sylar "${LIBS}")
 sylar_add_executable(echo_udp_client "examples/echo_udp_client.cc" sylar "${LIBS}")
+
+sylar_add_executable(test_daemon "tests/test_daemon.cc" sylar "${LIBS}")
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
