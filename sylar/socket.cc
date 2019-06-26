@@ -145,12 +145,12 @@ bool Socket::init(int sock) {
 bool Socket::bind(const Address::ptr addr) {
     if(!isValid()) {
         newSock();
-        if(SYLAR_UNLICKLY(!isValid())) {
+        if(SYLAR_UNLIKELY(!isValid())) {
             return false;
         }
     }
 
-    if(SYLAR_UNLICKLY(addr->getFamily() != m_family)) {
+    if(SYLAR_UNLIKELY(addr->getFamily() != m_family)) {
         SYLAR_LOG_ERROR(g_logger) << "bind sock.family("
             << m_family << ") addr.family(" << addr->getFamily()
             << ") not equal, addr=" << addr->toString();
@@ -169,12 +169,12 @@ bool Socket::bind(const Address::ptr addr) {
 bool Socket::connect(const Address::ptr addr, uint64_t timeout_ms) {
     if(!isValid()) {
         newSock();
-        if(SYLAR_UNLICKLY(!isValid())) {
+        if(SYLAR_UNLIKELY(!isValid())) {
             return false;
         }
     }
 
-    if(SYLAR_UNLICKLY(addr->getFamily() != m_family)) {
+    if(SYLAR_UNLIKELY(addr->getFamily() != m_family)) {
         SYLAR_LOG_ERROR(g_logger) << "connect sock.family("
             << m_family << ") addr.family(" << addr->getFamily()
             << ") not equal, addr=" << addr->toString();
@@ -428,13 +428,200 @@ void Socket::initSock() {
 
 void Socket::newSock() {
     m_sock = socket(m_family, m_type, m_protocol);
-    if(SYLAR_LICKLY(m_sock != -1)) {
+    if(SYLAR_LIKELY(m_sock != -1)) {
         initSock();
     } else {
         SYLAR_LOG_ERROR(g_logger) << "socket(" << m_family
             << ", " << m_type << ", " << m_protocol << ") errno="
             << errno << " errstr=" << strerror(errno);
     }
+}
+
+namespace {
+
+struct _SSLInit {
+    _SSLInit() {
+        SSL_library_init();
+        SSL_load_error_strings();
+        OpenSSL_add_all_algorithms();
+    }
+};
+
+static _SSLInit s_init;
+
+}
+
+SSLSocket::SSLSocket(int family, int type, int protocol)
+    :Socket(family, type, protocol) {
+}
+
+Socket::ptr SSLSocket::accept() {
+    SSLSocket::ptr sock(new SSLSocket(m_family, m_type, m_protocol));
+    int newsock = ::accept(m_sock, nullptr, nullptr);
+    if(newsock == -1) {
+        SYLAR_LOG_ERROR(g_logger) << "accept(" << m_sock << ") errno="
+            << errno << " errstr=" << strerror(errno);
+        return nullptr;
+    }
+    sock->m_ctx = m_ctx;
+    if(sock->init(newsock)) {
+        return sock;
+    }
+    return nullptr;
+}
+
+bool SSLSocket::bind(const Address::ptr addr) {
+    return Socket::bind(addr);
+}
+
+bool SSLSocket::connect(const Address::ptr addr, uint64_t timeout_ms) {
+    bool v = Socket::connect(addr, timeout_ms);
+    if(v) {
+        m_ctx.reset(SSL_CTX_new(SSLv23_client_method()), SSL_CTX_free);
+        m_ssl.reset(SSL_new(m_ctx.get()),  SSL_free);
+        SSL_set_fd(m_ssl.get(), m_sock);
+        v = (SSL_connect(m_ssl.get()) == 1);
+    }
+    return v;
+}
+
+bool SSLSocket::listen(int backlog) {
+    return Socket::listen(backlog);
+}
+
+bool SSLSocket::close() {
+    return Socket::close();
+}
+
+int SSLSocket::send(const void* buffer, size_t length, int flags) {
+    if(m_ssl) {
+        return SSL_write(m_ssl.get(), buffer, length);
+    }
+    return -1;
+}
+
+int SSLSocket::send(const iovec* buffers, size_t length, int flags) {
+    if(!m_ssl) {
+        return -1;
+    }
+    int total = 0;
+    for(size_t i = 0; i < length; ++i) {
+        int tmp = SSL_write(m_ssl.get(), buffers[i].iov_base, buffers[i].iov_len);
+        if(tmp <= 0) {
+            return tmp;
+        }
+        total += tmp;
+        if(tmp != (int)buffers[i].iov_len) {
+            break;
+        }
+    }
+    return total;
+}
+
+int SSLSocket::sendTo(const void* buffer, size_t length, const Address::ptr to, int flags) {
+    SYLAR_ASSERT(false);
+    return -1;
+}
+
+int SSLSocket::sendTo(const iovec* buffers, size_t length, const Address::ptr to, int flags) {
+    SYLAR_ASSERT(false);
+    return -1;
+}
+
+int SSLSocket::recv(void* buffer, size_t length, int flags) {
+    if(m_ssl) {
+        return SSL_read(m_ssl.get(), buffer, length);
+    }
+    return -1;
+}
+
+int SSLSocket::recv(iovec* buffers, size_t length, int flags) {
+    if(!m_ssl) {
+        return -1;
+    }
+    int total = 0;
+    for(size_t i = 0; i < length; ++i) {
+        int tmp = SSL_read(m_ssl.get(), buffers[i].iov_base, buffers[i].iov_len);
+        if(tmp <= 0) {
+            return tmp;
+        }
+        total += tmp;
+        if(tmp != (int)buffers[i].iov_len) {
+            break;
+        }
+    }
+    return total;
+}
+
+int SSLSocket::recvFrom(void* buffer, size_t length, Address::ptr from, int flags) {
+    SYLAR_ASSERT(false);
+    return -1;
+}
+
+int SSLSocket::recvFrom(iovec* buffers, size_t length, Address::ptr from, int flags) {
+    SYLAR_ASSERT(false);
+    return -1;
+}
+
+bool SSLSocket::init(int sock) {
+    bool v = Socket::init(sock);
+    if(v) {
+        m_ssl.reset(SSL_new(m_ctx.get()),  SSL_free);
+        SSL_set_fd(m_ssl.get(), m_sock);
+        v = (SSL_accept(m_ssl.get()) == 1);
+    }
+    return v;
+}
+
+bool SSLSocket::loadCertificates(const std::string& cert_file, const std::string& key_file) {
+    m_ctx.reset(SSL_CTX_new(SSLv23_server_method()), SSL_CTX_free);
+    if(SSL_CTX_use_certificate_chain_file(m_ctx.get(), cert_file.c_str()) != 1) {
+        SYLAR_LOG_ERROR(g_logger) << "SSL_CTX_use_certificate_chain_file("
+            << cert_file << ") error";
+        return false;
+    }
+    if(SSL_CTX_use_PrivateKey_file(m_ctx.get(), key_file.c_str(), SSL_FILETYPE_PEM) != 1) {
+        SYLAR_LOG_ERROR(g_logger) << "SSL_CTX_use_PrivateKey_file("
+            << key_file << ") error";
+        return false;
+    }
+    if(SSL_CTX_check_private_key(m_ctx.get()) != 1) {
+        SYLAR_LOG_ERROR(g_logger) << "SSL_CTX_check_private_key cert_file="
+            << cert_file << " key_file=" << key_file;
+        return false;
+    }
+    return true;
+}
+
+SSLSocket::ptr SSLSocket::CreateTCP(sylar::Address::ptr address) {
+    SSLSocket::ptr sock(new SSLSocket(address->getFamily(), TCP, 0));
+    return sock;
+}
+
+SSLSocket::ptr SSLSocket::CreateTCPSocket() {
+    SSLSocket::ptr sock(new SSLSocket(IPv4, TCP, 0));
+    return sock;
+}
+
+SSLSocket::ptr SSLSocket::CreateTCPSocket6() {
+    SSLSocket::ptr sock(new SSLSocket(IPv6, TCP, 0));
+    return sock;
+}
+
+std::ostream& SSLSocket::dump(std::ostream& os) const {
+    os << "[SSLSocket sock=" << m_sock
+       << " is_connected=" << m_isConnected
+       << " family=" << m_family
+       << " type=" << m_type
+       << " protocol=" << m_protocol;
+    if(m_localAddress) {
+        os << " local_address=" << m_localAddress->toString();
+    }
+    if(m_remoteAddress) {
+        os << " remote_address=" << m_remoteAddress->toString();
+    }
+    os << "]";
+    return os;
 }
 
 std::ostream& operator<<(std::ostream& os, const Socket& sock) {

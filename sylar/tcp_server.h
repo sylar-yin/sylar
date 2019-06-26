@@ -42,7 +42,7 @@ public:
      * @brief 绑定地址
      * @return 返回是否绑定成功
      */
-    virtual bool bind(sylar::Address::ptr addr);
+    virtual bool bind(sylar::Address::ptr addr, bool ssl = false);
 
     /**
      * @brief 绑定地址数组
@@ -51,7 +51,8 @@ public:
      * @return 是否绑定成功
      */
     virtual bool bind(const std::vector<Address::ptr>& addrs
-                        ,std::vector<Address::ptr>& fails);
+                        ,std::vector<Address::ptr>& fails
+                        ,bool ssl = false);
 
     /**
      * @brief 启动服务

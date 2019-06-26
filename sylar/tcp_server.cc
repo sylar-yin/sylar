@@ -26,15 +26,16 @@ TcpServer::~TcpServer() {
     m_socks.clear();
 }
 
-bool TcpServer::bind(sylar::Address::ptr addr) {
+bool TcpServer::bind(sylar::Address::ptr addr, bool ssl) {
     std::vector<Address::ptr> addrs;
     std::vector<Address::ptr> fails;
     addrs.push_back(addr);
-    return bind(addrs, fails);
+    return bind(addrs, fails, ssl);
 }
 
 bool TcpServer::bind(const std::vector<Address::ptr>& addrs
-                        ,std::vector<Address::ptr>& fails) {
+                        ,std::vector<Address::ptr>& fails
+                        ,bool ssl) {
     for(auto& addr : addrs) {
         Socket::ptr sock = Socket::CreateTCP(addr);
         if(!sock->bind(addr)) {

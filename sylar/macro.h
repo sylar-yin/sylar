@@ -15,17 +15,17 @@
 
 #if defined __GNUC__ || defined __llvm__
 /// LIKCLY 宏的封装, 告诉编译器优化,条件大概率成立
-#   define SYLAR_LICKLY(x)       __builtin_expect(!!(x), 1)
+#   define SYLAR_LIKELY(x)       __builtin_expect(!!(x), 1)
 /// LIKCLY 宏的封装, 告诉编译器优化,条件大概率不成立
-#   define SYLAR_UNLICKLY(x)     __builtin_expect(!!(x), 0)
+#   define SYLAR_UNLIKELY(x)     __builtin_expect(!!(x), 0)
 #else
-#   define SYLAR_LICKLY(x)      (x)
-#   define SYLAR_UNLICKLY(x)      (x)
+#   define SYLAR_LIKELY(x)      (x)
+#   define SYLAR_UNLIKELY(x)      (x)
 #endif
 
 /// 断言宏封装
 #define SYLAR_ASSERT(x) \
-    if(SYLAR_UNLICKLY(!(x))) { \
+    if(SYLAR_UNLIKELY(!(x))) { \
         SYLAR_LOG_ERROR(SYLAR_LOG_ROOT()) << "ASSERTION: " #x \
             << "\nbacktrace:\n" \
             << sylar::BacktraceToString(100, 2, "    "); \
@@ -34,7 +34,7 @@
 
 /// 断言宏封装
 #define SYLAR_ASSERT2(x, w) \
-    if(SYLAR_UNLICKLY(!(x))) { \
+    if(SYLAR_UNLIKELY(!(x))) { \
         SYLAR_LOG_ERROR(SYLAR_LOG_ROOT()) << "ASSERTION: " #x \
             << "\n" << w \
             << "\nbacktrace:\n" \

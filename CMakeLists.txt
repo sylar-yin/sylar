@@ -23,6 +23,10 @@ endif()
 #if(Protobuf_FOUND)
 #    include_directories(${Protobuf_INCLUDE_DIRS})
 #endif()
+find_package(OpenSSL REQUIRED)
+if(OPENSSL_FOUND)
+    include_directories(${OPENSSL_INCLUDE_DIR})
+endif()
 
 set(LIB_SRC
     sylar/address.cc
@@ -38,6 +42,10 @@ set(LIB_SRC
     sylar/http/http_session.cc
     sylar/http/http_server.cc
     sylar/http/servlet.cc
+    sylar/http/ws_connection.cc
+    sylar/http/ws_session.cc
+    sylar/http/ws_server.cc
+    sylar/http/ws_servlet.cc
     sylar/hook.cc
     sylar/iomanager.cc
     sylar/log.cc
@@ -49,6 +57,7 @@ set(LIB_SRC
     sylar/timer.cc
     sylar/thread.cc
     sylar/util.cc
+    sylar/util/hash_util.cc
     )
 
 ragelmaker(sylar/http/http11_parser.rl LIB_SRC ${CMAKE_CURRENT_SOURCE_DIR}/sylar/http)
@@ -76,7 +85,8 @@ set(LIBS
         sylar
         dl
         pthread
-        yaml-cpp)
+        yaml-cpp
+        ${OPENSSL_LIBRARIES})
 
 #${PROTOBUF_LIBRARIES})
 
@@ -105,6 +115,8 @@ sylar_add_executable(echo_udp_client "examples/echo_udp_client.cc" sylar "${LIBS
 
 sylar_add_executable(test_daemon "tests/test_daemon.cc" sylar "${LIBS}")
 sylar_add_executable(test_env "tests/test_env.cc" sylar "${LIBS}")
+sylar_add_executable(test_ws_server "tests/test_ws_server.cc" sylar "${LIBS}")
+sylar_add_executable(test_ws_client "tests/test_ws_client.cc" sylar "${LIBS}")
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

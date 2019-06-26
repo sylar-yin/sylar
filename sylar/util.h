@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
+#include "sylar/util/hash_util.h"
 
 namespace sylar {
 

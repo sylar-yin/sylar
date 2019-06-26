@@ -13,6 +13,8 @@
 #include <netinet/tcp.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <openssl/err.h>
+#include <openssl/ssl.h>
 #include "address.h"
 #include "noncopyable.h"
 
@@ -101,7 +103,7 @@ public:
     /**
      * @brief 析构函数
      */
-    ~Socket();
+    virtual ~Socket();
 
     /**
      * @brief 获取发送超时时间(毫秒)
@@ -155,21 +157,21 @@ public:
      * @return 成功返回新连接的socket,失败返回nullptr
      * @pre Socket必须 bind , listen  成功
      */
-    Socket::ptr accept();
+    virtual Socket::ptr accept();
 
     /**
      * @brief 绑定地址
      * @param[in] addr 地址
      * @return 是否绑定成功
      */
-    bool bind(const Address::ptr addr);
+    virtual bool bind(const Address::ptr addr);
 
     /**
      * @brief 连接地址
      * @param[in] addr 目标地址
      * @param[in] timeout_ms 超时时间(毫秒)
      */
-    bool connect(const Address::ptr addr, uint64_t timeout_ms = -1);
+    virtual bool connect(const Address::ptr addr, uint64_t timeout_ms = -1);
 
     /**
      * @brief 监听socket
@@ -177,12 +179,12 @@ public:
      * @result 返回监听是否成功
      * @pre 必须先 bind 成功
      */
-    bool listen(int backlog = SOMAXCONN);
+    virtual bool listen(int backlog = SOMAXCONN);
 
     /**
      * @brief 关闭socket
      */
-    bool close();
+    virtual bool close();
 
     /**
      * @brief 发送数据
@@ -194,7 +196,7 @@ public:
      *      @retval =0 socket被关闭
      *      @retval <0 socket出错
      */
-    int send(const void* buffer, size_t length, int flags = 0);
+    virtual int send(const void* buffer, size_t length, int flags = 0);
 
     /**
      * @brief 发送数据
@@ -206,7 +208,7 @@ public:
      *      @retval =0 socket被关闭
      *      @retval <0 socket出错
      */
-    int send(const iovec* buffers, size_t length, int flags = 0);
+    virtual int send(const iovec* buffers, size_t length, int flags = 0);
 
     /**
      * @brief 发送数据
@@ -219,7 +221,7 @@ public:
      *      @retval =0 socket被关闭
      *      @retval <0 socket出错
      */
-    int sendTo(const void* buffer, size_t length, const Address::ptr to, int flags = 0);
+    virtual int sendTo(const void* buffer, size_t length, const Address::ptr to, int flags = 0);
 
     /**
      * @brief 发送数据
@@ -232,7 +234,7 @@ public:
      *      @retval =0 socket被关闭
      *      @retval <0 socket出错
      */
-    int sendTo(const iovec* buffers, size_t length, const Address::ptr to, int flags = 0);
+    virtual int sendTo(const iovec* buffers, size_t length, const Address::ptr to, int flags = 0);
 
     /**
      * @brief 接受数据
@@ -244,7 +246,7 @@ public:
      *      @retval =0 socket被关闭
      *      @retval <0 socket出错
      */
-    int recv(void* buffer, size_t length, int flags = 0);
+    virtual int recv(void* buffer, size_t length, int flags = 0);
 
     /**
      * @brief 接受数据
@@ -256,7 +258,7 @@ public:
      *      @retval =0 socket被关闭
      *      @retval <0 socket出错
      */
-    int recv(iovec* buffers, size_t length, int flags = 0);
+    virtual int recv(iovec* buffers, size_t length, int flags = 0);
 
     /**
      * @brief 接受数据
@@ -269,7 +271,7 @@ public:
      *      @retval =0 socket被关闭
      *      @retval <0 socket出错
      */
-    int recvFrom(void* buffer, size_t length, Address::ptr from, int flags = 0);
+    virtual int recvFrom(void* buffer, size_t length, Address::ptr from, int flags = 0);
 
     /**
      * @brief 接受数据
@@ -282,7 +284,7 @@ public:
      *      @retval =0 socket被关闭
      *      @retval <0 socket出错
      */
-    int recvFrom(iovec* buffers, size_t length, Address::ptr from, int flags = 0);
+    virtual int recvFrom(iovec* buffers, size_t length, Address::ptr from, int flags = 0);
 
     /**
      * @brief 获取远端地址
@@ -327,7 +329,7 @@ public:
     /**
      * @brief 输出信息到流中
      */
-    std::ostream& dump(std::ostream& os) const;
+    virtual std::ostream& dump(std::ostream& os) const;
 
     /**
      * @brief 返回socket句柄
@@ -353,7 +355,7 @@ public:
      * @brief 取消所有事件
      */
     bool cancelAll();
-private:
+protected:
     /**
      * @brief 初始化socket
      */
@@ -367,8 +369,8 @@ private:
     /**
      * @brief 初始化sock
      */
-    bool init(int sock);
-private:
+    virtual bool init(int sock);
+protected:
     /// socket句柄
     int m_sock;
     /// 协议簇
@@ -383,6 +385,38 @@ private:
     Address::ptr m_localAddress;
     /// 远端地址
     Address::ptr m_remoteAddress;
+};
+
+class SSLSocket : public Socket {
+public:
+    typedef std::shared_ptr<SSLSocket> ptr;
+
+    static SSLSocket::ptr CreateTCP(sylar::Address::ptr address);
+    static SSLSocket::ptr CreateTCPSocket();
+    static SSLSocket::ptr CreateTCPSocket6();
+
+    SSLSocket(int family, int type, int protocol = 0);
+    virtual Socket::ptr accept() override;
+    virtual bool bind(const Address::ptr addr) override;
+    virtual bool connect(const Address::ptr addr, uint64_t timeout_ms = -1) override;
+    virtual bool listen(int backlog = SOMAXCONN) override;
+    virtual bool close() override;
+    virtual int send(const void* buffer, size_t length, int flags = 0) override;
+    virtual int send(const iovec* buffers, size_t length, int flags = 0) override;
+    virtual int sendTo(const void* buffer, size_t length, const Address::ptr to, int flags = 0) override;
+    virtual int sendTo(const iovec* buffers, size_t length, const Address::ptr to, int flags = 0) override;
+    virtual int recv(void* buffer, size_t length, int flags = 0) override;
+    virtual int recv(iovec* buffers, size_t length, int flags = 0) override;
+    virtual int recvFrom(void* buffer, size_t length, Address::ptr from, int flags = 0) override;
+    virtual int recvFrom(iovec* buffers, size_t length, Address::ptr from, int flags = 0) override;
+
+    bool loadCertificates(const std::string& cert_file, const std::string& key_file);
+    virtual std::ostream& dump(std::ostream& os) const override;
+protected:
+    virtual bool init(int sock) override;
+private:
+    std::shared_ptr<SSL_CTX> m_ctx;
+    std::shared_ptr<SSL> m_ssl;
 };
 
 /**

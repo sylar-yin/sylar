@@ -125,7 +125,7 @@ retry:
         }
 
         int rt = iom->addEvent(fd, (sylar::IOManager::Event)(event));
-        if(SYLAR_UNLICKLY(rt)) {
+        if(SYLAR_UNLIKELY(rt)) {
             SYLAR_LOG_ERROR(g_logger) << hook_fun_name << " addEvent("
                 << fd << ", " << event << ")";
             if(timer) {

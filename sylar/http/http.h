@@ -229,7 +229,7 @@ T getAs(const MapType& m, const std::string& key, const T& def = T()) {
     return def;
 }
 
-
+class HttpResponse;
 /**
  * @brief HTTP请求结构
  */
@@ -245,6 +245,8 @@ public:
      * @param[in] close 是否keepalive
      */
     HttpRequest(uint8_t version = 0x11, bool close = true);
+
+    std::shared_ptr<HttpResponse> createResponse();
 
     /**
      * @brief 返回HTTP方法
@@ -331,6 +333,16 @@ public:
      * @brief 设置是否自动关闭
      */
     void setClose(bool v) { m_close = v;}
+
+    /**
+     * @brief 是否websocket
+     */
+    bool isWebsocket() const { return m_websocket;}
+
+    /**
+     * @brief 设置是否websocket
+     */
+    void setWebsocket(bool v) { m_websocket = v;}
 
     /**
      * @brief 设置HTTP请求的头部MAP
@@ -532,6 +544,8 @@ private:
     uint8_t m_version;
     /// 是否自动关闭
     bool m_close;
+    /// 是否为websocket
+    bool m_websocket;
     /// 请求路径
     std::string m_path;
     /// 请求参数
@@ -634,6 +648,16 @@ public:
     void setClose(bool v) { m_close = v;}
 
     /**
+     * @brief 是否websocket
+     */
+    bool isWebsocket() const { return m_websocket;}
+
+    /**
+     * @brief 设置是否websocket
+     */
+    void setWebsocket(bool v) { m_websocket = v;}
+
+    /**
      * @brief 获取响应头部参数
      * @param[in] key 关键字
      * @param[in] def 默认值
@@ -697,6 +721,8 @@ private:
     uint8_t m_version;
     /// 是否自动关闭
     bool m_close;
+    /// 是否为websocket
+    bool m_websocket;
     /// 响应消息体
     std::string m_body;
     /// 响应原因
