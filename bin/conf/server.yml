@@ -1,0 +1,9 @@
+http_servers:
+    - address: ["0.0.0.0:8080", "127.0.0.1:8081"]
+      keepalive: 1
+      timeout: 1000
+      name: sylar/1.1
+    - address: ["0.0.0.0:8070", "enp0s3:8071"]
+      keepalive: 1
+      timeout: 1000
+      name: sylar/2.1
