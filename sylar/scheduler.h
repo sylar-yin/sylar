@@ -12,6 +12,7 @@
 #include <memory>
 #include <vector>
 #include <list>
+#include <iostream>
 #include "fiber.h"
 #include "thread.h"
 
@@ -102,6 +103,9 @@ public:
             tickle();
         }
     }
+
+    void switchTo(int thread = -1);
+    std::ostream& dump(std::ostream& os);
 protected:
     /**
      * @brief 通知协程调度器有任务了
@@ -239,6 +243,14 @@ protected:
     bool m_autoStop = false;
     /// 主线程id(use_caller)
     int m_rootThread = 0;
+};
+
+class SchedulerSwitcher : public Noncopyable {
+public:
+    SchedulerSwitcher(Scheduler* target = nullptr);
+    ~SchedulerSwitcher();
+private:
+    Scheduler* m_caller;
 };
 
 }

@@ -37,7 +37,7 @@ bool TcpServer::bind(const std::vector<Address::ptr>& addrs
                         ,std::vector<Address::ptr>& fails
                         ,bool ssl) {
     for(auto& addr : addrs) {
-        Socket::ptr sock = Socket::CreateTCP(addr);
+        Socket::ptr sock = ssl ? SSLSocket::CreateTCP(addr) : Socket::CreateTCP(addr);
         if(!sock->bind(addr)) {
             SYLAR_LOG_ERROR(g_logger) << "bind fail errno="
                 << errno << " errstr=" << strerror(errno)
@@ -106,6 +106,18 @@ void TcpServer::stop() {
 
 void TcpServer::handleClient(Socket::ptr client) {
     SYLAR_LOG_INFO(g_logger) << "handleClient: " << *client;
+}
+
+bool TcpServer::loadCertificates(const std::string& cert_file, const std::string& key_file) {
+    for(auto& i : m_socks) {
+        auto ssl_socket = std::dynamic_pointer_cast<SSLSocket>(i);
+        if(ssl_socket) {
+            if(!ssl_socket->loadCertificates(cert_file, key_file)) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 }

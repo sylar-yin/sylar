@@ -44,6 +44,7 @@ HttpRequest::ptr WSSession::handleShake() {
 
         std::string v = key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
         v = sylar::base64encode(sylar::sha1sum(v));
+        req->setWebsocket(true);
 
         auto rsp = req->createResponse();
         rsp->setStatus(HttpStatus::SWITCHING_PROTOCOLS);
@@ -54,8 +55,8 @@ HttpRequest::ptr WSSession::handleShake() {
         rsp->setHeader("Sec-WebSocket-Accept", v);
 
         sendResponse(rsp);
-        SYLAR_LOG_INFO(g_logger) << *req;
-        SYLAR_LOG_INFO(g_logger) << *rsp;
+        SYLAR_LOG_DEBUG(g_logger) << *req;
+        SYLAR_LOG_DEBUG(g_logger) << *rsp;
         return req;
     } while(false);
     if(req) {

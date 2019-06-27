@@ -23,7 +23,10 @@ struct HttpServerConf {
     std::vector<std::string> address;
     int keepalive = 0;
     int timeout = 1000 * 2 * 60;
+    int ssl = 0;
     std::string name;
+    std::string cert_file;
+    std::string key_file;
 
     bool isValid() const {
         return !address.empty();
@@ -33,7 +36,10 @@ struct HttpServerConf {
         return address == oth.address
             && keepalive == oth.keepalive
             && timeout == oth.timeout
-            && name == oth.name;
+            && name == oth.name
+            && ssl == oth.ssl
+            && cert_file == oth.cert_file
+            && key_file == oth.key_file;
     }
 };
 
@@ -46,6 +52,9 @@ public:
         conf.keepalive = node["keepalive"].as<int>(conf.keepalive);
         conf.timeout = node["timeout"].as<int>(conf.timeout);
         conf.name = node["name"].as<std::string>(conf.name);
+        conf.ssl = node["ssl"].as<int>(conf.ssl);
+        conf.name = node["cert_file"].as<std::string>(conf.cert_file);
+        conf.name = node["key_file"].as<std::string>(conf.key_file);
         if(node["address"].IsDefined()) {
             for(size_t i = 0; i < node["address"].size(); ++i) {
                 conf.address.push_back(node["address"][i].as<std::string>());
@@ -63,6 +72,9 @@ public:
         node["name"] = conf.name;
         node["keepalive"] = conf.keepalive;
         node["timeout"] = conf.timeout;
+        node["ssl"] = conf.ssl;
+        node["cert_file"] = conf.cert_file;
+        node["key_file"] = conf.key_file;
         for(auto& i : conf.address) {
             node["address"].push_back(i);
         }
@@ -196,12 +208,18 @@ int Application::run_fiber() {
         }
         sylar::http::HttpServer::ptr server(new sylar::http::HttpServer(i.keepalive));
         std::vector<Address::ptr> fails;
-        if(!server->bind(address, fails)) {
+        if(!server->bind(address, fails, i.ssl)) {
             for(auto& x : fails) {
                 SYLAR_LOG_ERROR(g_logger) << "bind address fail:"
                     << *x;
             }
             _exit(0);
+        }
+        if(i.ssl) {
+            if(!server->loadCertificates(i.cert_file, i.key_file)) {
+                SYLAR_LOG_ERROR(g_logger) << "loadCertificates fail, cert_file="
+                    << i.cert_file << " key_file=" << i.key_file;
+            }
         }
         if(!i.name.empty()) {
             server->setName(i.name);

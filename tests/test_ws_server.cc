@@ -17,7 +17,6 @@ void run() {
         return 0;
     };
 
-
     server->getWSServletDispatch()->addServlet("/sylar", fun);
     while(!server->bind(addr)) {
         SYLAR_LOG_ERROR(g_logger) << "bind " << *addr << " fail";

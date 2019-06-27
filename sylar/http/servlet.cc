@@ -19,7 +19,7 @@ int32_t FunctionServlet::handle(sylar::http::HttpRequest::ptr request
 
 ServletDispatch::ServletDispatch()
     :Servlet("ServletDispatch") {
-    m_default.reset(new NotFoundServlet());
+    m_default.reset(new NotFoundServlet("sylar/1.0"));
 }
 
 int32_t ServletDispatch::handle(sylar::http::HttpRequest::ptr request
@@ -109,21 +109,22 @@ Servlet::ptr ServletDispatch::getMatchedServlet(const std::string& uri) {
     return m_default;
 }
 
-NotFoundServlet::NotFoundServlet()
-    :Servlet("NotFoundServlet") {
+NotFoundServlet::NotFoundServlet(const std::string& name)
+    :Servlet("NotFoundServlet")
+    ,m_name(name) {
+    m_content = "<html><head><title>404 Not Found"
+        "</title></head><body><center><h1>404 Not Found</h1></center>"
+        "<hr><center>" + name + "</center></body></html>";
+
 }
 
 int32_t NotFoundServlet::handle(sylar::http::HttpRequest::ptr request
                    , sylar::http::HttpResponse::ptr response
                    , sylar::http::HttpSession::ptr session) {
-    static const std::string& RSP_BODY = "<html><head><title>404 Not Found"
-        "</title></head><body><center><h1>404 Not Found</h1></center>"
-        "<hr><center>sylar/1.0.0</center></body></html>";
-
     response->setStatus(sylar::http::HttpStatus::NOT_FOUND);
     response->setHeader("Server", "sylar/1.0.0");
     response->setHeader("Content-Type", "text/html");
-    response->setBody(RSP_BODY);
+    response->setBody(m_content);
     return 0;
 }
 

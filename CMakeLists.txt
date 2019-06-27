@@ -6,7 +6,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/yaml-cpp)
 include (cmake/utils.cmake)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
-set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O0 -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined")
+set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined")
 
 include_directories(.)
 include_directories(/apps/sylar/include)
@@ -50,6 +50,7 @@ set(LIB_SRC
     sylar/hook.cc
     sylar/iomanager.cc
     sylar/log.cc
+    sylar/mutex.cc
     sylar/scheduler.cc
     sylar/socket.cc
     sylar/socket_stream.cc
@@ -59,6 +60,7 @@ set(LIB_SRC
     sylar/thread.cc
     sylar/util.cc
     sylar/util/hash_util.cc
+    sylar/worker.cc
     )
 
 ragelmaker(sylar/http/http11_parser.rl LIB_SRC ${CMAKE_CURRENT_SOURCE_DIR}/sylar/http)
@@ -88,7 +90,6 @@ set(LIBS
         pthread
         yaml-cpp
         ${OPENSSL_LIBRARIES})
-
 #${PROTOBUF_LIBRARIES})
 
 sylar_add_executable(test1 "tests/test.cc" sylar "${LIBS}")

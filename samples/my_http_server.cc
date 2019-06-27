@@ -13,9 +13,14 @@ void run() {
 
     sylar::http::HttpServer::ptr http_server(new sylar::http::HttpServer(true, worker.get()));
     //sylar::http::HttpServer::ptr http_server(new sylar::http::HttpServer(true));
-    while(!http_server->bind(addr)) {
+    bool ssl = false;
+    while(!http_server->bind(addr, ssl)) {
         SYLAR_LOG_ERROR(g_logger) << "bind " << *addr << " fail";
         sleep(1);
+    }
+
+    if(ssl) {
+        //http_server->loadCertificates("/home/apps/soft/sylar/keys/server.crt", "/home/apps/soft/sylar/keys/server.key");
     }
 
     http_server->start();

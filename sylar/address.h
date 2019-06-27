@@ -296,6 +296,7 @@ public:
     sockaddr* getAddr() override;
     socklen_t getAddrLen() const override;
     void setAddrLen(uint32_t v);
+    std::string getPath() const;
     std::ostream& insert(std::ostream& os) const override;
 private:
     sockaddr_un m_addr;

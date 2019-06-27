@@ -156,9 +156,11 @@ bool Uri::isDefaultPort() const {
     if(m_port == 0) {
         return true;
     }
-    if(m_scheme == "http") {
+    if(m_scheme == "http"
+            || m_scheme == "ws") {
         return m_port == 80;
-    } else if(m_scheme == "https") {
+    } else if(m_scheme == "https"
+            || m_scheme == "wss") {
         return m_port == 443;
     }
     return false;
@@ -173,9 +175,11 @@ int32_t Uri::getPort() const {
     if(m_port) {
         return m_port;
     }
-    if(m_scheme == "http") {
+    if(m_scheme == "http"
+        || m_scheme == "ws") {
         return 80;
-    } else if(m_scheme == "https") {
+    } else if(m_scheme == "https"
+            || m_scheme == "wss") {
         return 443;
     }
     return m_port;
