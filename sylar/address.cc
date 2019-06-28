@@ -109,7 +109,7 @@ bool Address::Lookup(std::vector<Address::ptr>& result, const std::string& host,
     }
 
     freeaddrinfo(results);
-    return true;
+    return !result.empty();
 }
 
 bool Address::GetInterfaceAddresses(std::multimap<std::string
@@ -162,7 +162,7 @@ bool Address::GetInterfaceAddresses(std::multimap<std::string
         return false;
     }
     freeifaddrs(results);
-    return true;
+    return !result.empty();
 }
 
 bool Address::GetInterfaceAddresses(std::vector<std::pair<Address::ptr, uint32_t> >&result
@@ -188,7 +188,7 @@ bool Address::GetInterfaceAddresses(std::vector<std::pair<Address::ptr, uint32_t
     for(; its.first != its.second; ++its.first) {
         result.push_back(its.first->second);
     }
-    return true;
+    return !result.empty();
 }
 
 int Address::getFamily() const {

@@ -20,6 +20,7 @@ private:
     char** m_argv = nullptr;
 
     std::vector<sylar::http::HttpServer::ptr> m_httpservers;
+    IOManager::ptr m_mainIOManager;
     static Application* s_instance;
 };
 
