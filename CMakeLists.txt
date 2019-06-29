@@ -1,18 +1,21 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 project(sylar)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/yaml-cpp)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/jsoncpp-1.8.4)
 
 include (cmake/utils.cmake)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
-set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O0 -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined")
+set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O0 -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
 
 include_directories(.)
 include_directories(/apps/sylar/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/yaml-cpp/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/jsoncpp-1.8.4/include)
 link_directories(/apps/sylar/lib)
+link_directories(/apps/sylar/lib64)
 
 option(TEST "ON for complile test" OFF)
 
@@ -20,6 +23,7 @@ find_package(Boost REQUIRED)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
 endif()
+
 
 #find_package(Protobuf REQUIRED)
 #if(Protobuf_FOUND)
@@ -32,7 +36,6 @@ endif()
 
 set(LIB_SRC
     sylar/address.cc
-    sylar/application.cc
     sylar/bytearray.cc
     sylar/config.cc
     sylar/env.cc
@@ -63,8 +66,10 @@ set(LIB_SRC
     sylar/timer.cc
     sylar/thread.cc
     sylar/util.cc
+    sylar/util/json_util.cc
     sylar/util/hash_util.cc
     sylar/worker.cc
+    sylar/application.cc
     )
 
 ragelmaker(sylar/http/http11_parser.rl LIB_SRC ${CMAKE_CURRENT_SOURCE_DIR}/sylar/http)
@@ -77,22 +82,26 @@ ragelmaker(sylar/uri.rl LIB_SRC ${CMAKE_CURRENT_SOURCE_DIR}/sylar)
 #message(STATUS ${LIB_SRC})
 
 add_library(sylar SHARED ${LIB_SRC})
-force_redefine_file_macro_for_sources(sylar) #__FILE__
+force_redefine_file_macro_for_sources(sylar)
 #add_library(sylar_static STATIC ${LIB_SRC})
 #SET_TARGET_PROPERTIES (sylar_static PROPERTIES OUTPUT_NAME "sylar")
 
-find_library(YAMLCPP yaml-cpp)
+#find_library(YAMLCPP yaml-cpp)
 find_library(PTHREAD pthread)
 #set(LIBS ${LIBS} sylar)
 #set(LIBS ${LIBS} dl)
 #set(LIBS ${LIBS} ${YAMLCPP})
 #set(LIBS ${LIBS} ${PTHREAD})
 
+find_library(JSONCPP libjsoncpp.a)
+message(STATUS "***${JSONCPP}***")
+
 set(LIBS
         sylar
         dl
         pthread
         yaml-cpp
+        jsoncpp_lib_static
         ${OPENSSL_LIBRARIES})
 #${PROTOBUF_LIBRARIES})
 

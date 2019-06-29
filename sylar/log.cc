@@ -715,6 +715,8 @@ struct LogIniter {
                     }
                 }
                 logger->setLevel(i.level);
+                //std::cout << "** " << i.name << " level=" << i.level
+                //<< "  " << logger << std::endl;
                 if(!i.formatter.empty()) {
                     logger->setFormatter(i.formatter);
                 }

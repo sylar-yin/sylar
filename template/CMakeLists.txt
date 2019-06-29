@@ -14,6 +14,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/sylar)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/sylar/thirdpart)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/sylar/thirdpart)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/sylar/thirdpart/yaml-cpp/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/sylar/thirdpart/jsoncpp-1.8.4/include)
 link_directories(/apps/sylar/lib)
 
 find_package(Boost REQUIRED)

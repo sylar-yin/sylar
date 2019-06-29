@@ -26,6 +26,10 @@ TcpServer::~TcpServer() {
     m_socks.clear();
 }
 
+void TcpServer::setConf(const TcpServerConf& v) {
+    m_conf.reset(new TcpServerConf(v));
+}
+
 bool TcpServer::bind(sylar::Address::ptr addr, bool ssl) {
     std::vector<Address::ptr> addrs;
     std::vector<Address::ptr> fails;
@@ -36,6 +40,7 @@ bool TcpServer::bind(sylar::Address::ptr addr, bool ssl) {
 bool TcpServer::bind(const std::vector<Address::ptr>& addrs
                         ,std::vector<Address::ptr>& fails
                         ,bool ssl) {
+    m_ssl = ssl;
     for(auto& addr : addrs) {
         Socket::ptr sock = ssl ? SSLSocket::CreateTCP(addr) : Socket::CreateTCP(addr);
         if(!sock->bind(addr)) {
@@ -61,7 +66,10 @@ bool TcpServer::bind(const std::vector<Address::ptr>& addrs
     }
 
     for(auto& i : m_socks) {
-        SYLAR_LOG_INFO(g_logger) << "server bind success: " << *i;
+        SYLAR_LOG_INFO(g_logger) << "type=" << m_type
+            << " name=" << m_name
+            << " ssl=" << m_ssl
+            << " server bind success: " << *i;
     }
     return true;
 }

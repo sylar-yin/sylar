@@ -21,6 +21,7 @@ IOManager::FdContext::EventContext& IOManager::FdContext::getContext(IOManager::
         default:
             SYLAR_ASSERT2(false, "getContext");
     }
+    throw std::invalid_argument("getContext invalid event");
 }
 
 void IOManager::FdContext::resetContext(EventContext& ctx) {

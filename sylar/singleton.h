@@ -43,7 +43,9 @@ public:
      * @brief 返回单例裸指针
      */
     static T* GetInstance() {
-        return &GetInstanceX<T, X, N>();
+        static T v;
+        return &v;
+        //return &GetInstanceX<T, X, N>();
     }
 };
 
@@ -60,7 +62,9 @@ public:
      * @brief 返回单例智能指针
      */
     static std::shared_ptr<T> GetInstance() {
-        return GetInstancePtr<T, X, N>();
+        static std::shared_ptr<T> v(new T);
+        return v;
+        //return GetInstancePtr<T, X, N>();
     }
 };
 

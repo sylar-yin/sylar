@@ -6,10 +6,12 @@ C++的高性能服务器框架，支持协程，线程，hook，Http，Websocket
 使用方式：
 
 ### 编译库
+```
 git clone https://github.com/sylar-yin/sylar.git
 cd sylar
 make 
 make -j
+```
 
 ### 使用库创建项目
 sh generate.sh ${project-name} ${name-space}
@@ -150,3 +152,10 @@ static Logger::ptr g_log = SYLAR_LOG_NAME("system"); //m_root, m_system-> m_root
 ## 分布协议
 
 ## 推荐系统
+
+## 联系方式
+QQ：564628276
+邮箱：564628276@qq.com
+微信：sylar-yin
+QQ群：8151915（sylar技术群）
+个人主页：http://www.sylar.top

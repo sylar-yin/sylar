@@ -12,6 +12,8 @@ HttpServer::HttpServer(bool keepalive
     :TcpServer(worker, accept_worker)
     ,m_isKeepalive(keepalive) {
     m_dispatch.reset(new ServletDispatch);
+
+    m_type = "http";
 }
 
 void HttpServer::setName(const std::string& v) {
