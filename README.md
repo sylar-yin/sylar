@@ -1,5 +1,28 @@
 # sylar
 
+## 项目介绍
+C++的高性能服务器框架，支持协程，线程，hook，Http，Websocket，SSL，日志模块，配置模块等模块
+支持动态库方式，加载业务代码，支持业务热更新
+使用方式：
+
+### 编译库
+git clone https://github.com/sylar-yin/sylar.git
+cd sylar
+make 
+make -j
+
+### 使用库创建项目
+sh generate.sh ${project-name} ${name-space}
+cd ${project-name}
+make
+make -j
+sh move.sh #编译完成后，move可执行文件和动态库
+bin/${project-name} -s #执行
+
+### 依赖环境和安装
+请参考下面链接
+http://www.sylar.top/blog/?p=135
+
 ## 视频教程地址
 0. [C++高级教程-从零开始开发服务器框架(sylar)](https://www.bilibili.com/video/av53602631/ "")
 1. [C++服务器框架01_日志系统01](https://www.bilibili.com/video/av52778994/?from=www.sylar.top "")
