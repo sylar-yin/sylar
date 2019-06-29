@@ -203,7 +203,7 @@ int Application::run_fiber() {
     sylar::WorkerMgr::GetInstance()->init();
     auto http_confs = g_http_servers_conf->getValue();
     for(auto& i : http_confs) {
-        SYLAR_LOG_INFO(g_logger) << LexicalCast<HttpServerConf, std::string>()(i);
+        SYLAR_LOG_INFO(g_logger) << std::endl << LexicalCast<HttpServerConf, std::string>()(i);
 
         std::vector<Address::ptr> address;
         for(auto& a : i.address) {
