@@ -123,4 +123,8 @@ std::string Env::getAbsolutePath(const std::string& path) const {
     return m_cwd + path;
 }
 
+std::string Env::getConfigPath() {
+    return getAbsolutePath(get("c", "conf"));
+}
+
 }

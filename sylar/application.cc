@@ -1,8 +1,9 @@
 #include "application.h"
+#include "sylar/daemon.h"
 #include "sylar/config.h"
 #include "sylar/env.h"
 #include "sylar/log.h"
-#include "sylar/daemon.h"
+#include "sylar/module.h"
 #include "sylar/worker.h"
 #include <unistd.h>
 
@@ -111,15 +112,36 @@ bool Application::init(int argc, char** argv) {
     sylar::EnvMgr::GetInstance()->addHelp("c", "conf path default: ./conf");
     sylar::EnvMgr::GetInstance()->addHelp("p", "print help");
 
+    bool is_print_help = false;
     if(!sylar::EnvMgr::GetInstance()->init(argc, argv)) {
+        is_print_help = true;
+    }
+
+    if(sylar::EnvMgr::GetInstance()->has("p")) {
+        is_print_help = true;
+    }
+
+    std::string conf_path = sylar::EnvMgr::GetInstance()->getConfigPath();
+    SYLAR_LOG_INFO(g_logger) << "load conf path:" << conf_path;
+    sylar::Config::LoadFromConfDir(conf_path);
+
+    ModuleMgr::GetInstance()->init();
+    std::vector<Module::ptr> modules;
+    ModuleMgr::GetInstance()->listAll(modules);
+
+    for(auto i : modules) {
+        i->onBeforeArgsParse(argc, argv);
+    }
+
+    if(is_print_help) {
         sylar::EnvMgr::GetInstance()->printHelp();
         return false;
     }
 
-    if(sylar::EnvMgr::GetInstance()->has("p")) {
-        sylar::EnvMgr::GetInstance()->printHelp();
-        return false;
+    for(auto i : modules) {
+        i->onAfterArgsParse(argc, argv);
     }
+    modules.clear();
 
     int run_type = 0;
     if(sylar::EnvMgr::GetInstance()->has("s")) {
@@ -133,12 +155,6 @@ bool Application::init(int argc, char** argv) {
         sylar::EnvMgr::GetInstance()->printHelp();
         return false;
     }
-
-    std::string conf_path = sylar::EnvMgr::GetInstance()->getAbsolutePath(
-                sylar::EnvMgr::GetInstance()->get("c", "conf")
-                );
-    SYLAR_LOG_INFO(g_logger) << "load conf path:" << conf_path;
-    sylar::Config::LoadFromConfDir(conf_path);
 
     std::string pidfile = g_server_work_path->getValue()
                                 + "/" + g_server_pid_file->getValue();
@@ -177,7 +193,8 @@ int Application::main(int argc, char** argv) {
 
     m_mainIOManager.reset(new sylar::IOManager(1, true, "main"));
     m_mainIOManager->schedule(std::bind(&Application::run_fiber, this));
-    m_mainIOManager->addTimer(1000, [](){}, true);
+    m_mainIOManager->addTimer(2000, [](){
+    }, true);
     m_mainIOManager->stop();
     return 0;
 }

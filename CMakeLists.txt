@@ -14,6 +14,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/yaml-cpp/include)
 link_directories(/apps/sylar/lib)
 
+option(TEST "ON for complile test" OFF)
+
 find_package(Boost REQUIRED)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
@@ -49,7 +51,9 @@ set(LIB_SRC
     sylar/http/ws_servlet.cc
     sylar/hook.cc
     sylar/iomanager.cc
+    sylar/library.cc
     sylar/log.cc
+    sylar/module.cc
     sylar/mutex.cc
     sylar/scheduler.cc
     sylar/socket.cc
@@ -92,6 +96,7 @@ set(LIBS
         ${OPENSSL_LIBRARIES})
 #${PROTOBUF_LIBRARIES})
 
+if(TEST)
 sylar_add_executable(test1 "tests/test.cc" sylar "${LIBS}")
 sylar_add_executable(test_config "tests/test_config.cc" sylar "${LIBS}")
 sylar_add_executable(test_thread "tests/test_thread.cc" sylar "${LIBS}")
@@ -120,6 +125,12 @@ sylar_add_executable(test_env "tests/test_env.cc" sylar "${LIBS}")
 sylar_add_executable(test_ws_server "tests/test_ws_server.cc" sylar "${LIBS}")
 sylar_add_executable(test_ws_client "tests/test_ws_client.cc" sylar "${LIBS}")
 sylar_add_executable(test_application "tests/test_application.cc" sylar "${LIBS}")
+
+add_library(test SHARED tests/test_module.cc)
+endif()
+
+sylar_add_executable(bin_sylar "sylar/main.cc" sylar "${LIBS}")
+set_target_properties(bin_sylar PROPERTIES OUTPUT_NAME "sylar")
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

@@ -528,7 +528,7 @@ public:
     /**
      * @brief 加载path文件夹里面的配置文件
      */
-    static void LoadFromConfDir(const std::string& path);
+    static void LoadFromConfDir(const std::string& path, bool force = false);
 
     /**
      * @brief 查找配置参数,返回配置参数的基类

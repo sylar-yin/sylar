@@ -66,7 +66,7 @@ void Config::LoadFromYaml(const YAML::Node& root) {
 static std::map<std::string, uint64_t> s_file2modifytime;
 static sylar::Mutex s_mutex;
 
-void Config::LoadFromConfDir(const std::string& path) {
+void Config::LoadFromConfDir(const std::string& path, bool force) {
     std::string absoulte_path = sylar::EnvMgr::GetInstance()->getAbsolutePath(path);
     std::vector<std::string> files;
     FSUtil::ListAllFile(files, absoulte_path, ".yml");
@@ -76,7 +76,7 @@ void Config::LoadFromConfDir(const std::string& path) {
             struct stat st;
             lstat(i.c_str(), &st);
             sylar::Mutex::Lock lock(s_mutex);
-            if(s_file2modifytime[i] == (uint64_t)st.st_mtime) {
+            if(!force && s_file2modifytime[i] == (uint64_t)st.st_mtime) {
                 continue;
             }
             s_file2modifytime[i] = st.st_mtime;
