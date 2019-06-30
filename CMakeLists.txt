@@ -138,6 +138,10 @@ sylar_add_executable(test_application "tests/test_application.cc" sylar "${LIBS}
 add_library(test SHARED tests/test_module.cc)
 endif()
 
+sylar_add_executable(test_lru "tests/test_lru.cc" sylar "${LIBS}")
+sylar_add_executable(test_timed_cache "tests/test_timed_cache.cc" sylar "${LIBS}")
+sylar_add_executable(test_timed_lru_cache "tests/test_timed_lru_cache.cc" sylar "${LIBS}")
+
 sylar_add_executable(bin_sylar "sylar/main.cc" sylar "${LIBS}")
 set_target_properties(bin_sylar PROPERTIES OUTPUT_NAME "sylar")
 
