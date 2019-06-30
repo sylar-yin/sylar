@@ -29,7 +29,6 @@
 #include "scheduler.h"
 #include "singleton.h"
 #include "socket.h"
-#include "socket_stream.h"
 #include "stream.h"
 #include "tcp_server.h"
 #include "thread.h"
@@ -51,6 +50,8 @@
 #include "http/ws_server.h"
 #include "http/ws_servlet.h"
 #include "http/ws_session.h"
+
+#include "streams/socket_stream.h"
 
 #include "util/hash_util.h"
 

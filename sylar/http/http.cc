@@ -172,7 +172,7 @@ std::ostream& HttpRequest::dump(std::ostream& os) const {
         if(!m_websocket && strcasecmp(i.first.c_str(), "connection") == 0) {
             continue;
         }
-        os << i.first << ":" << i.second << "\r\n";
+        os << i.first << ": " << i.second << "\r\n";
     }
 
     if(!m_body.empty()) {

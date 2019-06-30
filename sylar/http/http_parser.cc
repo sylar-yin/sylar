@@ -246,6 +246,7 @@ size_t HttpResponseParser::execute(char* data, size_t len, bool chunck) {
         httpclient_parser_init(&m_parser);
     }
     size_t offset = httpclient_parser_execute(&m_parser, data, len, 0);
+
     memmove(data, data + offset, (len - offset));
     return offset;
 }

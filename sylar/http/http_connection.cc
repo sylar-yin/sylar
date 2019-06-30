@@ -1,6 +1,7 @@
 #include "http_connection.h"
 #include "http_parser.h"
 #include "sylar/log.h"
+#include "sylar/streams/zlib_stream.h"
 
 namespace sylar {
 namespace http {
@@ -57,8 +58,8 @@ HttpResponse::ptr HttpConnection::recvResponse() {
         }
     } while(true);
     auto& client_parser = parser->getParser();
+    std::string body;
     if(client_parser.chunked) {
-        std::string body;
         int len = offset;
         do {
             do {
@@ -80,17 +81,17 @@ HttpResponse::ptr HttpConnection::recvResponse() {
                     return nullptr;
                 }
             } while(!parser->isFinished());
-            len -= 2;
+            //len -= 2;
             
             SYLAR_LOG_INFO(g_logger) << "content_len=" << client_parser.content_len;
-            if(client_parser.content_len <= len) {
+            if(client_parser.content_len + 2 <= len) {
                 body.append(data, client_parser.content_len);
-                memmove(data, data + client_parser.content_len
-                        , len - client_parser.content_len);
-                len -= client_parser.content_len;
+                memmove(data, data + client_parser.content_len + 2
+                        , len - client_parser.content_len - 2);
+                len -= client_parser.content_len + 2;
             } else {
                 body.append(data, len);
-                int left = client_parser.content_len - len;
+                int left = client_parser.content_len - len + 2;
                 while(left > 0) {
                     int rt = read(data, left > (int)buff_size ? (int)buff_size : left);
                     if(rt <= 0) {
@@ -100,14 +101,13 @@ HttpResponse::ptr HttpConnection::recvResponse() {
                     body.append(data, rt);
                     left -= rt;
                 }
+                body.resize(body.size() - 2);
                 len = 0;
             }
         } while(!client_parser.chunks_done);
-        parser->getData()->setBody(body);
     } else {
         int64_t length = parser->getContentLength();
         if(length > 0) {
-            std::string body;
             body.resize(length);
 
             int len = 0;
@@ -125,8 +125,24 @@ HttpResponse::ptr HttpConnection::recvResponse() {
                     return nullptr;
                 }
             }
-            parser->getData()->setBody(body);
         }
+    }
+    if(!body.empty()) {
+        auto content_encoding = parser->getData()->getHeader("content-encoding");
+        SYLAR_LOG_DEBUG(g_logger) << "content_encoding: " << content_encoding
+            << " size=" << body.size();
+        if(strcasecmp(content_encoding.c_str(), "gzip") == 0) {
+            auto zs = ZlibStream::CreateGzip(false);
+            zs->write(body.c_str(), body.size());
+            zs->flush();
+            zs->getResult().swap(body);
+        } else if(strcasecmp(content_encoding.c_str(), "deflate") == 0) {
+            auto zs = ZlibStream::CreateDeflate(false);
+            zs->write(body.c_str(), body.size());
+            zs->flush();
+            zs->getResult().swap(body);
+        }
+        parser->getData()->setBody(body);
     }
     return parser->getData();
 }
@@ -135,6 +151,7 @@ int HttpConnection::sendRequest(HttpRequest::ptr rsp) {
     std::stringstream ss;
     ss << *rsp;
     std::string data = ss.str();
+    std::cout << ss.str() << std::endl;
     return writeFixSize(data.c_str(), data.size());
 }
 
