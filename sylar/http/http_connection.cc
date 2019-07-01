@@ -62,13 +62,16 @@ HttpResponse::ptr HttpConnection::recvResponse() {
     if(client_parser.chunked) {
         int len = offset;
         do {
+            bool begin = true;
             do {
-                int rt = read(data + len, buff_size - len);
-                if(rt <= 0) {
-                    close();
-                    return nullptr;
+                if(!begin || len == 0) {
+                    int rt = read(data + len, buff_size - len);
+                    if(rt <= 0) {
+                        close();
+                        return nullptr;
+                    }
+                    len += rt;
                 }
-                len += rt;
                 data[len] = '\0';
                 size_t nparse = parser->execute(data, len, true);
                 if(parser->hasError()) {
@@ -80,10 +83,11 @@ HttpResponse::ptr HttpConnection::recvResponse() {
                     close();
                     return nullptr;
                 }
+                begin = false;
             } while(!parser->isFinished());
             //len -= 2;
             
-            SYLAR_LOG_INFO(g_logger) << "content_len=" << client_parser.content_len;
+            SYLAR_LOG_DEBUG(g_logger) << "content_len=" << client_parser.content_len;
             if(client_parser.content_len + 2 <= len) {
                 body.append(data, client_parser.content_len);
                 memmove(data, data + client_parser.content_len + 2

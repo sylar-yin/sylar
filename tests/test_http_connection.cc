@@ -66,19 +66,21 @@ void run() {
 void test_https() {
     auto r = sylar::http::HttpConnection::DoGet("http://www.baidu.com/", 300, {
                         {"Accept-Encoding", "gzip, deflate, br"},
-                        {"Connection", "keep-alive"}
+                        {"Connection", "keep-alive"},
+                        {"User-Agent", "curl/7.29.0"}
             });
     SYLAR_LOG_INFO(g_logger) << "result=" << r->result
         << " error=" << r->error
         << " rsp=" << (r->response ? r->response->toString() : "");
 
-    sylar::http::HttpConnectionPool::ptr pool(new sylar::http::HttpConnectionPool(
-                "www.baidu.com", "", 443, true, 10, 1000 * 30, 5));
-    //auto pool = sylar::http::HttpConnectionPool::Create(
-    //                "https://www.baidu.com", "", 10, 1000 * 30, 5);
+    //sylar::http::HttpConnectionPool::ptr pool(new sylar::http::HttpConnectionPool(
+    //            "www.baidu.com", "", 80, false, 10, 1000 * 30, 5));
+    auto pool = sylar::http::HttpConnectionPool::Create(
+                    "https://www.baidu.com", "", 10, 1000 * 30, 5);
     sylar::IOManager::GetThis()->addTimer(1000, [pool](){
-            auto r = pool->doGet("/", 300, {
-                        {"Accept-Encoding", "gzip, deflate, br"}
+            auto r = pool->doGet("/", 3000, {
+                        {"Accept-Encoding", "gzip, deflate, br"},
+                        {"User-Agent", "curl/7.29.0"}
                     });
             SYLAR_LOG_INFO(g_logger) << r->toString();
     }, true);
