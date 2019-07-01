@@ -61,6 +61,7 @@ set(LIB_SRC
     sylar/scheduler.cc
     sylar/socket.cc
     sylar/stream.cc
+    sylar/streams/async_socket_stream.cc
     sylar/streams/socket_stream.cc
     sylar/streams/zlib_stream.cc
     sylar/tcp_server.cc

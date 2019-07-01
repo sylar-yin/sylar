@@ -173,6 +173,8 @@ public:
      */
     virtual bool connect(const Address::ptr addr, uint64_t timeout_ms = -1);
 
+    virtual bool reconnect(uint64_t timeout_ms = -1);
+
     /**
      * @brief 监听socket
      * @param[in] backlog 未完成连接队列的最大长度
