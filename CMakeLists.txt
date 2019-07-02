@@ -34,6 +34,12 @@ if(OPENSSL_FOUND)
     include_directories(${OPENSSL_INCLUDE_DIR})
 endif()
 
+find_package(ZLIB REQUIRED)
+
+if(ZLIB_FOUND)
+    include_directories(${ZLIB_INCLUDE_DIR})
+endif()
+
 set(LIB_SRC
     sylar/address.cc
     sylar/bytearray.cc
@@ -56,6 +62,7 @@ set(LIB_SRC
     sylar/iomanager.cc
     sylar/library.cc
     sylar/log.cc
+    sylar/protocol.cc
     sylar/module.cc
     sylar/mutex.cc
     sylar/scheduler.cc
@@ -95,15 +102,13 @@ find_library(PTHREAD pthread)
 #set(LIBS ${LIBS} ${YAMLCPP})
 #set(LIBS ${LIBS} ${PTHREAD})
 
-find_library(JSONCPP libjsoncpp.a)
-message(STATUS "***${JSONCPP}***")
-
 set(LIBS
         sylar
         dl
         pthread
         yaml-cpp
         jsoncpp_lib_static
+        ${ZLIB_LIBRARIES}
         ${OPENSSL_LIBRARIES})
 #${PROTOBUF_LIBRARIES})
 
@@ -137,13 +142,14 @@ sylar_add_executable(test_ws_client "tests/test_ws_client.cc" sylar "${LIBS}")
 sylar_add_executable(test_application "tests/test_application.cc" sylar "${LIBS}")
 
 add_library(test SHARED tests/test_module.cc)
-endif()
 
 sylar_add_executable(test_http_connection "tests/test_http_connection.cc" sylar "${LIBS}")
 sylar_add_executable(test_lru "tests/test_lru.cc" sylar "${LIBS}")
 sylar_add_executable(test_timed_cache "tests/test_timed_cache.cc" sylar "${LIBS}")
 sylar_add_executable(test_timed_lru_cache "tests/test_timed_lru_cache.cc" sylar "${LIBS}")
 sylar_add_executable(test_zlib_stream "tests/test_zlib_stream.cc" sylar "${LIBS}")
+
+endif()
 
 sylar_add_executable(bin_sylar "sylar/main.cc" sylar "${LIBS}")
 set_target_properties(bin_sylar PROPERTIES OUTPUT_NAME "sylar")
