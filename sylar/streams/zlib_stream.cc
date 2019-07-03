@@ -204,4 +204,13 @@ std::string ZlibStream::getResult() const {
     return rt;
 }
 
+sylar::ByteArray::ptr ZlibStream::getByteArray() {
+    sylar::ByteArray::ptr ba(new sylar::ByteArray);
+    for(auto& i : m_buffs) {
+        ba->write(i.iov_base, i.iov_len);
+    }
+    ba->setPosition(0);
+    return ba;
+}
+
 }

@@ -21,6 +21,7 @@
 #include <boost/lexical_cast.hpp>
 #include "sylar/util/hash_util.h"
 #include "sylar/util/json_util.h"
+#include "sylar/util/crypto_util.h"
 
 namespace sylar {
 

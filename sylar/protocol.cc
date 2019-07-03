@@ -1,4 +1,5 @@
 #include "sylar/protocol.h"
+#include "sylar/util.h"
 
 namespace sylar {
 

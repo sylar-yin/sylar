@@ -34,10 +34,12 @@ public:
     virtual int32_t getType() const = 0;
 };
 
-class MsgHeader {
+class MessageDecoder {
 public:
-    virtual ~MsgHeader() {}
-    virtual int32_t parseFrom(Stream::ptr stream) = 0;
+    typedef std::shared_ptr<MessageDecoder> ptr;
+
+    virtual ~MessageDecoder() {}
+    virtual Message::ptr parseFrom(Stream::ptr stream) = 0;
     virtual int32_t serializeTo(Stream::ptr stream, Message::ptr msg) = 0;
 };
 

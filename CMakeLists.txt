@@ -25,17 +25,16 @@ if(Boost_FOUND)
 endif()
 
 
-#find_package(Protobuf REQUIRED)
-#if(Protobuf_FOUND)
-#    include_directories(${Protobuf_INCLUDE_DIRS})
-#endif()
+find_package(Protobuf REQUIRED)
+if(Protobuf_FOUND)
+    include_directories(${Protobuf_INCLUDE_DIRS})
+endif()
 find_package(OpenSSL REQUIRED)
 if(OPENSSL_FOUND)
     include_directories(${OPENSSL_INCLUDE_DIR})
 endif()
 
 find_package(ZLIB REQUIRED)
-
 if(ZLIB_FOUND)
     include_directories(${ZLIB_INCLUDE_DIR})
 endif()
@@ -62,9 +61,10 @@ set(LIB_SRC
     sylar/iomanager.cc
     sylar/library.cc
     sylar/log.cc
-    sylar/protocol.cc
     sylar/module.cc
     sylar/mutex.cc
+    sylar/protocol.cc
+    sylar/rock/rock_protocol.cc
     sylar/scheduler.cc
     sylar/socket.cc
     sylar/stream.cc
@@ -75,6 +75,7 @@ set(LIB_SRC
     sylar/timer.cc
     sylar/thread.cc
     sylar/util.cc
+    sylar/util/crypto_util.cc
     sylar/util/json_util.cc
     sylar/util/hash_util.cc
     sylar/worker.cc
@@ -109,8 +110,9 @@ set(LIBS
         yaml-cpp
         jsoncpp_lib_static
         ${ZLIB_LIBRARIES}
-        ${OPENSSL_LIBRARIES})
-#${PROTOBUF_LIBRARIES})
+        ${OPENSSL_LIBRARIES}
+        ${PROTOBUF_LIBRARIES}
+        )
 
 if(TEST)
 sylar_add_executable(test1 "tests/test.cc" sylar "${LIBS}")
@@ -150,6 +152,7 @@ sylar_add_executable(test_timed_lru_cache "tests/test_timed_lru_cache.cc" sylar 
 sylar_add_executable(test_zlib_stream "tests/test_zlib_stream.cc" sylar "${LIBS}")
 
 endif()
+sylar_add_executable(test_crypto "tests/test_crypto.cc" sylar "${LIBS}")
 
 sylar_add_executable(bin_sylar "sylar/main.cc" sylar "${LIBS}")
 set_target_properties(bin_sylar PROPERTIES OUTPUT_NAME "sylar")
