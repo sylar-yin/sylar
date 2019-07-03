@@ -27,7 +27,7 @@ struct TcpServerConf {
     int timeout = 1000 * 2 * 60;
     int ssl = 0;
     std::string id;
-    /// 服务器类型，http, ws
+    /// 服务器类型，http, ws, rock
     std::string type = "http";
     std::string name;
     std::string cert_file;
@@ -118,11 +118,11 @@ public:
     typedef std::shared_ptr<TcpServer> ptr;
     /**
      * @brief 构造函数
-     * @param[in] woker socket客户端工作的协程调度器
-     * @param[in] accept_woker 服务器socket执行接收socket连接的协程调度器
+     * @param[in] worker socket客户端工作的协程调度器
+     * @param[in] accept_worker 服务器socket执行接收socket连接的协程调度器
      */
-    TcpServer(sylar::IOManager* woker = sylar::IOManager::GetThis()
-              ,sylar::IOManager* accept_woker = sylar::IOManager::GetThis());
+    TcpServer(sylar::IOManager* worker = sylar::IOManager::GetThis()
+              ,sylar::IOManager* accept_worker = sylar::IOManager::GetThis());
 
     /**
      * @brief 析构函数

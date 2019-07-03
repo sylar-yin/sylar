@@ -65,6 +65,7 @@ set(LIB_SRC
     sylar/mutex.cc
     sylar/protocol.cc
     sylar/rock/rock_protocol.cc
+    sylar/rock/rock_server.cc
     sylar/rock/rock_stream.cc
     sylar/scheduler.cc
     sylar/socket.cc
