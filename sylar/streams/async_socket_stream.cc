@@ -108,14 +108,17 @@ void AsyncSocketStream::doWrite() {
     try {
         while(isConnected()) {
             m_sem.wait();
-            std::list<Ctx::ptr> ctxs;
+            std::list<SendCtx::ptr> ctxs;
             {
                 RWMutexType::WriteLock lock(m_queueMutex);
                 m_queue.swap(ctxs);
             }
             auto self = shared_from_this();
             for(auto& i : ctxs) {
-                i->doSend(self);
+                if(!i->doSend(self)) {
+                    innerClose();
+                    break;
+                }
             }
         }
     } catch (...) {
@@ -168,7 +171,7 @@ bool AsyncSocketStream::addCtx(Ctx::ptr ctx) {
     return true;
 }
 
-bool AsyncSocketStream::enqueue(Ctx::ptr ctx) {
+bool AsyncSocketStream::enqueue(SendCtx::ptr ctx) {
     RWMutexType::WriteLock lock(m_mutex);
     bool empty = m_queue.empty();
     m_queue.push_back(ctx);

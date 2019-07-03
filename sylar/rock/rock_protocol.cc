@@ -26,6 +26,13 @@ bool RockBody::parseFromByteArray(ByteArray::ptr bytearray) {
     return true;
 }
 
+std::shared_ptr<RockResponse> RockRequest::createResponse() {
+    RockResponse::ptr rt(new RockResponse);
+    rt->setSn(m_sn);
+    rt->setCmd(m_cmd);
+    return rt;
+}
+
 std::string RockRequest::toString() const {
     std::stringstream ss;
     ss << "[RockRequest sn=" << m_sn
