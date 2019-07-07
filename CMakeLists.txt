@@ -3,6 +3,7 @@ project(sylar)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/yaml-cpp)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/jsoncpp-1.8.4)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/sqlite-3.28.0)
 
 include (cmake/utils.cmake)
 
@@ -14,6 +15,7 @@ include_directories(/apps/sylar/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/yaml-cpp/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/jsoncpp-1.8.4/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/sqlite-3.28.0)
 link_directories(/apps/sylar/lib)
 link_directories(/apps/sylar/lib64)
 
@@ -43,6 +45,7 @@ set(LIB_SRC
     sylar/address.cc
     sylar/bytearray.cc
     sylar/config.cc
+    sylar/db/sqlite3.cc
     sylar/env.cc
     sylar/daemon.cc
     sylar/fd_manager.cc
@@ -114,6 +117,7 @@ set(LIBS
         ${ZLIB_LIBRARIES}
         ${OPENSSL_LIBRARIES}
         ${PROTOBUF_LIBRARIES}
+        libsqlite3
         )
 
 if(TEST)
@@ -155,6 +159,7 @@ sylar_add_executable(test_zlib_stream "tests/test_zlib_stream.cc" sylar "${LIBS}
 
 endif()
 sylar_add_executable(test_crypto "tests/test_crypto.cc" sylar "${LIBS}")
+sylar_add_executable(test_sqlite3 "tests/test_sqlite3.cc" sylar "${LIBS}")
 
 sylar_add_executable(bin_sylar "sylar/main.cc" sylar "${LIBS}")
 set_target_properties(bin_sylar PROPERTIES OUTPUT_NAME "sylar")
