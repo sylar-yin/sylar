@@ -13,5 +13,5 @@ xx:
 		cd build && make $@; \
 	else \
 		mkdir build; \
-		cd build && cmake ..; \
+		cd build && cmake $@ ..; \
 	fi

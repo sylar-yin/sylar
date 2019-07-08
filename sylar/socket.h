@@ -333,6 +333,8 @@ public:
      */
     virtual std::ostream& dump(std::ostream& os) const;
 
+    virtual std::string toString() const;
+
     /**
      * @brief 返回socket句柄
      */

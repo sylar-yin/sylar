@@ -31,16 +31,15 @@ void RockServer::handleClient(Socket::ptr client) {
         [](sylar::RockRequest::ptr req
            ,sylar::RockResponse::ptr rsp
            ,sylar::RockStream::ptr conn)->bool {
+            SYLAR_LOG_INFO(g_logger) << "handleReq " << req->toString()
+                                     << " body=" << req->getBody();
             bool rt = false;
             ModuleMgr::GetInstance()->foreach(Module::ROCK,
                     [&rt, req, rsp, conn](Module::ptr m) {
                 if(rt) {
                     return;
                 }
-                auto rm = std::dynamic_pointer_cast<RockModule>(m);
-                if(rm) {
-                    rt = rm->handle(req, rsp, conn);
-                }
+                rt = m->handleRequest(req, rsp, conn);
             });
             return rt;
         }
@@ -48,16 +47,15 @@ void RockServer::handleClient(Socket::ptr client) {
     session->setNotifyHandler(
         [](sylar::RockNotify::ptr nty
            ,sylar::RockStream::ptr conn)->bool {
+            SYLAR_LOG_INFO(g_logger) << "handleNty " << nty->toString()
+                                     << " body=" << nty->getBody();
             bool rt = false;
             ModuleMgr::GetInstance()->foreach(Module::ROCK,
                     [&rt, nty, conn](Module::ptr m) {
                 if(rt) {
                     return;
                 }
-                auto rm = std::dynamic_pointer_cast<RockModule>(m);
-                if(rm) {
-                    rt = rm->handle(nty, conn);
-                }
+                rt = m->handleNotify(nty, conn);
             });
             return rt;
         }

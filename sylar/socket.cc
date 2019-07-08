@@ -423,6 +423,12 @@ std::ostream& Socket::dump(std::ostream& os) const {
     return os;
 }
 
+std::string Socket::toString() const {
+    std::stringstream ss;
+    dump(ss);
+    return ss.str();
+}
+
 bool Socket::cancelRead() {
     return IOManager::GetThis()->cancelEvent(m_sock, sylar::IOManager::READ);
 }

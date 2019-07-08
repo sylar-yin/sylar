@@ -44,6 +44,12 @@ public:
     virtual bool onServerReady();
     virtual bool onServerUp();
 
+    virtual bool handleRequest(sylar::Message::ptr req
+                               ,sylar::Message::ptr rsp
+                               ,sylar::Stream::ptr stream);
+    virtual bool handleNotify(sylar::Message::ptr notify
+                              ,sylar::Stream::ptr stream);
+
     virtual std::string statusString();
 
     const std::string& getName() const { return m_name;}
@@ -69,11 +75,18 @@ public:
                ,const std::string& version
                ,const std::string& filename);
 
-    virtual bool handle(sylar::RockRequest::ptr request
+    virtual bool handleRockRequest(sylar::RockRequest::ptr request
                         ,sylar::RockResponse::ptr response
                         ,sylar::RockStream::ptr stream) = 0;
-    virtual bool handle(sylar::RockNotify::ptr request
+    virtual bool handleRockNotify(sylar::RockNotify::ptr notify
                         ,sylar::RockStream::ptr stream) = 0;
+
+    virtual bool handleRequest(sylar::Message::ptr req
+                               ,sylar::Message::ptr rsp
+                               ,sylar::Stream::ptr stream);
+    virtual bool handleNotify(sylar::Message::ptr notify
+                              ,sylar::Stream::ptr stream);
+
 };
 
 class ModuleManager {

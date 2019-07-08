@@ -8,28 +8,45 @@ static sylar::Logger::ptr g_logger = SYLAR_LOG_NAME("system");
 RockStream::RockStream(Socket::ptr sock)
     :AsyncSocketStream(sock, true)
     ,m_decoder(new RockMessageDecoder) {
+    SYLAR_LOG_INFO(g_logger) << "RockStream::RockStream "
+        << this << " "
+        << (sock ? sock->toString() : "");
+}
+
+RockStream::~RockStream() {
+    SYLAR_LOG_INFO(g_logger) << "RockStream::~RockStream "
+        << this << " "
+        << (m_socket ? m_socket->toString() : "");
 }
 
 int32_t RockStream::sendMessage(Message::ptr msg) {
-    RockSendCtx::ptr ctx(new RockSendCtx);
-    ctx->msg = msg;
-    enqueue(ctx);
-    return 1;
+    if(isConnected()) {
+        RockSendCtx::ptr ctx(new RockSendCtx);
+        ctx->msg = msg;
+        enqueue(ctx);
+        return 1;
+    } else {
+        return -1;
+    }
 }
 
 RockResult::ptr RockStream::request(RockRequest::ptr req, uint32_t timeout_ms) {
-    RockCtx::ptr ctx(new RockCtx);
-    ctx->request = req;
-    ctx->sn = req->getSn();
-    ctx->timeout = timeout_ms;
-    ctx->scheduler = sylar::Scheduler::GetThis();
-    ctx->fiber = sylar::Fiber::GetThis();
-    addCtx(ctx);
-    //ctx->timer = sylar::IOManager::GetThis()->addTimer(timeout_ms,
-    //        std::bind(&AsyncSocketStream::onTimeOut, shared_from_this(), ctx));
-    enqueue(ctx);
-    sylar::Fiber::YieldToHold();
-    return std::make_shared<RockResult>(ctx->result, ctx->response);
+    if(isConnected()) {
+        RockCtx::ptr ctx(new RockCtx);
+        ctx->request = req;
+        ctx->sn = req->getSn();
+        ctx->timeout = timeout_ms;
+        ctx->scheduler = sylar::Scheduler::GetThis();
+        ctx->fiber = sylar::Fiber::GetThis();
+        addCtx(ctx);
+        ctx->timer = sylar::IOManager::GetThis()->addTimer(timeout_ms,
+                std::bind(&RockStream::onTimeOut, shared_from_this(), ctx));
+        enqueue(ctx);
+        sylar::Fiber::YieldToHold();
+        return std::make_shared<RockResult>(ctx->result, ctx->response);
+    } else {
+        return std::make_shared<RockResult>(AsyncSocketStream::NOT_CONNECT, nullptr);
+    }
 }
 
 bool RockStream::RockSendCtx::doSend(AsyncSocketStream::ptr stream) {
@@ -43,6 +60,7 @@ bool RockStream::RockCtx::doSend(AsyncSocketStream::ptr stream) {
 }
 
 AsyncSocketStream::Ctx::ptr RockStream::doRecv() {
+    SYLAR_LOG_INFO(g_logger) << "doRecv " << this;
     auto msg = m_decoder->parseFrom(shared_from_this());
     if(!msg) {
         innerClose();
@@ -60,7 +78,7 @@ AsyncSocketStream::Ctx::ptr RockStream::doRecv() {
         RockCtx::ptr ctx = getAndDelCtxAs<RockCtx>(rsp->getSn());
         if(!ctx) {
             SYLAR_LOG_INFO(g_logger) << "RockStream request timeout reponse="
-                << rsp->toString() << " - request=" << ctx->request->toString();
+                << rsp->toString();
             return nullptr;
         }
         ctx->result = rsp->getResult();
@@ -102,7 +120,10 @@ void RockStream::handleRequest(sylar::RockRequest::ptr req) {
     sylar::RockResponse::ptr rsp = req->createResponse();
     if(!m_requestHandler(req, rsp
         ,std::dynamic_pointer_cast<RockStream>(shared_from_this()))) {
+        sendMessage(rsp);
         innerClose();
+    } else {
+        sendMessage(rsp);
     }
 }
 
@@ -128,5 +149,34 @@ bool RockConnection::connect(sylar::Address::ptr addr) {
     return m_socket->connect(addr);
 }
 
+RockResult::ptr RockFairLoadBalance::request(RockRequest::ptr req, uint32_t timeout_ms) {
+    uint64_t ts = sylar::GetCurrentMS();
+    {
+        if((ts - m_lastInitTime) > 500) {
+            RWMutexType::WriteLock lock(m_mutex);
+            initWeight();
+            m_lastInitTime = ts;
+        }
+    }
+    auto conn = getAsFair();
+    if(!conn) {
+        return std::make_shared<RockResult>(AsyncSocketStream::NOT_CONNECT, nullptr);
+    }
+    auto& stats = conn->get(ts / 1000);
+    stats.incDoing(1);
+    stats.incTotal(1);
+    auto r = conn->getStreamAs<RockStream>()->request(req, timeout_ms);
+    uint64_t ts2 = sylar::GetCurrentMS();
+    if(r->result == 0) {
+        stats.incOks(1);
+        stats.incUsedTime(ts2 -ts);
+    } else if(r->result == AsyncSocketStream::TIMEOUT) {
+        stats.incTimeouts(1);
+    } else if(r->result < 0) {
+        stats.incErrs(1);
+    }
+    stats.decDoing(1);
+    return r;
+}
 
 }
