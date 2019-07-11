@@ -70,6 +70,17 @@ std::string Time2Str(time_t ts, const std::string& format) {
     return buf;
 }
 
+std::string ToUpper(const std::string& name) {
+    std::string rt = name;
+    std::transform(rt.begin(), rt.end(), rt.begin(), ::toupper);
+    return rt;
+}
+
+std::string ToLower(const std::string& name) {
+    std::string rt = name;
+    std::transform(rt.begin(), rt.end(), rt.begin(), ::tolower);
+    return rt;
+}
 
 void FSUtil::ListAllFile(std::vector<std::string>& files
                             ,const std::string& path

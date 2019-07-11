@@ -45,7 +45,7 @@ int SQLite3::close() {
     return rc;
 }
 
-int SQLite3::execute(const char* format, ...) const {
+int SQLite3::execute(const char* format, ...) {
     va_list ap;
     va_start(ap, format);
     std::shared_ptr<char> sql(sqlite3_vmprintf(format, ap), sqlite3_free);
@@ -53,11 +53,31 @@ int SQLite3::execute(const char* format, ...) const {
     return sqlite3_exec(m_db, sql.get(), 0, 0, 0);
 }
 
-int SQLite3::execute(const std::string& sql) const {
+ISQLData::ptr SQLite3::query(const char* format, ...) {
+    va_list ap;
+    va_start(ap, format);
+    std::shared_ptr<char> sql(sqlite3_vmprintf(format, ap), sqlite3_free);
+    va_end(ap);
+    auto stmt = SQLite3Stmt::Create(shared_from_this(), sql.get());
+    if(!stmt) {
+        return nullptr;
+    }
+    return stmt->query();
+}
+
+ISQLData::ptr SQLite3::query(const std::string& sql) {
+    auto stmt = SQLite3Stmt::Create(shared_from_this(), sql.c_str());
+    if(!stmt) {
+        return nullptr;
+    }
+    return stmt->query();
+}
+
+int SQLite3::execute(const std::string& sql) {
     return sqlite3_exec(m_db, sql.c_str(), 0, 0, 0);
 }
 
-int64_t SQLite3::getLastInsertRowid() const {
+int64_t SQLite3::getLastInsertId() {
     return sqlite3_last_insert_rowid(m_db);
 }
 

@@ -43,14 +43,17 @@ void data_from_hexstring(const char *hexstring, size_t length, void *output);
 std::string data_from_hexstring(const char *hexstring, size_t length);
 std::string data_from_hexstring(const std::string &data);
 
-void replace(std::string &str, char find, char replaceWith);
-void replace(std::string &str, char find, const std::string &replaceWith);
-void replace(std::string &str, const std::string &find, const std::string &replaceWith);
+std::string replace(const std::string &str, char find, char replaceWith);
+std::string replace(const std::string &str, char find, const std::string &replaceWith);
+std::string replace(const std::string &str, const std::string &find, const std::string &replaceWith);
 
 std::vector<std::string> split(const std::string &str, char delim, size_t max = ~0);
 std::vector<std::string> split(const std::string &str, const char *delims, size_t max = ~0);
 
 std::string random_string(size_t len);
+
+std::string WStringToString(const std::wstring& ws);
+std::wstring StringToWString(const std::string& s);
 }
 
 #endif
