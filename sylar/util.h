@@ -87,7 +87,7 @@ public:
                     ,std::ios_base::openmode mode);
 };
 
-template<class Map, class K, class V>
+template<class V, class Map, class K>
 V GetParamValue(const Map& m, const K& k, const V& def = V()) {
     auto it = m.find(k);
     if(it == m.end()) {
@@ -100,7 +100,7 @@ V GetParamValue(const Map& m, const K& k, const V& def = V()) {
     return def;
 }
 
-template<class Map, class K, class V>
+template<class V, class Map, class K>
 bool CheckGetParamValue(const Map& m, const K& k, V& v) {
     auto it = m.find(k);
     if(it == m.end()) {
@@ -195,6 +195,22 @@ public:
     static bool compareAndSwapBool(volatile T& t, S old_val, S new_val) {
         return __sync_bool_compare_and_swap(&t, (T)old_val, (T)new_val);
     }
+};
+
+template<class T>
+void nop(T*) {}
+
+template<class T>
+void delete_array(T* v) {
+    if(v) {
+        delete[] v;
+    }
+}
+
+class StringUtil {
+public:
+    static std::string Format(const char* fmt, ...);
+    static std::string Formatv(const char* fmt, va_list ap);
 };
 
 }
