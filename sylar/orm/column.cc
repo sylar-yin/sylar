@@ -27,6 +27,7 @@ Column::Type Column::ParseType(const std::string& v) {
     XX(TYPE_DOUBLE, double, double);
     XX(TYPE_STRING, string, std::string);
     XX(TYPE_BLOB, blob, blob);
+    XX(TYPE_DATETIME, datetime, datetime);
 
 #undef XX
     return TYPE_NULL;
@@ -50,6 +51,7 @@ std::string Column::TypeToString(Type type) {
     XX(TYPE_DOUBLE, double);
     XX(TYPE_STRING, std::string);
     XX(TYPE_BLOB, std::string);
+    XX(TYPE_DATETIME, int64_t);
 #undef XX
     return "null";
 }
@@ -72,8 +74,44 @@ std::string Column::getSQLite3TypeString() {
     XX(TYPE_DOUBLE, REAL);
     XX(TYPE_STRING, TEXT);
     XX(TYPE_BLOB, BLOB);
+    XX(TYPE_DATETIME, DATETIME);
 #undef XX
     return "";
+}
+
+std::string Column::getDefaultValueString() {
+    if(m_default.empty()) {
+        return "";
+    }
+    if(m_dtype <= TYPE_DOUBLE) {
+        return m_default;
+    }
+    if(m_dtype <= TYPE_BLOB) {
+        return "\"" + m_default + "\"";
+    }
+    if(m_default == "current_timestamp") {
+        return "time(0)";
+    }
+    return "sylar::Str2Time(\"" + m_default + "\")";
+}
+
+std::string Column::getSQLite3Default() {
+    if(m_dtype <= TYPE_DOUBLE) {
+        if(m_default.empty()) {
+            return "0";
+        }
+        return m_default;
+    }
+    if(m_dtype <= TYPE_BLOB) {
+        if(m_default.empty()) {
+            return "''";
+        }
+        return "'" + m_default + "'";
+    }
+    if(m_default.empty()) {
+        return "current_timestamp";
+    }
+    return m_default;
 }
 
 bool Column::init(const tinyxml2::XMLElement& node) {
@@ -98,6 +136,10 @@ bool Column::init(const tinyxml2::XMLElement& node) {
     }
     if(node.Attribute("desc")) {
         m_desc = node.Attribute("desc");
+    }
+
+    if(node.Attribute("default")) {
+        m_default = node.Attribute("default");
     }
 
     m_autoIncrement = node.BoolAttribute("auto_increment", false);

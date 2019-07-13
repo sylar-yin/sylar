@@ -26,12 +26,18 @@ public:
         TYPE_INT64,
         TYPE_UINT64,
         TYPE_STRING,
-        TYPE_BLOB
+        TYPE_BLOB,
+        TYPE_DATETIME
     };
 
     const std::string& getName() const { return m_name;}
     const std::string& getType() const { return m_type;}
     const std::string& getDesc() const { return m_desc;}
+    const std::string& getDefault() const { return m_default;}
+
+    std::string getDefaultValueString();
+    std::string getSQLite3Default();
+
     bool isAutoIncrement() const { return m_autoIncrement;}
     Type getDType() const { return m_dtype;}
 
@@ -51,6 +57,7 @@ public:
 private:
     std::string m_name;
     std::string m_type;
+    std::string m_default;
     std::string m_desc;
     int m_index;
 

@@ -70,6 +70,15 @@ std::string Time2Str(time_t ts, const std::string& format) {
     return buf;
 }
 
+time_t Str2Time(const char* str, const char* format) {
+    struct tm t;
+    memset(&t, 0, sizeof(t));
+    if(!strptime(str, format, &t)) {
+        return 0;
+    }
+    return mktime(&t);
+}
+
 std::string ToUpper(const std::string& name) {
     std::string rt = name;
     std::transform(rt.begin(), rt.end(), rt.begin(), ::toupper);

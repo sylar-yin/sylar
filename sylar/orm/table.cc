@@ -210,6 +210,9 @@ std::string Table::genToStringSrc(const std::string& class_name) {
                 || (*it)->getDType() == Column::TYPE_INT64) {
             ss << "std::to_string(" << GetAsMemberName((*it)->getName()) << ")"
                << ";" << std::endl;
+        } else if((*it)->getDType() == Column::TYPE_DATETIME) {
+            ss << "sylar::Time2Str(" << GetAsMemberName((*it)->getName()) << ")"
+               << ";" << std::endl;
         } else {
             ss << GetAsMemberName((*it)->getName())
                << ";" << std::endl;
@@ -250,7 +253,8 @@ void Table::gen_src(const std::string& path) {
         if(it != cols.begin()) {
             ofs << std::endl << "    ,";
         }
-        ofs << GetAsMemberName((*it)->getName()) << "()";
+        ofs << GetAsMemberName((*it)->getName()) << "("
+            << (*it)->getDefaultValueString() << ")";
     }
     ofs << " {" << std::endl;
     ofs << "}" << std::endl;
@@ -536,7 +540,11 @@ void Table::gen_dao_src(std::ofstream& ofs) {
         if(is_exists(pks, i)) {
             continue;
         }
-        ofs << ", info->" << GetAsMemberName(i->getName());
+        if(i->getDType() == Column::TYPE_DATETIME) {
+            ofs << ", sylar::Time2Str(info->" << GetAsMemberName(i->getName()) << ")";
+        } else {
+            ofs << ", info->" << GetAsMemberName(i->getName());
+        }
     }
     for(auto& i : pks) {
         ofs << ", info->" << GetAsMemberName(i->getName());
@@ -550,6 +558,7 @@ void Table::gen_dao_src(std::ofstream& ofs) {
     ofs << "    int rt = conn->execStmt(\"insert into " << m_name << " (";
     is_first = true;
     Column::ptr auto_inc;
+
     for(auto& i : m_cols) {
         if(i->isAutoIncrement()) {
             auto_inc = i;
@@ -580,7 +589,11 @@ void Table::gen_dao_src(std::ofstream& ofs) {
         if(i->isAutoIncrement()) {
             continue;
         }
-        ofs << ", info->" << GetAsMemberName(i->getName());
+        if(i->getDType() == Column::TYPE_DATETIME) {
+            ofs << ", sylar::Time2Str(info->" << GetAsMemberName(i->getName()) << ")";
+        } else {
+            ofs << ", info->" << GetAsMemberName(i->getName());
+        }
     }
     ofs << ");" << std::endl;
     if(auto_inc) {
@@ -666,21 +679,35 @@ void Table::gen_dao_src(std::ofstream& ofs) {
     ofs << "    do {" << std::endl;
     ofs << "        " << GetAsClassName(class_name) << "::ptr v(new "
         << GetAsClassName(class_name) << ");" << std::endl;
-    for(size_t i = 0; i < m_cols.size(); ++i) {
-        ofs << "        v->" << GetAsMemberName(m_cols[i]->getName()) << " = rt->get";
-        if(m_cols[i]->getDType() <= Column::TYPE_UINT32) {
-            ofs << "Int";
-        } else if(m_cols[i]->getDType() <= Column::TYPE_DOUBLE) {
-            ofs << "Double";
-        } else if(m_cols[i]->getDType() <= Column::TYPE_UINT64) {
-            ofs << "Int64";
-        } else if(m_cols[i]->getDType() == Column::TYPE_STRING) {
-            ofs << "TextString";
-        } else if(m_cols[i]->getDType() == Column::TYPE_BLOB) {
-            ofs << "Blob";
-        }
-        ofs << "(" << (i) << ");" << std::endl;
+
+#define PARSE_OBJECT(prefix) \
+    for(size_t i = 0; i < m_cols.size(); ++i) { \
+        ofs << prefix "v->" << GetAsMemberName(m_cols[i]->getName()) << " = "; \
+        if(m_cols[i]->getDType() == Column::TYPE_DATETIME) { \
+            ofs << "sylar::Str2Time("; \
+        } \
+        ofs << "rt->get"; \
+        if(m_cols[i]->getDType() <= Column::TYPE_UINT32) { \
+            ofs << "Int"; \
+        } else if(m_cols[i]->getDType() <= Column::TYPE_DOUBLE) { \
+            ofs << "Double"; \
+        } else if(m_cols[i]->getDType() <= Column::TYPE_UINT64) { \
+            ofs << "Int64"; \
+        } else if(m_cols[i]->getDType() == Column::TYPE_STRING) { \
+            ofs << "TextString"; \
+        } else if(m_cols[i]->getDType() == Column::TYPE_BLOB) { \
+            ofs << "Blob"; \
+        } else if(m_cols[i]->getDType() == Column::TYPE_DATETIME) { \
+            ofs << "Text"; \
+        } \
+        ofs << "(" << (i) << ")"; \
+        if(m_cols[i]->getDType() == Column::TYPE_DATETIME) { \
+            ofs << ")"; \
+        } \
+        ofs << ";" << std::endl; \
     }
+
+    PARSE_OBJECT("        ");
     ofs << "        results.push_back(v);" << std::endl;
     ofs << "    } while (rt->next());" << std::endl;
     ofs << "    return 0;" << std::endl;
@@ -723,21 +750,7 @@ void Table::gen_dao_src(std::ofstream& ofs) {
     ofs << "    }" << std::endl;
     ofs << "    " << GetAsClassName(class_name) << "::ptr v(new "
         << GetAsClassName(class_name) << ");" << std::endl;
-    for(size_t i = 0; i < m_cols.size(); ++i) {
-        ofs << "    v->" << GetAsMemberName(m_cols[i]->getName()) << " = rt->get";
-        if(m_cols[i]->getDType() <= Column::TYPE_UINT32) {
-            ofs << "Int";
-        } else if(m_cols[i]->getDType() <= Column::TYPE_DOUBLE) {
-            ofs << "Double";
-        } else if(m_cols[i]->getDType() <= Column::TYPE_UINT64) {
-            ofs << "Int64";
-        } else if(m_cols[i]->getDType() == Column::TYPE_STRING) {
-            ofs << "TextString";
-        } else if(m_cols[i]->getDType() == Column::TYPE_BLOB) {
-            ofs << "Blob";
-        }
-        ofs << "(" << (i) << ");" << std::endl;
-    }
+    PARSE_OBJECT("    ");
     ofs << "    return v;" << std::endl;
     ofs << "}" << std::endl << std::endl;
 
@@ -786,21 +799,7 @@ void Table::gen_dao_src(std::ofstream& ofs) {
             ofs << "    }" << std::endl;
             ofs << "    " << GetAsClassName(class_name) << "::ptr v(new "
                 << GetAsClassName(class_name) << ");" << std::endl;
-            for(size_t i = 0; i < m_cols.size(); ++i) {
-                ofs << "    v->" << GetAsMemberName(m_cols[i]->getName()) << " = rt->get";
-                if(m_cols[i]->getDType() <= Column::TYPE_UINT32) {
-                    ofs << "Int";
-                } else if(m_cols[i]->getDType() <= Column::TYPE_DOUBLE) {
-                    ofs << "Double";
-                } else if(m_cols[i]->getDType() <= Column::TYPE_UINT64) {
-                    ofs << "Int64";
-                } else if(m_cols[i]->getDType() == Column::TYPE_STRING) {
-                    ofs << "TextString";
-                } else if(m_cols[i]->getDType() == Column::TYPE_BLOB) {
-                    ofs << "Blob";
-                }
-                ofs << "(" << (i) << ");" << std::endl;
-            }
+            PARSE_OBJECT("    ");
             ofs << "    return v;" << std::endl;
             ofs << "}" << std::endl << std::endl;
         } else if(i->getDType() == Index::TYPE_INDEX) {
@@ -848,21 +847,7 @@ void Table::gen_dao_src(std::ofstream& ofs) {
             ofs << "    do {" << std::endl;
             ofs << "        " << GetAsClassName(class_name) << "::ptr v(new "
                 << GetAsClassName(class_name) << ");" << std::endl;
-            for(size_t i = 0; i < m_cols.size(); ++i) {
-                ofs << "        v->" << GetAsMemberName(m_cols[i]->getName()) << " = rt->get";
-                if(m_cols[i]->getDType() <= Column::TYPE_UINT32) {
-                    ofs << "Int";
-                } else if(m_cols[i]->getDType() <= Column::TYPE_DOUBLE) {
-                    ofs << "Double";
-                } else if(m_cols[i]->getDType() <= Column::TYPE_UINT64) {
-                    ofs << "Int64";
-                } else if(m_cols[i]->getDType() == Column::TYPE_STRING) {
-                    ofs << "TextString";
-                } else if(m_cols[i]->getDType() == Column::TYPE_BLOB) {
-                    ofs << "Blob";
-                }
-                ofs << "(" << (i) << ");" << std::endl;
-            }
+            PARSE_OBJECT("        ");
             ofs << "        results.push_back(v);" << std::endl;
             ofs << "    } while (rt->next());" << std::endl;
             ofs << "    return 0;" << std::endl;
@@ -883,7 +868,7 @@ void Table::gen_dao_src(std::ofstream& ofs) {
             ofs << " PRIMARY KEY AUTOINCREMENT";
             has_auto_increment = true;
         } else {
-            ofs << " NOT NULL";
+            ofs << " NOT NULL DEFAULT " << i->getSQLite3Default();
         }
         is_first = false;
     }
