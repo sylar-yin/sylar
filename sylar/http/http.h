@@ -376,7 +376,7 @@ public:
      * @param[in] def 默认值
      * @return 如果存在则返回对应值,否则返回默认值
      */
-    std::string getParam(const std::string& key, const std::string& def = "") const;
+    std::string getParam(const std::string& key, const std::string& def = "");
 
     /**
      * @brief 获取HTTP请求的Cookie参数
@@ -384,7 +384,7 @@ public:
      * @param[in] def 默认值
      * @return 如果存在则返回对应值,否则返回默认值
      */
-    std::string getCookie(const std::string& key, const std::string& def = "") const;
+    std::string getCookie(const std::string& key, const std::string& def = "");
 
     
     /**
@@ -537,6 +537,12 @@ public:
      * @return 字符串
      */
     std::string toString() const;
+
+    void init();
+    void initParam();
+    void initQueryParam();
+    void initBodyParam();
+    void initCookies();
 private:
     /// HTTP方法
     HttpMethod m_method;
@@ -546,6 +552,8 @@ private:
     bool m_close;
     /// 是否为websocket
     bool m_websocket;
+
+    uint8_t m_parserParamFlag;
     /// 请求路径
     std::string m_path;
     /// 请求参数

@@ -666,7 +666,7 @@ public:
         if(i.level != LogLevel::UNKNOW) {
             n["level"] = LogLevel::ToString(i.level);
         }
-        if(i.formatter.empty()) {
+        if(!i.formatter.empty()) {
             n["formatter"] = i.formatter;
         }
 

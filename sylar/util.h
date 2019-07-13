@@ -212,6 +212,9 @@ class StringUtil {
 public:
     static std::string Format(const char* fmt, ...);
     static std::string Formatv(const char* fmt, va_list ap);
+
+    static std::string UrlEncode(const std::string& str, bool space_as_plus = true);
+    static std::string UrlDecode(const std::string& str, bool space_as_plus = true);
 };
 
 }
