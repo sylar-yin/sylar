@@ -50,7 +50,8 @@ std::string replace(const std::string &str, const std::string &find, const std::
 std::vector<std::string> split(const std::string &str, char delim, size_t max = ~0);
 std::vector<std::string> split(const std::string &str, const char *delims, size_t max = ~0);
 
-std::string random_string(size_t len);
+std::string random_string(size_t len
+        ,const std::string& chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
 
 std::string WStringToString(const std::wstring& ws);
 std::wstring StringToWString(const std::string& s);

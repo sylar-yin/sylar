@@ -2,6 +2,7 @@
 #include <iostream>
 #include <assert.h>
 #include <openssl/err.h>
+#include "sylar/sylar.h"
 
 void test_aes256ecb() {
     for(int i = 0; i < 4097; ++i) {
@@ -166,5 +167,13 @@ int main(int argc, char** argv) {
     //test_aes256cbc();
     //test_one();
     test_rsa();
+    //for(int i = 0; i < 10000; ++i) {
+    //    auto v = sylar::random_string(128, "0123456789");
+    //    std::cout << "[" << v << "]" << std::endl;
+    //    for(auto& n : v) {
+    //        SYLAR_ASSERT(n);
+    //    }
+    //}
+    //std::cout << "===" << std::endl;
     return 0;
 }

@@ -544,16 +544,15 @@ std::vector<std::string> split(const std::string &str, const char *delims, size_
     return result;
 }
 
-std::string random_string(size_t len) {
-    if(len == 0) {
+std::string random_string(size_t len, const std::string& chars) {
+    if(len == 0 || chars.empty()) {
         return "";
     }
-    static const char CHARS[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    static const int CHARS_SIZE = sizeof(CHARS) - 1;
     std::string rt;
     rt.resize(len);
+    int count = chars.size();
     for(size_t i = 0; i < len; ++i) {
-        rt[i] = CHARS[rand() % CHARS_SIZE];
+        rt[i] = chars[rand() % count];
     }
     return rt;
 }
