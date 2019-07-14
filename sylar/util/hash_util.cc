@@ -549,10 +549,11 @@ std::string random_string(size_t len) {
         return "";
     }
     static const char CHARS[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    static const int CHARS_SIZE = sizeof(CHARS) - 1;
     std::string rt;
     rt.resize(len);
     for(size_t i = 0; i < len; ++i) {
-        rt[i] = CHARS[rand() % sizeof(CHARS)];
+        rt[i] = CHARS[rand() % CHARS_SIZE];
     }
     return rt;
 }
