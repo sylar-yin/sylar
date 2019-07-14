@@ -190,10 +190,7 @@ SQLite3Stmt::~SQLite3Stmt() {
 }
 
 SQLite3Data::ptr SQLite3Stmt::query() {
-    if(step() == SQLITE_ROW) {
-        return SQLite3Data::ptr(new SQLite3Data(shared_from_this()));
-    }
-    return nullptr;
+    return SQLite3Data::ptr(new SQLite3Data(shared_from_this()));
 }
 
 int SQLite3Stmt::execute() {

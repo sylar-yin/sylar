@@ -712,6 +712,8 @@ struct LogIniter {
                     if(!(i == *it)) {
                         //修改的logger
                         logger = SYLAR_LOG_NAME(i.name);
+                    } else {
+                        continue;
                     }
                 }
                 logger->setLevel(i.level);
