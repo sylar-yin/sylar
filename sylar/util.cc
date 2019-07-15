@@ -466,5 +466,57 @@ std::string StringUtil::UrlDecode(const std::string& str, bool space_as_plus) {
     }
 }
 
+std::string StringUtil::Trim(const std::string& str, const std::string& delimit) {
+    auto begin = str.find_first_not_of(delimit);
+    if(begin == std::string::npos) {
+        return "";
+    }
+    auto end = str.find_last_not_of(delimit);
+    return str.substr(begin, end - begin + 1);
+}
+
+std::string StringUtil::TrimLeft(const std::string& str, const std::string& delimit) {
+    auto begin = str.find_first_not_of(delimit);
+    if(begin == std::string::npos) {
+        return "";
+    }
+    return str.substr(begin);
+}
+
+std::string StringUtil::TrimRight(const std::string& str, const std::string& delimit) {
+    auto end = str.find_last_not_of(delimit);
+    if(end == std::string::npos) {
+        return "";
+    }
+    return str.substr(0, end);
+}
+
+std::string StringUtil::WStringToString(const std::wstring& ws) {
+    std::string str_locale = setlocale(LC_ALL, "");
+    const wchar_t* wch_src = ws.c_str();
+    size_t n_dest_size = wcstombs(NULL, wch_src, 0) + 1;
+    char *ch_dest = new char[n_dest_size];
+    memset(ch_dest,0,n_dest_size);
+    wcstombs(ch_dest,wch_src,n_dest_size);
+    std::string str_result = ch_dest;
+    delete []ch_dest;
+    setlocale(LC_ALL, str_locale.c_str());
+    return str_result;
+}
+
+std::wstring StringUtil::StringToWString(const std::string& s) {
+    std::string str_locale = setlocale(LC_ALL, "");
+    const char* chSrc = s.c_str();
+    size_t n_dest_size = mbstowcs(NULL, chSrc, 0) + 1;
+    wchar_t* wch_dest = new wchar_t[n_dest_size];
+    wmemset(wch_dest, 0, n_dest_size);
+    mbstowcs(wch_dest,chSrc,n_dest_size);
+    std::wstring wstr_result = wch_dest;
+    delete []wch_dest;
+    setlocale(LC_ALL, str_locale.c_str());
+    return wstr_result;
+}
+
+
 
 }

@@ -52,9 +52,6 @@ std::vector<std::string> split(const std::string &str, const char *delims, size_
 
 std::string random_string(size_t len
         ,const std::string& chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
-
-std::string WStringToString(const std::wstring& ws);
-std::wstring StringToWString(const std::string& s);
 }
 
 #endif

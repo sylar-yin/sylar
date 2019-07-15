@@ -557,30 +557,4 @@ std::string random_string(size_t len, const std::string& chars) {
     return rt;
 }
 
-std::string WStringToString(const std::wstring& ws) {
-    std::string str_locale = setlocale(LC_ALL, "");
-    const wchar_t* wch_src = ws.c_str();
-    size_t n_dest_size = wcstombs(NULL, wch_src, 0) + 1;
-    char *ch_dest = new char[n_dest_size];
-    memset(ch_dest,0,n_dest_size);
-    wcstombs(ch_dest,wch_src,n_dest_size);
-    std::string str_result = ch_dest;
-    delete []ch_dest;
-    setlocale(LC_ALL, str_locale.c_str());
-    return str_result;
-}
-
-std::wstring StringToWString(const std::string& s) {
-    std::string str_locale = setlocale(LC_ALL, "");
-    const char* chSrc = s.c_str();
-    size_t n_dest_size = mbstowcs(NULL, chSrc, 0) + 1;
-    wchar_t* wch_dest = new wchar_t[n_dest_size];
-    wmemset(wch_dest, 0, n_dest_size);
-    mbstowcs(wch_dest,chSrc,n_dest_size);
-    std::wstring wstr_result = wch_dest;
-    delete []wch_dest;
-    setlocale(LC_ALL, str_locale.c_str());
-    return wstr_result;
-}
-
 }
