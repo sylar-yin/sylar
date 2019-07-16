@@ -27,7 +27,7 @@ public:
         TYPE_UINT64,
         TYPE_STRING,
         TYPE_BLOB,
-        TYPE_DATETIME
+        TYPE_TIMESTAMP
     };
 
     const std::string& getName() const { return m_name;}
@@ -54,15 +54,22 @@ public:
 
     std::string getDTypeString() { return TypeToString(m_dtype);}
     std::string getSQLite3TypeString();
+    std::string getMySQLTypeString();
+
+    std::string getBindString();
+    std::string getGetString();
+    const std::string& getUpdate() const { return m_update;}
 private:
     std::string m_name;
     std::string m_type;
     std::string m_default;
+    std::string m_update;
     std::string m_desc;
     int m_index;
 
     bool m_autoIncrement;
     Type m_dtype;
+    int m_length;
 };
 
 }

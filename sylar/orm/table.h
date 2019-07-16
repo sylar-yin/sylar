@@ -38,12 +38,18 @@ private:
 
     void gen_dao_inc(std::ofstream& ofs);
     void gen_dao_src(std::ofstream& ofs);
+
+    enum DBType {
+        TYPE_SQLITE3 = 1,
+        TYPE_MYSQL = 2
+    };
 private:
     std::string m_name;
     std::string m_namespace;
     std::string m_desc;
     std::string m_subfix = "_info";
-    std::string m_dbclass = "sylar::SQLite3";
+    DBType m_type = TYPE_SQLITE3;
+    std::string m_dbclass = "sylar::IDB";
     std::vector<Column::ptr> m_cols;
     std::vector<Index::ptr> m_idxs;
 };

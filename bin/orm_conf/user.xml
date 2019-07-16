@@ -1,12 +1,12 @@
 <table name="user" namespace="test.orm">
     <columns>
         <column name="id" type="int64" desc="唯一主键" auto_increment="true"/>
-        <column name="name" type="string" desc="名称"/>
+        <column name="name" type="string" desc="名称" length="30"/>
         <column name="email" type="string" default="xx@xx.com"/>
         <column name="phone" type="string"/>
         <column name="status" type="int32" default="10"/>
-        <column name="create_time" type="datetime" default="current_timestamp"/>
-        <column name="update_time" type="datetime" default="current_timestamp"/>
+        <column name="create_time" type="timestamp"/>
+        <column name="update_time" type="timestamp" default="current_timestamp" update="current_timestamp"/>
     </columns>
     <indexs>
         <index name="pk" cols="id" type="pk" desc="主键"/>

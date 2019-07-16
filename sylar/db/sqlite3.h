@@ -26,7 +26,7 @@ struct SQLite3Binder {
 };
 }
 
-class SQLite3 : public ISQLUpdate, public ISQLQuery
+class SQLite3 : public IDB
               , public std::enable_shared_from_this<SQLite3> {
 public:
     enum Flags {
@@ -40,8 +40,11 @@ public:
             ,int flags = READWRITE | CREATE);
     ~SQLite3();
 
-    int getErrorCode() const;
-    std::string getErrorMsg() const;
+
+    IStmt::ptr prepare(const std::string& stmt) override;
+
+    int getErrno() override;
+    std::string getErrStr() override;
 
     int execute(const char* format, ...) override;
     int execute(const std::string& sql) override;
@@ -68,7 +71,10 @@ class SQLite3Stmt;
 class SQLite3Data : public ISQLData {
 public:
     typedef std::shared_ptr<SQLite3Data> ptr;
-    SQLite3Data(std::shared_ptr<SQLite3Stmt> stmt);
+    SQLite3Data(std::shared_ptr<SQLite3Stmt> stmt, int err
+                ,const char* errstr);
+    int getErrno() const override { return m_errno;}
+    const std::string& getErrStr() const override { return m_errstr;}
 
     int getDataCount() override;
     int getColumnCount() override;
@@ -77,19 +83,31 @@ public:
 
     std::string getColumnName(int idx);
 
-    int getInt(int idx);
-    double getDouble(int idx);
-    int64_t getInt64(int idx);
-    const char* getText(int idx);
-    std::string getTextString(int idx);
-    std::string getBlob(int idx);
+    bool isNull(int idx) override;
+    int8_t getInt8(int idx) override;
+    uint8_t getUint8(int idx) override;
+    int16_t getInt16(int idx) override;
+    uint16_t getUint16(int idx) override;
+    int32_t getInt32(int idx) override;
+    uint32_t getUint32(int idx) override;
+    int64_t getInt64(int idx) override;
+    uint64_t getUint64(int idx) override;
+    float getFloat(int idx) override;
+    double getDouble(int idx) override;
+    std::string getString(int idx) override;
+    std::string getBlob(int idx) override;
+    time_t getTime(int idx) override;
 
     bool next();
 private:
+    int m_errno;
+    bool m_first;
+    std::string m_errstr;
     std::shared_ptr<SQLite3Stmt> m_stmt;
 };
 
-class SQLite3Stmt : public std::enable_shared_from_this<SQLite3Stmt> {
+class SQLite3Stmt : public IStmt
+                    ,public std::enable_shared_from_this<SQLite3Stmt> {
 friend class SQLite3Data;
 public:
     typedef std::shared_ptr<SQLite3Stmt> ptr;
@@ -99,22 +117,43 @@ public:
     };
     static SQLite3Stmt::ptr Create(SQLite3::ptr db, const char* stmt);
 
-    virtual ~SQLite3Stmt();
     int prepare(const char* stmt);
+    ~SQLite3Stmt();
     int finish();
 
     int bind(int idx, int32_t value);
+    int bind(int idx, uint32_t value);
     int bind(int idx, double value);
     int bind(int idx, int64_t value);
+    int bind(int idx, uint64_t value);
     int bind(int idx, const char* value, Type type = COPY);
     int bind(int idx, const void* value, int len, Type type = COPY);
     int bind(int idx, const std::string& value, Type type = COPY);
     // for null type
     int bind(int idx);
 
+    int bindInt8(int idx, int8_t& value) override;
+    int bindUint8(int idx, uint8_t& value) override;
+    int bindInt16(int idx, int16_t& value) override;
+    int bindUint16(int idx, uint16_t& value) override;
+    int bindInt32(int idx, int32_t& value) override;
+    int bindUint32(int idx, uint32_t& value) override;
+    int bindInt64(int idx, int64_t& value) override;
+    int bindUint64(int idx, uint64_t& value) override;
+    int bindFloat(int idx, float& value) override;
+    int bindDouble(int idx, double& value) override;
+    int bindString(int idx, char* value) override;
+    int bindString(int idx, std::string& value) override;
+    int bindBlob(int idx, void* value, int64_t size) override;
+    int bindBlob(int idx, std::string& value) override;
+    int bindTime(int idx, time_t value) override;
+    int bindNull(int idx) override;
+
     int bind(const char* name, int32_t value);
+    int bind(const char* name, uint32_t value);
     int bind(const char* name, double value);
     int bind(const char* name, int64_t value);
+    int bind(const char* name, uint64_t value);
     int bind(const char* name, const char* value, Type type = COPY);
     int bind(const char* name, const void* value, int len, Type type = COPY);
     int bind(const char* name, const std::string& value, Type type = COPY);
@@ -124,8 +163,12 @@ public:
     int step();
     int reset();
 
-    SQLite3Data::ptr query();
-    int execute();
+    ISQLData::ptr query() override;
+    int execute() override;
+    int64_t getLastInsertId() override;
+
+    int getErrno() override;
+    std::string getErrStr() override;
 protected:
     SQLite3Stmt(SQLite3::ptr db);
 protected:
@@ -213,18 +256,18 @@ struct SQLite3Binder<N, type, Tail...> { \
     } \
 };
 
-template<size_t N, typename... Tail>
-struct SQLite3Binder<N, const char(&)[], Tail...> {
-    static int Bind(SQLite3Stmt::ptr stmt
-                    , const char value[]
-                    , const Tail&... tail) {
-        int rt = stmt->bind(N, (const char*)value);
-        if(rt != SQLITE_OK) {
-            return rt;
-        }
-        return SQLite3Binder<N + 1, Tail...>::Bind(stmt, tail...);
-    }
-};
+//template<size_t N, typename... Tail>
+//struct SQLite3Binder<N, const char(&)[], Tail...> {
+//    static int Bind(SQLite3Stmt::ptr stmt
+//                    , const char value[]
+//                    , const Tail&... tail) {
+//        int rt = stmt->bind(N, (const char*)value);
+//        if(rt != SQLITE_OK) {
+//            return rt;
+//        }
+//        return SQLite3Binder<N + 1, Tail...>::Bind(stmt, tail...);
+//    }
+//};
 
 XX(char*, char* const);
 XX(const char*, char* const);
