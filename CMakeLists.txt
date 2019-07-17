@@ -66,6 +66,7 @@ set(LIB_SRC
     sylar/http/http_session.cc
     sylar/http/http_server.cc
     sylar/http/servlet.cc
+    sylar/http/session_data.cc
     sylar/http/ws_connection.cc
     sylar/http/ws_session.cc
     sylar/http/ws_server.cc

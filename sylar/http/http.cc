@@ -283,6 +283,32 @@ void HttpResponse::delHeader(const std::string& key) {
     m_headers.erase(key);
 }
 
+void HttpResponse::setRedirect(const std::string& uri) {
+    m_status = HttpStatus::FOUND;
+    setHeader("Location", uri);
+}
+
+void HttpResponse::setCookie(const std::string& key, const std::string& val,
+                             time_t expired, const std::string& domain,
+                             const std::string& path, bool secure) {
+    std::stringstream ss;
+    ss << key << "=" << val;
+    if(expired > 0) {
+        ss << ";expires=" << sylar::Time2Str(expired, "%a, %d %b %Y %H:%M:%S") << " GMT";
+    }
+    if(!domain.empty()) {
+        ss << ";domain=" << domain;
+    }
+    if(!path.empty()) {
+        ss << ";path=" << path;
+    }
+    if(secure) {
+        ss << ";secure";
+    }
+    m_cookies.push_back(ss.str());
+}
+
+
 std::string HttpResponse::toString() const {
     std::stringstream ss;
     dump(ss);
@@ -306,10 +332,12 @@ std::ostream& HttpResponse::dump(std::ostream& os) const {
         }
         os << i.first << ": " << i.second << "\r\n";
     }
+    for(auto& i : m_cookies) {
+        os << "Set-Cookie: " << i << "\r\n";
+    }
     if(!m_websocket) {
         os << "connection: " << (m_close ? "close" : "keep-alive") << "\r\n";
     }
-
     if(!m_body.empty()) {
         os << "content-length: " << m_body.size() << "\r\n\r\n"
            << m_body;
