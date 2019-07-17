@@ -20,6 +20,9 @@ bool mysql_time_to_time_t(const MYSQL_TIME& mt, time_t& ts) {
     tm.tm_min = mt.minute;
     tm.tm_sec = mt.second;
     ts = mktime(&tm);
+    if(ts < 0) {
+        ts = 0;
+    }
     return true;
 }
 
@@ -106,6 +109,10 @@ bool MySQL::connect() {
 
 sylar::IStmt::ptr MySQL::prepare(const std::string& sql) {
     return MySQLStmt::Create(shared_from_this(), sql);
+}
+
+ITransaction::ptr MySQL::openTransaction(bool auto_commit) {
+    return MySQLTransaction::Create(shared_from_this(), auto_commit);
 }
 
 int64_t MySQL::getLastInsertId() {
@@ -236,70 +243,73 @@ MySQLStmt::~MySQLStmt() {
     }
 
     for(auto& i : m_binds) {
-        if(i.buffer_type == MYSQL_TYPE_TIMESTAMP
-            || i.buffer_type == MYSQL_TYPE_DATETIME
-            || i.buffer_type == MYSQL_TYPE_DATE
-            || i.buffer_type == MYSQL_TYPE_TIME) {
-            if(i.buffer) {
-                free(i.buffer);
-            }
+        if(i.buffer) {
+            free(i.buffer);
         }
+        //if(i.buffer_type == MYSQL_TYPE_TIMESTAMP
+        //    || i.buffer_type == MYSQL_TYPE_DATETIME
+        //    || i.buffer_type == MYSQL_TYPE_DATE
+        //    || i.buffer_type == MYSQL_TYPE_TIME) {
+        //    if(i.buffer) {
+        //        free(i.buffer);
+        //    }
+        //}
     }
 }
 
-int MySQLStmt::bind(int idx, int8_t& value) {
+int MySQLStmt::bind(int idx, const int8_t& value) {
     return bindInt8(idx, value);
 }
 
-int MySQLStmt::bind(int idx, uint8_t& value) {
+int MySQLStmt::bind(int idx, const uint8_t& value) {
     return bindUint8(idx, value);
 }
 
-int MySQLStmt::bind(int idx, int16_t& value) {
+int MySQLStmt::bind(int idx, const int16_t& value) {
     return bindInt16(idx, value);
 }
 
-int MySQLStmt::bind(int idx, uint16_t& value) {
+int MySQLStmt::bind(int idx, const uint16_t& value) {
     return bindUint16(idx, value);
 }
 
-int MySQLStmt::bind(int idx, int32_t& value) {
+int MySQLStmt::bind(int idx, const int32_t& value) {
     return bindInt32(idx, value);
 }
 
-int MySQLStmt::bind(int idx, uint32_t& value) {
+int MySQLStmt::bind(int idx, const uint32_t& value) {
     return bindUint32(idx, value);
 }
 
-int MySQLStmt::bind(int idx, int64_t& value) {
+int MySQLStmt::bind(int idx, const int64_t& value) {
     return bindInt64(idx, value);
 }
 
-int MySQLStmt::bind(int idx, uint64_t& value) {
+int MySQLStmt::bind(int idx, const uint64_t& value) {
     return bindUint64(idx, value);
 }
 
-int MySQLStmt::bind(int idx, float& value) {
+int MySQLStmt::bind(int idx, const float& value) {
     return bindFloat(idx, value);
 }
 
-int MySQLStmt::bind(int idx, double& value) {
+int MySQLStmt::bind(int idx, const double& value) {
     return bindDouble(idx, value);
 }
 
-//int MySQLStmt::bind(int idx, MYSQL_TIME& value, int type) {
+//int MySQLStmt::bind(int idx, const MYSQL_TIME& value, int type) {
 //    return bindTime(idx, value, type);
 //}
 
-int MySQLStmt::bind(int idx, std::string& value) {
+int MySQLStmt::bind(int idx, const std::string& value) {
     return bindString(idx, value);
 }
 
-int MySQLStmt::bind(int idx, char* value) {
+int MySQLStmt::bind(int idx, const char* value) {
     return bindString(idx, value);
 }
 
-int MySQLStmt::bind(int idx, void* value, int len) {
+int MySQLStmt::bind(int idx, const void* value, int len) {
     return bindBlob(idx, value, len);
 }
 
@@ -325,127 +335,137 @@ int MySQLStmt::bindNull(int idx) {
     return bind(idx);
 }
 
-int MySQLStmt::bindInt8(int idx, int8_t& value) {
+int MySQLStmt::bindInt8(int idx, const int8_t& value) {
     idx -= 1;
     m_binds[idx].buffer_type = MYSQL_TYPE_TINY;
-    m_binds[idx].buffer = &value;
+#define BIND_COPY(ptr, size) \
+    if(m_binds[idx].buffer == nullptr) { \
+        m_binds[idx].buffer = malloc(size); \
+    } \
+    memcpy(m_binds[idx].buffer, ptr, size);
+    BIND_COPY(&value, sizeof(value));
     m_binds[idx].is_unsigned = false;
     m_binds[idx].buffer_length = sizeof(value);
     return 0;
 }
 
-int MySQLStmt::bindUint8(int idx, uint8_t& value) {
+int MySQLStmt::bindUint8(int idx, const uint8_t& value) {
     idx -= 1;
     m_binds[idx].buffer_type = MYSQL_TYPE_TINY;
-    m_binds[idx].buffer = &value;
+    BIND_COPY(&value, sizeof(value));
     m_binds[idx].is_unsigned = true;
     m_binds[idx].buffer_length = sizeof(value);
     return 0;
 }
 
-int MySQLStmt::bindInt16(int idx, int16_t& value) {
+int MySQLStmt::bindInt16(int idx, const int16_t& value) {
     idx -= 1;
     m_binds[idx].buffer_type = MYSQL_TYPE_SHORT;
-    m_binds[idx].buffer = &value;
+    BIND_COPY(&value, sizeof(value));
     m_binds[idx].is_unsigned = false;
     m_binds[idx].buffer_length = sizeof(value);
     return 0;
 }
 
-int MySQLStmt::bindUint16(int idx, uint16_t& value) {
+int MySQLStmt::bindUint16(int idx, const uint16_t& value) {
     idx -= 1;
     m_binds[idx].buffer_type = MYSQL_TYPE_SHORT;
-    m_binds[idx].buffer = &value;
+    BIND_COPY(&value, sizeof(value));
     m_binds[idx].is_unsigned = true;
     m_binds[idx].buffer_length = sizeof(value);
     return 0;
 }
 
-int MySQLStmt::bindInt32(int idx, int32_t& value) {
+int MySQLStmt::bindInt32(int idx, const int32_t& value) {
     idx -= 1;
     m_binds[idx].buffer_type = MYSQL_TYPE_LONG;
-    m_binds[idx].buffer = &value;
+    BIND_COPY(&value, sizeof(value));
     m_binds[idx].is_unsigned = false;
     m_binds[idx].buffer_length = sizeof(value);
     return 0;
 }
 
-int MySQLStmt::bindUint32(int idx, uint32_t& value) {
+int MySQLStmt::bindUint32(int idx, const uint32_t& value) {
     idx -= 1;
     m_binds[idx].buffer_type = MYSQL_TYPE_LONG;
-    m_binds[idx].buffer = &value;
+    BIND_COPY(&value, sizeof(value));
     m_binds[idx].is_unsigned = true;
     m_binds[idx].buffer_length = sizeof(value);
     return 0;
 }
 
-int MySQLStmt::bindInt64(int idx, int64_t& value) {
+int MySQLStmt::bindInt64(int idx, const int64_t& value) {
     idx -= 1;
     m_binds[idx].buffer_type = MYSQL_TYPE_LONGLONG;
-    m_binds[idx].buffer = &value;
+    BIND_COPY(&value, sizeof(value));
     m_binds[idx].is_unsigned = false;
     m_binds[idx].buffer_length = sizeof(value);
     return 0;
 }
 
-int MySQLStmt::bindUint64(int idx, uint64_t& value) {
+int MySQLStmt::bindUint64(int idx, const uint64_t& value) {
     idx -= 1;
     m_binds[idx].buffer_type = MYSQL_TYPE_LONGLONG;
-    m_binds[idx].buffer = &value;
+    BIND_COPY(&value, sizeof(value));
     m_binds[idx].is_unsigned = true;
     m_binds[idx].buffer_length = sizeof(value);
     return 0;
 }
 
-int MySQLStmt::bindFloat(int idx, float& value) {
+int MySQLStmt::bindFloat(int idx, const float& value) {
     idx -= 1;
     m_binds[idx].buffer_type = MYSQL_TYPE_FLOAT;
-    m_binds[idx].buffer = &value;
+    BIND_COPY(&value, sizeof(value));
     m_binds[idx].buffer_length = sizeof(value);
     return 0;
 }
 
-int MySQLStmt::bindDouble(int idx, double& value) {
+int MySQLStmt::bindDouble(int idx, const double& value) {
     idx -= 1;
     m_binds[idx].buffer_type = MYSQL_TYPE_DOUBLE;
-    m_binds[idx].buffer = &value;
+    BIND_COPY(&value, sizeof(value));
     m_binds[idx].buffer_length = sizeof(value);
     return 0;
 }
 
-int MySQLStmt::bindString(int idx, char* value) {
+int MySQLStmt::bindString(int idx, const char* value) {
     idx -= 1;
     m_binds[idx].buffer_type = MYSQL_TYPE_STRING;
-    m_binds[idx].buffer = value;
-    m_binds[idx].buffer_length = strlen(value);
-    return 0;
-}
-
-int MySQLStmt::bindString(int idx, std::string& value) {
-    idx -= 1;
-    m_binds[idx].buffer_type = MYSQL_TYPE_STRING;
-    m_binds[idx].buffer = &value[0];
-    m_binds[idx].buffer_length = value.size();
-    return 0;
-}
-
-int MySQLStmt::bindBlob(int idx, void* value, int64_t size) {
-    idx -= 1;
-    m_binds[idx].buffer_type = MYSQL_TYPE_BLOB;
-    m_binds[idx].buffer = value;
+#define BIND_COPY_LEN(ptr, size) \
+    if(m_binds[idx].buffer == nullptr) { \
+        m_binds[idx].buffer = malloc(size); \
+    } else if((size_t)m_binds[idx].buffer_length < (size_t)size) { \
+        free(m_binds[idx].buffer); \
+        m_binds[idx].buffer = malloc(size); \
+    } \
+    memcpy(m_binds[idx].buffer, ptr, size); \
     m_binds[idx].buffer_length = size;
+    BIND_COPY_LEN(value, strlen(value));
     return 0;
 }
 
-int MySQLStmt::bindBlob(int idx, std::string& value) {
+int MySQLStmt::bindString(int idx, const std::string& value) {
+    idx -= 1;
+    m_binds[idx].buffer_type = MYSQL_TYPE_STRING;
+    BIND_COPY_LEN(value.c_str(), value.size());
+    return 0;
+}
+
+int MySQLStmt::bindBlob(int idx, const void* value, int64_t size) {
     idx -= 1;
     m_binds[idx].buffer_type = MYSQL_TYPE_BLOB;
-    m_binds[idx].buffer = &value[0];
-    m_binds[idx].buffer_length = value.size();
+    BIND_COPY_LEN(value, size);
     return 0;
 }
 
-//int MySQLStmt::bindTime(int idx, MYSQL_TIME& value, int type) {
+int MySQLStmt::bindBlob(int idx, const std::string& value) {
+    idx -= 1;
+    m_binds[idx].buffer_type = MYSQL_TYPE_BLOB;
+    BIND_COPY_LEN(value.c_str(), value.size());
+    return 0;
+}
+
+//int MySQLStmt::bindTime(int idx, const MYSQL_TIME& value, int type) {
 //    idx -= 1;
 //    m_binds[idx].buffer_type = (enum_field_types)type;
 //    m_binds[idx].buffer = &value;
@@ -453,7 +473,7 @@ int MySQLStmt::bindBlob(int idx, std::string& value) {
 //    return 0;
 //}
 
-int MySQLStmt::bindTime(int idx, time_t value) {
+int MySQLStmt::bindTime(int idx, const time_t& value) {
     idx -= 1;
     m_binds[idx].buffer_type = MYSQL_TYPE_TIMESTAMP;
     MYSQL_TIME* mt = (MYSQL_TIME*)malloc(sizeof(MYSQL_TIME));
@@ -861,7 +881,7 @@ uint64_t MySQL::getInsertId() {
 
 MySQLTransaction::ptr MySQLTransaction::Create(MySQL::ptr mysql, bool auto_commit) {
     MySQLTransaction::ptr rt(new MySQLTransaction(mysql, auto_commit));
-    if(rt->execute("BEGIN") == 0) {
+    if(rt->begin()) {
         return rt;
     }
     return nullptr;
@@ -877,6 +897,11 @@ MySQLTransaction::~MySQLTransaction() {
 
 int64_t MySQLTransaction::getLastInsertId() {
     return m_mysql->getLastInsertId();
+}
+
+bool MySQLTransaction::begin() {
+    int rt = execute("BEGIN");
+    return rt == 0;
 }
 
 bool MySQLTransaction::commit() {

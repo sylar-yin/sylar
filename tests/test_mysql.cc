@@ -17,7 +17,7 @@ void run() {
         }
 
         //auto stmt = mysql_stmt_init(mysql->getRaw());
-        //std::string sql = "select * from abt_pageids_gd9 where status >= ?";
+        //std::string sql = "select * from sylar where status >= ?";
         //mysql_stmt_prepare(stmt, sql.c_str(), sql.size());
         //MYSQL_BIND b;
         //int a = 0;
@@ -29,15 +29,15 @@ void run() {
         sylar::time_t_to_mysql_time(time(0), mt);
 
         int a = 0;
-        //auto stmt = mysql->prepare("select * from abt_pageids_gd9 where status >= ?");
+        //auto stmt = mysql->prepare("select * from sylar where status >= ?");
         //stmt->bind(0, a);
         //auto res = std::dynamic_pointer_cast<sylar::MySQLStmtRes>(stmt->query());
 
         auto res = std::dynamic_pointer_cast<sylar::MySQLStmtRes>
-            //(mysql->queryStmt("select * from abt_pageids_gd9"));
-            (mysql->queryStmt("select *, 'hello' as xx from abt_pageids_gd9 where status >= ? and status <= ?"
+            //(mysql->queryStmt("select * from sylar"));
+            (mysql->queryStmt("select *, 'hello' as xx from user where status >= ? and status <= ?"
                               , a, a));
-            //(mysql->queryStmt("select id,name, keyword, creator as aa, last_update_time from search_brand"
+            //(mysql->queryStmt("select id,name, keyword, creator as aa, last_update_time from sylar "
             //                  " where last_update_time > ?", (time_t)0));
         //auto res = std::dynamic_pointer_cast<sylar::MySQLRes>
         //    (mysql->query("select * from search_brand"));

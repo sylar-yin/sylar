@@ -26,6 +26,14 @@ SQLite3::ptr SQLite3::Create(const std::string& dbname ,int flags) {
     return nullptr;
 }
 
+ITransaction::ptr SQLite3::openTransaction(bool auto_commit) {
+    ITransaction::ptr trans(new SQLite3Transaction(shared_from_this(), auto_commit));
+    if(trans->begin()) {
+        return trans;
+    }
+    return nullptr;
+}
+
 int SQLite3::getErrno() {
     return sqlite3_errcode(m_db);
 }
@@ -52,8 +60,13 @@ IStmt::ptr SQLite3::prepare(const std::string& stmt) {
 int SQLite3::execute(const char* format, ...) {
     va_list ap;
     va_start(ap, format);
-    std::shared_ptr<char> sql(sqlite3_vmprintf(format, ap), sqlite3_free);
+    int rt = execute(format, ap);
     va_end(ap);
+    return rt;
+}
+
+int SQLite3::execute(const char* format, va_list ap) {
+    std::shared_ptr<char> sql(sqlite3_vmprintf(format, ap), sqlite3_free);
     return sqlite3_exec(m_db, sql.get(), 0, 0, 0);
 }
 
@@ -97,63 +110,63 @@ int64_t SQLite3Stmt::getLastInsertId() {
     return m_db->getLastInsertId();
 }
 
-int SQLite3Stmt::bindInt8(int idx, int8_t& value) {
+int SQLite3Stmt::bindInt8(int idx, const int8_t& value) {
     return bind(idx, (int32_t)value);
 }
 
-int SQLite3Stmt::bindUint8(int idx, uint8_t& value) {
+int SQLite3Stmt::bindUint8(int idx, const uint8_t& value) {
     return bind(idx, (int32_t)value);
 }
 
-int SQLite3Stmt::bindInt16(int idx, int16_t& value) {
+int SQLite3Stmt::bindInt16(int idx, const int16_t& value) {
     return bind(idx, (int32_t)value);
 }
 
-int SQLite3Stmt::bindUint16(int idx, uint16_t& value) {
+int SQLite3Stmt::bindUint16(int idx, const uint16_t& value) {
     return bind(idx, (int32_t)value);
 }
 
-int SQLite3Stmt::bindInt32(int idx, int32_t& value) {
+int SQLite3Stmt::bindInt32(int idx, const int32_t& value) {
     return bind(idx, (int32_t)value);
 }
 
-int SQLite3Stmt::bindUint32(int idx, uint32_t& value) {
+int SQLite3Stmt::bindUint32(int idx, const uint32_t& value) {
     return bind(idx, (int32_t)value);
 }
 
-int SQLite3Stmt::bindInt64(int idx, int64_t& value) {
+int SQLite3Stmt::bindInt64(int idx, const int64_t& value) {
     return bind(idx, (int64_t)value);
 }
 
-int SQLite3Stmt::bindUint64(int idx, uint64_t& value) {
+int SQLite3Stmt::bindUint64(int idx, const uint64_t& value) {
     return bind(idx, (int64_t)value);
 }
 
-int SQLite3Stmt::bindFloat(int idx, float& value) {
+int SQLite3Stmt::bindFloat(int idx, const float& value) {
     return bind(idx, (double)value);
 }
 
-int SQLite3Stmt::bindDouble(int idx, double& value) {
+int SQLite3Stmt::bindDouble(int idx, const double& value) {
     return bind(idx, (double)value);
 }
 
-int SQLite3Stmt::bindString(int idx, char* value) {
+int SQLite3Stmt::bindString(int idx, const char* value) {
     return bind(idx, value);
 }
 
-int SQLite3Stmt::bindString(int idx, std::string& value) {
+int SQLite3Stmt::bindString(int idx, const std::string& value) {
     return bind(idx, value);
 }
 
-int SQLite3Stmt::bindBlob(int idx, void* value, int64_t size) {
+int SQLite3Stmt::bindBlob(int idx, const void* value, int64_t size) {
     return bind(idx, value, size);
 }
 
-int SQLite3Stmt::bindBlob(int idx, std::string& value) {
+int SQLite3Stmt::bindBlob(int idx, const std::string& value) {
     return bind(idx, (void*)&value[0], value.size());
 }
 
-int SQLite3Stmt::bindTime(int idx, time_t value) {
+int SQLite3Stmt::bindTime(int idx, const time_t& value) {
     return bind(idx, sylar::Time2Str(value));
 }
 
@@ -427,7 +440,24 @@ SQLite3Transaction::~SQLite3Transaction() {
     }
 }
 
-int SQLite3Transaction::begin() {
+
+int SQLite3Transaction::execute(const char* format, ...) {
+    va_list ap;
+    va_start(ap, format);
+    int rt = m_db->execute(format, ap);
+    va_end(ap);
+    return rt;
+}
+
+int SQLite3Transaction::execute(const std::string& sql) {
+    return m_db->execute(sql);
+}
+
+int64_t SQLite3Transaction::getLastInsertId() {
+    return m_db->getLastInsertId();
+}
+
+bool SQLite3Transaction::begin() {
     if(m_status == 0) {
         const char* sql = "BEGIN";
         if(m_type == IMMEDIATE) {
@@ -439,31 +469,31 @@ int SQLite3Transaction::begin() {
         if(rt == SQLITE_OK) {
             m_status = 1;
         }
-        return rt;
+        return rt == SQLITE_OK;
     }
-    return -1;
+    return false;
 }
 
-int SQLite3Transaction::commit() {
+bool SQLite3Transaction::commit() {
     if(m_status == 1) {
         int rc = m_db->execute("COMMIT");
         if(rc == SQLITE_OK) {
             m_status = 2;
         }
-        return rc;
+        return rc == SQLITE_OK;
     }
-    return -2;
+    return false;
 }
 
-int SQLite3Transaction::rollback() {
+bool SQLite3Transaction::rollback() {
     if(m_status == 1) {
         int rc = m_db->execute("ROLLBACK");
         if(rc == SQLITE_OK) {
             m_status = 3;
         }
-        return rc;
+        return rc == SQLITE_OK;
     }
-    return -3;
+    return false;
 }
 
 }

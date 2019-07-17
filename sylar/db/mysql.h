@@ -156,6 +156,7 @@ public:
     ISQLData::ptr query(const char* format, va_list ap); 
     ISQLData::ptr query(const std::string& sql) override;
 
+    ITransaction::ptr openTransaction(bool auto_commit) override;
     sylar::IStmt::ptr prepare(const std::string& sql) override;
 
     template<typename... Args>
@@ -183,15 +184,16 @@ private:
     bool m_hasError;
 };
 
-class MySQLTransaction : public ISQLUpdate {
+class MySQLTransaction : public ITransaction {
 public:
     typedef std::shared_ptr<MySQLTransaction> ptr;
 
     static MySQLTransaction::ptr Create(MySQL::ptr mysql, bool auto_commit);
     ~MySQLTransaction();
 
-    bool commit();
-    bool rollback();
+    bool begin() override;
+    bool commit() override;
+    bool rollback() override;
 
     virtual int execute(const char* format, ...) override;
     int execute(const char* format, va_list ap);
@@ -218,39 +220,39 @@ public:
     static MySQLStmt::ptr Create(MySQL::ptr db, const std::string& stmt);
 
     ~MySQLStmt();
-    int bind(int idx, int8_t& value);
-    int bind(int idx, uint8_t& value);
-    int bind(int idx, int16_t& value);
-    int bind(int idx, uint16_t& value);
-    int bind(int idx, int32_t& value);
-    int bind(int idx, uint32_t& value);
-    int bind(int idx, int64_t& value);
-    int bind(int idx, uint64_t& value);
-    int bind(int idx, float& value);
-    int bind(int idx, double& value);
-    int bind(int idx, std::string& value);
-    int bind(int idx, char* value);
-    int bind(int idx, void* value, int len);
-    //int bind(int idx, MYSQL_TIME& value, int type = MYSQL_TYPE_TIMESTAMP);
+    int bind(int idx, const int8_t& value);
+    int bind(int idx, const uint8_t& value);
+    int bind(int idx, const int16_t& value);
+    int bind(int idx, const uint16_t& value);
+    int bind(int idx, const int32_t& value);
+    int bind(int idx, const uint32_t& value);
+    int bind(int idx, const int64_t& value);
+    int bind(int idx, const uint64_t& value);
+    int bind(int idx, const float& value);
+    int bind(int idx, const double& value);
+    int bind(int idx, const std::string& value);
+    int bind(int idx, const char* value);
+    int bind(int idx, const void* value, int len);
+    //int bind(int idx, const MYSQL_TIME& value, int type = MYSQL_TYPE_TIMESTAMP);
     //for null type
     int bind(int idx);
 
-    int bindInt8(int idx, int8_t& value) override;
-    int bindUint8(int idx, uint8_t& value) override;
-    int bindInt16(int idx, int16_t& value) override;
-    int bindUint16(int idx, uint16_t& value) override;
-    int bindInt32(int idx, int32_t& value) override;
-    int bindUint32(int idx, uint32_t& value) override;
-    int bindInt64(int idx, int64_t& value) override;
-    int bindUint64(int idx, uint64_t& value) override;
-    int bindFloat(int idx, float& value) override;
-    int bindDouble(int idx, double& value) override;
-    int bindString(int idx, char* value) override;
-    int bindString(int idx, std::string& value) override;
-    int bindBlob(int idx, void* value, int64_t size) override;
-    int bindBlob(int idx, std::string& value) override;
-    //int bindTime(int idx, MYSQL_TIME& value, int type = MYSQL_TYPE_TIMESTAMP);
-    int bindTime(int idx, time_t value) override;
+    int bindInt8(int idx, const int8_t& value) override;
+    int bindUint8(int idx, const uint8_t& value) override;
+    int bindInt16(int idx, const int16_t& value) override;
+    int bindUint16(int idx, const uint16_t& value) override;
+    int bindInt32(int idx, const int32_t& value) override;
+    int bindUint32(int idx, const uint32_t& value) override;
+    int bindInt64(int idx, const int64_t& value) override;
+    int bindUint64(int idx, const uint64_t& value) override;
+    int bindFloat(int idx, const float& value) override;
+    int bindDouble(int idx, const double& value) override;
+    int bindString(int idx, const char* value) override;
+    int bindString(int idx, const std::string& value) override;
+    int bindBlob(int idx, const void* value, int64_t size) override;
+    int bindBlob(int idx, const std::string& value) override;
+    //int bindTime(int idx, const MYSQL_TIME& value, int type = MYSQL_TYPE_TIMESTAMP);
+    int bindTime(int idx, const time_t& value) override;
     int bindNull(int idx) override;
 
     int getErrno() override;
