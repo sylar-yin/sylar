@@ -27,7 +27,7 @@ class SmtpClient : public sylar::SocketStream {
 public:
     typedef std::shared_ptr<SmtpClient> ptr;
     static SmtpClient::ptr Create(const std::string& host, uint32_t port, bool ssl= false);
-    SmtpResult::ptr send(EMail::ptr email, bool debug = false);
+    SmtpResult::ptr send(EMail::ptr email, int64_t timeout_ms = 1000, bool debug = false);
 
     std::string getDebugInfo();
 private:

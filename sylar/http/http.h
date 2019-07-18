@@ -485,6 +485,8 @@ public:
      */
     template<class T>
     bool checkGetParamAs(const std::string& key, T& val, const T& def = T()) {
+        initQueryParam();
+        initBodyParam();
         return checkGetAs(m_headers, key, val, def);
     }
 
@@ -497,6 +499,8 @@ public:
      */
     template<class T>
     T getParamAs(const std::string& key, const T& def = T()) {
+        initQueryParam();
+        initBodyParam();
         return getAs(m_headers, key, def);
     }
 
@@ -510,6 +514,7 @@ public:
      */
     template<class T>
     bool checkGetCookieAs(const std::string& key, T& val, const T& def = T()) {
+        initCookies();
         return checkGetAs(m_headers, key, val, def);
     }
 
@@ -522,7 +527,8 @@ public:
      */
     template<class T>
     T getCookieAs(const std::string& key, const T& def = T()) {
-        return getAs(m_headers, key, def);
+        initCookies();
+        return getAs(m_cookies, key, def);
     }
 
     /**

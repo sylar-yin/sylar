@@ -29,6 +29,7 @@ public:
     std::string getEnv(const std::string& key, const std::string& default_value = "");
 
     std::string getAbsolutePath(const std::string& path) const;
+    std::string getAbsoluteWorkPath(const std::string& path) const;
     std::string getConfigPath();
 private:
     RWMutexType m_mutex;

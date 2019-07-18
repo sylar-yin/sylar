@@ -70,11 +70,17 @@ SmtpResult::ptr SmtpClient::doCmd(const std::string& cmd, bool debug) {
     return nullptr;
 }
 
-SmtpResult::ptr SmtpClient::send(EMail::ptr email, bool debug) {
+SmtpResult::ptr SmtpClient::send(EMail::ptr email, int64_t timeout_ms, bool debug) {
 #define DO_CMD() \
     result = doCmd(cmd, debug); \
     if(result) {\
         return result; \
+    }
+
+    Socket::ptr sock = getSocket();
+    if(sock) {
+        sock->setRecvTimeout(timeout_ms);
+        sock->setSendTimeout(timeout_ms);
     }
 
     SmtpResult::ptr result;

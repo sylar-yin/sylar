@@ -214,7 +214,7 @@ void HttpRequest::initQueryParam() {
         return;
     }
 
-#define PARSE_PARAM(str, m, flag) \
+#define PARSE_PARAM(str, m, flag, trim) \
     size_t pos = 0; \
     do { \
         size_t last = pos; \
@@ -224,7 +224,7 @@ void HttpRequest::initQueryParam() {
         } \
         size_t key = pos; \
         pos = str.find(flag, pos); \
-        m.insert(std::make_pair(str.substr(last, key - last), \
+        m.insert(std::make_pair(trim(str.substr(last, key - last)), \
                     sylar::StringUtil::UrlDecode(str.substr(key + 1, pos - key - 1)))); \
         if(pos == std::string::npos) { \
             break; \
@@ -232,7 +232,7 @@ void HttpRequest::initQueryParam() {
         ++pos; \
     } while(true);
 
-    PARSE_PARAM(m_query, m_params, '&');
+    PARSE_PARAM(m_query, m_params, '&',);
     m_parserParamFlag |= 0x1;
 }
 
@@ -245,7 +245,7 @@ void HttpRequest::initBodyParam() {
         m_parserParamFlag |= 0x2;
         return;
     }
-    PARSE_PARAM(m_body, m_params, '&');
+    PARSE_PARAM(m_body, m_params, '&',);
     m_parserParamFlag |= 0x2;
 }
 
@@ -258,7 +258,7 @@ void HttpRequest::initCookies() {
         m_parserParamFlag |= 0x4;
         return;
     }
-    PARSE_PARAM(cookie, m_cookies, ';');
+    PARSE_PARAM(cookie, m_cookies, ';', sylar::StringUtil::Trim);
     m_parserParamFlag |= 0x4;
 }
 

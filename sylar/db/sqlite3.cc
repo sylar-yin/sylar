@@ -1,9 +1,15 @@
 #include "sqlite3.h"
 #include "sylar/log.h"
+#include "sylar/config.h"
+#include "sylar/env.h"
 
 namespace sylar {
 
 static sylar::Logger::ptr g_logger = SYLAR_LOG_NAME("system");
+
+static sylar::ConfigVar<std::map<std::string, std::map<std::string, std::string> > >::ptr g_sqlite3_dbs
+    = sylar::Config::Lookup("sqlite3.dbs", std::map<std::string, std::map<std::string, std::string> >()
+            , "sqlite3 dbs");
 
 SQLite3::SQLite3(sqlite3* db)
     :m_db(db) {
@@ -494,6 +500,181 @@ bool SQLite3Transaction::rollback() {
         return rc == SQLITE_OK;
     }
     return false;
+}
+
+SQLite3Manager::SQLite3Manager()
+    :m_maxConn(10) {
+}
+
+SQLite3Manager::~SQLite3Manager() {
+    for(auto& i : m_conns) {
+        for(auto& n : i.second) {
+            delete n;
+        }
+    }
+}
+
+SQLite3::ptr SQLite3Manager::get(const std::string& name) {
+    MutexType::Lock lock(m_mutex);
+    auto it = m_conns.find(name);
+    if(it != m_conns.end()) {
+        if(!it->second.empty()) {
+            SQLite3* rt = it->second.front();
+            it->second.pop_front();
+            lock.unlock();
+            return SQLite3::ptr(rt, std::bind(&SQLite3Manager::freeSQLite3,
+                        this, name, std::placeholders::_1));
+        }
+    }
+    auto config = g_sqlite3_dbs->getValue();
+    auto sit = config.find(name);
+    std::map<std::string, std::string> args;
+    if(sit != config.end()) {
+        args = sit->second;
+    } else {
+        sit = m_dbDefines.find(name);
+        if(sit != m_dbDefines.end()) {
+            args = sit->second;
+        } else {
+            return nullptr;
+        }
+    }
+    lock.unlock();
+    std::string path = sylar::GetParamValue<std::string>(args, "path");
+    if(path.empty()) {
+        SYLAR_LOG_ERROR(g_logger) << "open db name=" << name << " path is null";
+        return nullptr;
+    }
+
+    if(path.find(":") == std::string::npos) {
+        path = sylar::EnvMgr::GetInstance()->getAbsoluteWorkPath(path);
+    }
+
+    sqlite3* db;
+    if(sqlite3_open_v2(path.c_str(), &db, SQLite3::CREATE | SQLite3::READWRITE, nullptr)) {
+        SYLAR_LOG_ERROR(g_logger) << "open db name=" << name << " path=" << path << " fail";
+        return nullptr;
+    }
+
+    SQLite3* rt = new SQLite3(db);
+    std::string sql = sylar::GetParamValue<std::string>(args, "sql");
+    if(!sql.empty()) {
+        if(rt->execute(sql)) {
+            SYLAR_LOG_ERROR(g_logger) << "execute sql=" << sql
+                << " errno=" << rt->getErrno() << " errstr=" << rt->getErrStr();
+            delete rt;
+            return nullptr;
+        }
+    }
+    rt->m_lastUsedTime = time(0);
+    return SQLite3::ptr(rt, std::bind(&SQLite3Manager::freeSQLite3,
+                    this, name, std::placeholders::_1));
+}
+
+void SQLite3Manager::registerSQLite3(const std::string& name, const std::map<std::string, std::string>& params) {
+    MutexType::Lock lock(m_mutex);
+    m_dbDefines[name] = params;
+}
+
+void SQLite3Manager::checkConnection(int sec) {
+    time_t now = time(0);
+    std::vector<SQLite3*> conns;
+    MutexType::Lock lock(m_mutex);
+    for(auto& i : m_conns) {
+        for(auto it = i.second.begin();
+                it != i.second.end();) {
+            if((int)(now - (*it)->m_lastUsedTime) >= sec) {
+                auto tmp = *it;
+                i.second.erase(it++);
+                conns.push_back(tmp);
+            } else {
+                ++it;
+            }
+        }
+    }
+    lock.unlock();
+    for(auto& i : conns) {
+        delete i;
+    }
+}
+
+int SQLite3Manager::execute(const std::string& name, const char* format, ...) {
+    va_list ap;
+    va_start(ap, format);
+    int rt = execute(name, format, ap);
+    va_end(ap);
+    return rt;
+}
+
+int SQLite3Manager::execute(const std::string& name, const char* format, va_list ap) {
+    auto conn = get(name);
+    if(!conn) {
+        SYLAR_LOG_ERROR(g_logger) << "SQLite3Manager::execute, get(" << name
+            << ") fail, format=" << format;
+        return -1;
+    }
+    return conn->execute(format, ap);
+}
+
+int SQLite3Manager::execute(const std::string& name, const std::string& sql) {
+    auto conn = get(name);
+    if(!conn) {
+        SYLAR_LOG_ERROR(g_logger) << "SQLite3Manager::execute, get(" << name
+            << ") fail, sql=" << sql;
+        return -1;
+    }
+    return conn->execute(sql);
+}
+
+ISQLData::ptr SQLite3Manager::query(const std::string& name, const char* format, ...) {
+    va_list ap;
+    va_start(ap, format);
+    auto res = query(name, format, ap);
+    va_end(ap);
+    return res;
+}
+
+ISQLData::ptr SQLite3Manager::query(const std::string& name, const char* format, va_list ap) {
+    auto conn = get(name);
+    if(!conn) {
+        SYLAR_LOG_ERROR(g_logger) << "SQLite3Manager::query, get(" << name
+            << ") fail, format=" << format;
+        return nullptr;
+    }
+    return conn->query(format, ap);
+}
+
+ISQLData::ptr SQLite3Manager::query(const std::string& name, const std::string& sql) {
+    auto conn = get(name);
+    if(!conn) {
+        SYLAR_LOG_ERROR(g_logger) << "SQLite3Manager::query, get(" << name
+            << ") fail, sql=" << sql;
+        return nullptr;
+    }
+    return conn->query(sql);
+
+}
+
+SQLite3Transaction::ptr SQLite3Manager::openTransaction(const std::string& name, bool auto_commit) {
+    auto conn = get(name);
+    if(!conn) {
+        SYLAR_LOG_ERROR(g_logger) << "SQLite3Manager::openTransaction, get(" << name
+            << ") fail";
+        return nullptr;
+    }
+    SQLite3Transaction::ptr trans(new SQLite3Transaction(conn, auto_commit));
+    return trans;
+}
+
+void SQLite3Manager::freeSQLite3(const std::string& name, SQLite3* m) {
+    if(m->m_db) {
+        MutexType::Lock lock(m_mutex);
+        if(m_conns[name].size() < m_maxConn) {
+            m_conns[name].push_back(m);
+            return;
+        }
+    }
+    delete m;
 }
 
 }
