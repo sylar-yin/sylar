@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 #include <map>
+#include <vector>
 #include <iostream>
 #include <sstream>
 #include <boost/lexical_cast.hpp>
