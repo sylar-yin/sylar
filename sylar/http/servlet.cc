@@ -128,6 +128,20 @@ Servlet::ptr ServletDispatch::getMatchedServlet(const std::string& uri) {
     return m_default;
 }
 
+void ServletDispatch::listAllServletCreator(std::map<std::string, IServletCreator::ptr>& infos) {
+    RWMutexType::ReadLock lock(m_mutex);
+    for(auto& i : m_datas) {
+        infos[i.first] = i.second;
+    }
+}
+
+void ServletDispatch::listAllGlobServletCreator(std::map<std::string, IServletCreator::ptr>& infos) {
+    RWMutexType::ReadLock lock(m_mutex);
+    for(auto& i : m_globs) {
+        infos[i.first] = i.second;
+    }
+}
+
 NotFoundServlet::NotFoundServlet(const std::string& name)
     :Servlet("NotFoundServlet")
     ,m_name(name) {

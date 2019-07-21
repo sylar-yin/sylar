@@ -187,6 +187,8 @@ public:
     TcpServerConf::ptr getConf() const { return m_conf;}
     void setConf(TcpServerConf::ptr v) { m_conf = v;}
     void setConf(const TcpServerConf& v);
+
+    virtual std::string toString(const std::string& prefix = "");
 protected:
 
     /**

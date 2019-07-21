@@ -128,4 +128,18 @@ bool TcpServer::loadCertificates(const std::string& cert_file, const std::string
     return true;
 }
 
+std::string TcpServer::toString(const std::string& prefix) {
+    std::stringstream ss;
+    ss << prefix << "[type=" << m_type
+       << " name=" << m_name << " ssl=" << m_ssl
+       << " worker=" << (m_worker ? m_worker->getName() : "")
+       << " accept=" << (m_acceptWorker ? m_acceptWorker->getName() : "")
+       << " recv_timeout=" << m_recvTimeout << "]" << std::endl;
+    std::string pfx = prefix.empty() ? "    " : prefix;
+    for(auto& i : m_socks) {
+        ss << pfx << pfx << *i << std::endl;
+    }
+    return ss.str();
+}
+
 }

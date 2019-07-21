@@ -6,6 +6,8 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <arpa/inet.h>
+#include <ifaddrs.h>
 
 #include "log.h"
 #include "fiber.h"
@@ -22,6 +24,25 @@ uint32_t GetFiberId() {
     return sylar::Fiber::GetFiberId();
 }
 
+static std::string demangle(const char* str) {
+    size_t size = 0;
+    int status = 0;
+    std::string rt;
+    rt.resize(256);
+    if(1 == sscanf(str, "%*[^(]%*[^_]%255[^)+]", &rt[0])) {
+        char* v = abi::__cxa_demangle(&rt[0], nullptr, &size, &status);
+        if(v) {
+            std::string result(v);
+            free(v);
+            return result;
+        }
+    }
+    if(1 == sscanf(str, "%255s", &rt[0])) {
+        return rt;
+    }
+    return str;
+}
+
 void Backtrace(std::vector<std::string>& bt, int size, int skip) {
     void** array = (void**)malloc((sizeof(void*) * size));
     size_t s = ::backtrace(array, size);
@@ -33,7 +54,7 @@ void Backtrace(std::vector<std::string>& bt, int size, int skip) {
     }
 
     for(size_t i = skip; i < s; ++i) {
-        bt.push_back(strings[i]);
+        bt.push_back(demangle(strings[i]));
     }
 
     free(strings);
@@ -517,6 +538,119 @@ std::wstring StringUtil::StringToWString(const std::string& s) {
     return wstr_result;
 }
 
+std::string GetHostName() {
+    std::shared_ptr<char> host(new char[512], sylar::delete_array<char>);
+    memset(host.get(), 0, 512);
+    gethostname(host.get(), 511);
+    return host.get();
+}
 
+in_addr_t GetIPv4Inet() {
+    struct ifaddrs* ifas = nullptr;
+    struct ifaddrs* ifa = nullptr;
+
+    in_addr_t localhost = inet_addr("127.0.0.1");
+    if(getifaddrs(&ifas)) {
+        SYLAR_LOG_ERROR(g_logger) << "getifaddrs errno=" << errno
+            << " errstr=" << strerror(errno);
+        return localhost;
+    }
+
+    in_addr_t ipv4 = localhost;
+
+    for(ifa = ifas; ifa && ifa->ifa_addr; ifa = ifa->ifa_next) {
+        if(ifa->ifa_addr->sa_family != AF_INET) {
+            continue;
+        }
+        if(!strncasecmp(ifa->ifa_name, "lo", 2)) {
+            continue;
+        }
+        ipv4 = ((struct sockaddr_in*)ifa->ifa_addr)->sin_addr.s_addr;
+        if(ipv4 == localhost) {
+            continue;
+        }
+    }
+    if(ifas != nullptr) {
+        freeifaddrs(ifas);
+    }
+    return ipv4;
+}
+
+std::string _GetIPv4() {
+    std::shared_ptr<char> ipv4(new char[INET_ADDRSTRLEN], sylar::delete_array<char>);
+    memset(ipv4.get(), 0, INET_ADDRSTRLEN);
+    auto ia = GetIPv4Inet();
+    inet_ntop(AF_INET, &ia, ipv4.get(), INET_ADDRSTRLEN);
+    return ipv4.get();
+}
+
+std::string GetIPv4() {
+    static const std::string ip = _GetIPv4();
+    return ip;
+}
+
+bool YamlToJson(const YAML::Node& ynode, Json::Value& jnode) {
+    try {
+        if(ynode.IsScalar()) {
+            Json::Value v(ynode.Scalar());
+            jnode.swapPayload(v);
+            return true;
+        }
+        if(ynode.IsSequence()) {
+            for(size_t i = 0; i < ynode.size(); ++i) {
+                Json::Value v;
+                if(YamlToJson(ynode[i], v)) {
+                    jnode.append(v);
+                } else {
+                    return false;
+                }
+            }
+        } else if(ynode.IsMap()) {
+            for(auto it = ynode.begin();
+                    it != ynode.end(); ++it) {
+                Json::Value v;
+                if(YamlToJson(it->second, v)) {
+                    jnode[it->first.Scalar()] = v;
+                } else {
+                    return false;
+                }
+            }
+        }
+    } catch(...) {
+        return false;
+    }
+    return true;
+}
+
+bool JsonToYaml(const Json::Value& jnode, YAML::Node& ynode) {
+    try {
+        if(jnode.isArray()) {
+            for(int i = 0; i < (int)jnode.size(); ++i) {
+                YAML::Node n;
+                if(JsonToYaml(jnode[i], n)) {
+                    ynode.push_back(n);
+                } else {
+                    return false;
+                }
+            }
+        } else if(jnode.isObject()) {
+            for(auto it = jnode.begin();
+                    it != jnode.end();
+                    ++it) {
+                YAML::Node n;
+                if(JsonToYaml(*it, n)) {
+                    ynode[it.name()] = n;
+                } else {
+                    return false;
+                }
+            }
+        } else {
+            ynode = jnode.asString();
+        }
+    } catch (...) {
+        return false;
+    }
+    return true;
+}
 
 }

@@ -17,6 +17,7 @@
 #include "http.h"
 #include "http_session.h"
 #include "sylar/thread.h"
+#include "sylar/util.h"
 
 namespace sylar {
 namespace http {
@@ -92,6 +93,7 @@ public:
     typedef std::shared_ptr<IServletCreator> ptr;
     virtual ~IServletCreator() {}
     virtual Servlet::ptr get() const = 0;
+    virtual std::string getName() const = 0;
 };
 
 class HoldServletCreator : public IServletCreator {
@@ -104,6 +106,10 @@ public:
     Servlet::ptr get() const override {
         return m_servlet;
     }
+
+    std::string getName() const override {
+        return m_servlet->getName();
+    }
 private:
     Servlet::ptr m_servlet;
 };
@@ -112,10 +118,16 @@ template<class T>
 class ServletCreator : public IServletCreator {
 public:
     typedef std::shared_ptr<ServletCreator> ptr;
+
     ServletCreator() {
     }
+
     Servlet::ptr get() const override {
         return Servlet::ptr(new T);
+    }
+
+    std::string getName() const override {
+        return TypeToName<T>();
     }
 };
 
@@ -222,6 +234,9 @@ public:
      * @return 优先精准匹配,其次模糊匹配,最后返回默认
      */
     Servlet::ptr getMatchedServlet(const std::string& uri);
+
+    void listAllServletCreator(std::map<std::string, IServletCreator::ptr>& infos);
+    void listAllGlobServletCreator(std::map<std::string, IServletCreator::ptr>& infos);
 private:
     /// 读写互斥量
     RWMutexType m_mutex;
