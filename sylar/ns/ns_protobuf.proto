@@ -1,0 +1,36 @@
+package sylar.ns;
+
+message Node {
+    optional string ip = 1;     //ip地址
+    optional uint32 port = 2;   //端口号
+    optional uint32 weight = 3; //权重
+}
+
+message RegisterInfo {
+    optional string domain = 1; //域名
+    repeated uint32 cmds = 2;  //命令字
+    optional Node node = 3;     //节点信息
+}
+
+message RegisterRequest {
+    repeated RegisterInfo infos = 1;    //注册信息
+}
+
+message QueryRequest {
+    repeated string domains = 1;         //域名
+}
+
+message NodeInfo {
+    optional string domain = 1;
+    optional uint32 cmd = 2;
+    repeated Node nodes = 3;
+}
+
+message QueryResponse {
+    repeated NodeInfo infos = 1;
+}
+
+message NotifyMessage {
+    repeated NodeInfo dels = 1;
+    repeated NodeInfo updates = 2;
+}
