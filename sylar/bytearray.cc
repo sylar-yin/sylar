@@ -505,7 +505,7 @@ void ByteArray::addCapacity(size_t size) {
     }
 
     size = size - old_cap;
-    size_t count = (size / m_baseSize) + (((size % m_baseSize) > old_cap) ? 1 : 0);
+    size_t count = ceil(1.0 * size / m_baseSize);
     Node* tmp = m_root;
     while(tmp->next) {
         tmp = tmp->next;

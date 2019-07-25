@@ -94,6 +94,11 @@ public:
      * @brief 返回是否连接
      */
     bool isConnected() const;
+
+    Address::ptr getRemoteAddress();
+    Address::ptr getLocalAddress();
+    std::string getRemoteAddressString();
+    std::string getLocalAddressString();
 protected:
     /// Socket类
     Socket::ptr m_socket;

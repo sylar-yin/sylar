@@ -23,6 +23,7 @@
 #include <yaml-cpp/yaml.h>
 #include <iostream>
 #include <boost/lexical_cast.hpp>
+#include <google/protobuf/message.h>
 #include "sylar/util/hash_util.h"
 #include "sylar/util/json_util.h"
 #include "sylar/util/crypto_util.h"
@@ -241,6 +242,8 @@ const char* TypeToName() {
     static const char* s_name = abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, nullptr);
     return s_name;
 }
+
+std::string PBToJsonString(const google::protobuf::Message& message);
 
 }
 

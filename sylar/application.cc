@@ -12,6 +12,7 @@
 #include "sylar/worker.h"
 #include "sylar/http/ws_server.h"
 #include "sylar/rock/rock_server.h"
+#include "sylar/ns/name_server_module.h"
 
 namespace sylar {
 
@@ -193,11 +194,20 @@ int Application::run_fiber() {
             _exit(0);
         }
         IOManager* accept_worker = sylar::IOManager::GetThis();
+        IOManager* io_worker = sylar::IOManager::GetThis();
         IOManager* process_worker = sylar::IOManager::GetThis();
         if(!i.accept_worker.empty()) {
             accept_worker = sylar::WorkerMgr::GetInstance()->getAsIOManager(i.accept_worker).get();
             if(!accept_worker) {
                 SYLAR_LOG_ERROR(g_logger) << "accept_worker: " << i.accept_worker
+                    << " not exists";
+                _exit(0);
+            }
+        }
+        if(!i.io_worker.empty()) {
+            io_worker = sylar::WorkerMgr::GetInstance()->getAsIOManager(i.io_worker).get();
+            if(!io_worker) {
+                SYLAR_LOG_ERROR(g_logger) << "io_worker: " << i.io_worker
                     << " not exists";
                 _exit(0);
             }
@@ -214,13 +224,17 @@ int Application::run_fiber() {
         TcpServer::ptr server;
         if(i.type == "http") {
             server.reset(new sylar::http::HttpServer(i.keepalive,
-                            process_worker, accept_worker));
+                            process_worker, io_worker, accept_worker));
         } else if(i.type == "ws") {
             server.reset(new sylar::http::WSServer(
-                            process_worker, accept_worker));
+                            process_worker, io_worker, accept_worker));
         } else if(i.type == "rock") {
-            server.reset(new sylar::RockServer(
-                            process_worker, accept_worker));
+            server.reset(new sylar::RockServer("rock",
+                            process_worker, io_worker, accept_worker));
+        } else if(i.type == "nameserver") {
+            server.reset(new sylar::RockServer("nameserver",
+                            process_worker, io_worker, accept_worker));
+            ModuleMgr::GetInstance()->add(std::make_shared<sylar::ns::NameServerModule>());
         } else {
             SYLAR_LOG_ERROR(g_logger) << "invalid server type=" << i.type
                 << LexicalCast<TcpServerConf, std::string>()(i);

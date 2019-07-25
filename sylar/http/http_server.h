@@ -33,6 +33,7 @@ public:
      */
     HttpServer(bool keepalive = false
                ,sylar::IOManager* worker = sylar::IOManager::GetThis()
+               ,sylar::IOManager* io_worker = sylar::IOManager::GetThis()
                ,sylar::IOManager* accept_worker = sylar::IOManager::GetThis());
 
     /**

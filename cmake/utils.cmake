@@ -39,6 +39,28 @@ function(ragelmaker src_rl outputlist outputdir)
     set_source_files_properties(${rl_out} PROPERTIES GENERATED TRUE)
 endfunction(ragelmaker)
 
+function(protobufmaker src_proto outputlist outputdir)
+    #Create a custom build step that will call ragel on the provided src_rl file.
+    #The output .cpp file will be appended to the variable name passed in outputlist.
+
+    get_filename_component(src_file ${src_proto} NAME_WE)
+    get_filename_component(src_path ${src_proto} PATH)
+
+    set(protobuf_out ${outputdir}/${src_path}/${src_file}.pb.cc)
+
+    #adding to the list inside a function takes special care, we cannot use list(APPEND...)
+    #because the results are local scope only
+    set(${outputlist} ${${outputlist}} ${protobuf_out} PARENT_SCOPE)
+
+    add_custom_command(
+        OUTPUT ${protobuf_out}
+        COMMAND protoc --cpp_out=${outputdir} -I${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/${src_proto}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${src_proto}
+        )
+    set_source_files_properties(${protobuf_out} PROPERTIES GENERATED TRUE)
+endfunction(protobufmaker)
+
+
 function(sylar_add_executable targetname srcs depends libs)
     add_executable(${targetname} ${srcs})
     add_dependencies(${targetname} ${depends})

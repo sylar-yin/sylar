@@ -22,7 +22,7 @@ include_directories(/apps/sylar/include)
 link_directories(/apps/sylar/lib)
 link_directories(/apps/sylar/lib64)
 
-option(TEST "ON for complile test" OFF)
+option(BUILD_TEST "ON for complile test" OFF)
 
 find_package(Boost REQUIRED)
 if(Boost_FOUND)
@@ -79,6 +79,9 @@ set(LIB_SRC
     sylar/log.cc
     sylar/module.cc
     sylar/mutex.cc
+    sylar/ns/name_server_module.cc
+    sylar/ns/ns_client.cc
+    sylar/ns/ns_protocol.cc
     sylar/protocol.cc
     sylar/rock/rock_protocol.cc
     sylar/rock/rock_server.cc
@@ -105,7 +108,9 @@ ragelmaker(sylar/http/http11_parser.rl LIB_SRC ${CMAKE_CURRENT_SOURCE_DIR}/sylar
 ragelmaker(sylar/http/httpclient_parser.rl LIB_SRC ${CMAKE_CURRENT_SOURCE_DIR}/sylar/http)
 ragelmaker(sylar/uri.rl LIB_SRC ${CMAKE_CURRENT_SOURCE_DIR}/sylar)
 
-#PROTOBUF_GENERATE_CPP(PB_SRCS PB_HDRS sylar/test.proto)
+protobufmaker(sylar/ns/ns_protobuf.proto LIB_SRC ${CMAKE_CURRENT_SOURCE_DIR})
+#PROTOBUF_GENERATE_CPP(PB_SRCS PB_HDRS sylar/ns/ns_protobuf.proto)
+#message("****${PB_SRCS}***${PB_HDRS}****")
 #list(APPEND LIB_SRC ${PB_SRCS})
 #
 #message(STATUS ${LIB_SRC})
@@ -135,7 +140,7 @@ set(LIBS
         sqlite3
         tinyxml2
         )
-if(TEST)
+if(BUILD_TEST)
 sylar_add_executable(test1 "tests/test.cc" sylar "${LIBS}")
 sylar_add_executable(test_config "tests/test_config.cc" sylar "${LIBS}")
 sylar_add_executable(test_thread "tests/test_thread.cc" sylar "${LIBS}")
@@ -176,6 +181,7 @@ sylar_add_executable(test_sqlite3 "tests/test_sqlite3.cc" sylar "${LIBS}")
 sylar_add_executable(test_rock "tests/test_rock.cc" sylar "${LIBS}")
 sylar_add_executable(test_email  "tests/test_email.cc" sylar "${LIBS}")
 sylar_add_executable(test_mysql "tests/test_mysql.cc" sylar "${LIBS}")
+sylar_add_executable(test_nameserver "tests/test_nameserver.cc" sylar "${LIBS}")
 
 set(ORM_SRCS
     sylar/orm/table.cc

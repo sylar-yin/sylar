@@ -16,7 +16,7 @@ static thread_local Fiber* t_fiber = nullptr;
 static thread_local Fiber::ptr t_threadFiber = nullptr;
 
 static ConfigVar<uint32_t>::ptr g_fiber_stack_size =
-    Config::Lookup<uint32_t>("fiber.stack_size", 1024 * 1024, "fiber stack size");
+    Config::Lookup<uint32_t>("fiber.stack_size", 128 * 1024, "fiber stack size");
 
 class MallocStackAllocator {
 public:
@@ -48,7 +48,7 @@ Fiber::Fiber() {
 
     ++s_fiber_count;
 
-    SYLAR_LOG_DEBUG(g_logger) << "Fiber::Fiber";
+    SYLAR_LOG_DEBUG(g_logger) << "Fiber::Fiber main";
 }
 
 Fiber::Fiber(std::function<void()> cb, size_t stacksize, bool use_caller)
@@ -91,7 +91,8 @@ Fiber::~Fiber() {
             SetThis(nullptr);
         }
     }
-    SYLAR_LOG_DEBUG(g_logger) << "Fiber::~Fiber id=" << m_id;
+    SYLAR_LOG_DEBUG(g_logger) << "Fiber::~Fiber id=" << m_id
+                              << " total=" << s_fiber_count;
 }
 
 //重置协程函数，并重置状态

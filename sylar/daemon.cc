@@ -74,6 +74,8 @@ int start_daemon(int argc, char** argv
                  , std::function<int(int argc, char** argv)> main_cb
                  , bool is_daemon) {
     if(!is_daemon) {
+        ProcessInfoMgr::GetInstance()->parent_id = getpid();
+        ProcessInfoMgr::GetInstance()->parent_start_time = time(0);
         return real_start(argc, argv, main_cb);
     }
     return real_daemon(argc, argv, main_cb);

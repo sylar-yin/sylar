@@ -64,4 +64,34 @@ void SocketStream::close() {
     }
 }
 
+Address::ptr SocketStream::getRemoteAddress() {
+    if(m_socket) {
+        return m_socket->getRemoteAddress();
+    }
+    return nullptr;
+}
+
+Address::ptr SocketStream::getLocalAddress() {
+    if(m_socket) {
+        return m_socket->getLocalAddress();
+    }
+    return nullptr;
+}
+
+std::string SocketStream::getRemoteAddressString() {
+    auto addr = getRemoteAddress();
+    if(addr) {
+        return addr->toString();
+    }
+    return "";
+}
+
+std::string SocketStream::getLocalAddressString() {
+    auto addr = getLocalAddress();
+    if(addr) {
+        return addr->toString();
+    }
+    return "";
+}
+
 }

@@ -18,7 +18,7 @@ public:
 
     AsyncSocketStream(Socket::ptr sock, bool owner = true);
 
-    bool start();
+    virtual bool start();
     virtual void close() override;
 public:
     enum Error {
@@ -55,6 +55,12 @@ protected:
     };
 
 public:
+    void setWorker(sylar::IOManager* v) { m_worker = v;}
+    sylar::IOManager* getWorker() const { return m_worker;}
+
+    void setIOManager(sylar::IOManager* v) { m_iomanager = v;}
+    sylar::IOManager* getIOManager() const { return m_iomanager;}
+
     bool isAutoConnect() const { return m_autoConnect;}
     void setAutoConnect(bool v) { m_autoConnect = v;}
 
@@ -120,6 +126,7 @@ protected:
     bool m_autoConnect;
     sylar::Timer::ptr m_timer;
     sylar::IOManager* m_iomanager;
+    sylar::IOManager* m_worker;
 
     connect_callback m_connectCb;
     disconnect_callback m_disconnectCb;

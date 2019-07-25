@@ -1,5 +1,11 @@
 workers:
     io:
-        thread_num: 4
+        thread_num: 8
+    http_io:
+        thread_num: 1
     accept:
         thread_num: 1
+    worker:
+        thread_num: 8
+    notify:
+        thread_num: 8

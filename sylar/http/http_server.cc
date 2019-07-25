@@ -10,8 +10,9 @@ static sylar::Logger::ptr g_logger = SYLAR_LOG_NAME("system");
 
 HttpServer::HttpServer(bool keepalive
                ,sylar::IOManager* worker
+               ,sylar::IOManager* io_worker
                ,sylar::IOManager* accept_worker)
-    :TcpServer(worker, accept_worker)
+    :TcpServer(worker, io_worker, accept_worker)
     ,m_isKeepalive(keepalive) {
     m_dispatch.reset(new ServletDispatch);
 
