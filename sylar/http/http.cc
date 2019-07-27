@@ -241,7 +241,7 @@ void HttpRequest::initBodyParam() {
         return;
     }
     std::string content_type = getHeader("content-type");
-    if(strcasestr(content_type.c_str(), "application/x-www-form-urlencoded") != nullptr) {
+    if(strcasestr(content_type.c_str(), "application/x-www-form-urlencoded") == nullptr) {
         m_parserParamFlag |= 0x2;
         return;
     }
