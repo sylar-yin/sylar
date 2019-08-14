@@ -14,6 +14,8 @@
 #include "sylar/http/ws_server.h"
 #include "sylar/rock/rock_server.h"
 #include "sylar/ns/name_server_module.h"
+#include "sylar/db/fox_thread.h"
+#include "sylar/db/redis.h"
 
 namespace sylar {
 
@@ -159,7 +161,12 @@ int Application::run_fiber() {
     if(has_error) {
         _exit(0);
     }
+
     sylar::WorkerMgr::GetInstance()->init();
+    FoxThreadMgr::GetInstance()->init();
+    FoxThreadMgr::GetInstance()->start();
+    RedisMgr::GetInstance();
+
     auto http_confs = g_servers_conf->getValue();
     std::vector<TcpServer::ptr> svrs;
     for(auto& i : http_confs) {

@@ -52,7 +52,9 @@ set(LIB_SRC
     sylar/address.cc
     sylar/bytearray.cc
     sylar/config.cc
+    sylar/db/fox_thread.cc
     sylar/db/mysql.cc
+    sylar/db/redis.cc
     sylar/db/sqlite3.cc
     sylar/ds/bitmap.cc
     sylar/email/email.cc
@@ -139,6 +141,8 @@ set(LIBS
         ${ZLIB_LIBRARIES}
         ${OPENSSL_LIBRARIES}
         ${PROTOBUF_LIBRARIES}
+        event
+        hiredis_vip
         mysqlclient_r
         zookeeper_mt
         sqlite3

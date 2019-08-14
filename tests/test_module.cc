@@ -2,6 +2,7 @@
 #include "sylar/singleton.h"
 #include <iostream>
 #include "sylar/log.h"
+#include "sylar/db/redis.h"
 
 static sylar::Logger::ptr g_logger = SYLAR_LOG_ROOT();
 
@@ -38,6 +39,13 @@ public:
 
     bool onServerReady() {
         registerService("rock", "sylar.top", "blog");
+        auto rpy = sylar::RedisUtil::Cmd("local", "get abc");
+        if(!rpy) {
+            SYLAR_LOG_ERROR(g_logger) << "redis cmd get abc error";
+        } else {
+            SYLAR_LOG_ERROR(g_logger) << "redis get abc: "
+                << (rpy->str ? rpy->str : "(null)");
+        }
         return true;
     }
 
