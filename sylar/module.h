@@ -60,6 +60,9 @@ public:
     void setFilename(const std::string& v) { m_filename = v;}
 
     uint32_t getType() const { return m_type;}
+
+    void registerService(const std::string& server_type,
+            const std::string& domain, const std::string& service);
 protected:
     std::string m_name;
     std::string m_version;

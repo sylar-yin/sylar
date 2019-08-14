@@ -4,63 +4,11 @@
 #include "sylar/streams/socket_stream.h"
 #include "sylar/mutex.h"
 #include "sylar/util.h"
+#include "sylar/streams/service_discovery.h"
 #include <vector>
+#include <unordered_map>
 
 namespace sylar {
-
-class LoadBalanceItem {
-public:
-    typedef std::shared_ptr<LoadBalanceItem> ptr;
-    virtual ~LoadBalanceItem() {}
-
-    SocketStream::ptr getStream() const { return m_stream;}
-
-    template<class T>
-    std::shared_ptr<T> getStreamAs() {
-        return std::dynamic_pointer_cast<T>(m_stream);
-    }
-
-    virtual int32_t getWeight() { return m_weight;}
-    void setWeight(int32_t v) { m_weight = v;}
-
-    virtual bool isValid() = 0;
-protected:
-    SocketStream::ptr m_stream;
-    int32_t m_weight = 0;
-};
-
-class LoadBalance {
-public:
-    typedef sylar::RWMutex RWMutexType;
-    typedef std::shared_ptr<LoadBalance> ptr;
-    virtual ~LoadBalance() {}
-
-    virtual LoadBalanceItem::ptr get() = 0;
-    void add(LoadBalanceItem::ptr v);
-    void del(LoadBalanceItem::ptr v);
-    void set(const std::vector<LoadBalanceItem::ptr>& vs);
-protected:
-    RWMutexType m_mutex;
-    std::vector<LoadBalanceItem::ptr> m_items;
-};
-
-class RoundRobinLoadBalance : public LoadBalance {
-public:
-    typedef std::shared_ptr<RoundRobinLoadBalance> ptr;
-    virtual LoadBalanceItem::ptr get() override;
-};
-
-class WeightLoadBalance : public LoadBalance {
-public:
-    typedef std::shared_ptr<WeightLoadBalance> ptr;
-    virtual LoadBalanceItem::ptr get() override;
-
-    int32_t initWeight();
-private:
-    int32_t getIdx();
-private:
-    std::vector<int32_t> m_weights;
-};
 
 class HolderStatsSet;
 class HolderStats {
@@ -106,30 +54,160 @@ private:
     std::vector<HolderStats> m_stats;
 };
 
-class FairLoadBalance;
+class LoadBalanceItem {
+public:
+    typedef std::shared_ptr<LoadBalanceItem> ptr;
+    virtual ~LoadBalanceItem() {}
+
+    SocketStream::ptr getStream() const { return m_stream;}
+    void setStream(SocketStream::ptr v) { m_stream = v;}
+
+    void setId(uint64_t v) { m_id = v;}
+    uint64_t getId() const { return m_id;}
+
+    HolderStats& get(const uint32_t& now = time(0));
+
+    template<class T>
+    std::shared_ptr<T> getStreamAs() {
+        return std::dynamic_pointer_cast<T>(m_stream);
+    }
+
+    virtual int32_t getWeight() { return m_weight;}
+    void setWeight(int32_t v) { m_weight = v;}
+
+    virtual bool isValid();
+    void close();
+protected:
+    uint64_t m_id = 0;
+    SocketStream::ptr m_stream;
+    int32_t m_weight = 0;
+    HolderStatsSet m_stats;
+};
+
+class ILoadBalance {
+public:
+    enum Type {
+        ROUNDROBIN = 1,
+        WEIGHT = 2,
+        FAIR = 3
+    };
+
+    enum Error {
+        NO_SERVICE = -101,
+        NO_CONNECTION = -102,
+    };
+    typedef std::shared_ptr<ILoadBalance> ptr;
+    virtual ~ILoadBalance() {}
+    virtual LoadBalanceItem::ptr get(uint64_t v = -1) = 0;
+};
+
+class LoadBalance : public ILoadBalance {
+public:
+    typedef sylar::RWMutex RWMutexType;
+    typedef std::shared_ptr<LoadBalance> ptr;
+    void add(LoadBalanceItem::ptr v);
+    void del(LoadBalanceItem::ptr v);
+    void set(const std::vector<LoadBalanceItem::ptr>& vs);
+
+    LoadBalanceItem::ptr getById(uint64_t id);
+    void update(const std::unordered_map<uint64_t, LoadBalanceItem::ptr>& adds
+                ,std::unordered_map<uint64_t, LoadBalanceItem::ptr>& dels);
+protected:
+    void init();
+    virtual void initNolock() = 0;
+protected:
+    RWMutexType m_mutex;
+    std::unordered_map<uint64_t, LoadBalanceItem::ptr> m_datas;
+};
+
+class RoundRobinLoadBalance : public LoadBalance {
+public:
+    typedef std::shared_ptr<RoundRobinLoadBalance> ptr;
+    virtual LoadBalanceItem::ptr get(uint64_t v = -1) override;
+protected:
+    virtual void initNolock();
+protected:
+    std::vector<LoadBalanceItem::ptr> m_items;
+};
+
+//class FairLoadBalance;
 class FairLoadBalanceItem : public LoadBalanceItem {
-friend class FairLoadBalance;
+//friend class FairLoadBalance;
 public:
     typedef std::shared_ptr<FairLoadBalanceItem> ptr;
 
     void clear();
     virtual int32_t getWeight();
-    HolderStats& get(const uint32_t& now = time(0));
-protected:
-    HolderStatsSet m_stats;
 };
 
-class FairLoadBalance : public LoadBalance {
+class WeightLoadBalance : public LoadBalance {
 public:
-    typedef std::shared_ptr<FairLoadBalance> ptr;
-    virtual LoadBalanceItem::ptr get() override;
-    FairLoadBalanceItem::ptr getAsFair();
+    typedef std::shared_ptr<WeightLoadBalance> ptr;
+    virtual LoadBalanceItem::ptr get(uint64_t v = -1) override;
 
-    int32_t initWeight();
+    FairLoadBalanceItem::ptr getAsFair();
+protected:
+    virtual void initNolock();
 private:
-    int32_t getIdx();
+    int32_t getIdx(uint64_t v = -1);
+protected:
+    std::vector<LoadBalanceItem::ptr> m_items;
 private:
     std::vector<int32_t> m_weights;
+};
+
+
+
+//class FairLoadBalance : public LoadBalance {
+//public:
+//    typedef std::shared_ptr<FairLoadBalance> ptr;
+//    virtual LoadBalanceItem::ptr get() override;
+//    FairLoadBalanceItem::ptr getAsFair();
+//
+//protected:
+//    virtual void initNolock();
+//private:
+//    int32_t getIdx();
+//protected:
+//    std::vector<LoadBalanceItem::ptr> m_items;
+//private:
+//    std::vector<int32_t> m_weights;
+//};
+
+class SDLoadBalance {
+public:
+    typedef std::shared_ptr<SDLoadBalance> ptr;
+    typedef std::function<SocketStream::ptr(ServiceItemInfo::ptr)> stream_callback;
+    typedef sylar::RWMutex RWMutexType;
+
+    SDLoadBalance(IServiceDiscovery::ptr sd);
+    virtual ~SDLoadBalance() {}
+
+    virtual void start();
+    virtual void stop();
+
+    stream_callback getCb() const { return m_cb;}
+    void setCb(stream_callback v) { m_cb = v;}
+
+    LoadBalance::ptr get(const std::string& domain, const std::string& service, bool auto_create = false);
+
+    void initConf(const std::unordered_map<std::string, std::unordered_map<std::string, std::string> >& confs);
+private:
+    void onServiceChange(const std::string& domain, const std::string& service
+                ,const std::unordered_map<uint64_t, ServiceItemInfo::ptr>& old_value
+                ,const std::unordered_map<uint64_t, ServiceItemInfo::ptr>& new_value);
+
+    ILoadBalance::Type getType(const std::string& domain, const std::string& service);
+    LoadBalance::ptr createLoadBalance(ILoadBalance::Type type);
+    LoadBalanceItem::ptr createLoadBalanceItem(ILoadBalance::Type type);
+protected:
+    RWMutexType m_mutex;
+    IServiceDiscovery::ptr m_sd;
+    //domain -> [ service -> [ LoadBalance ] ]
+    std::unordered_map<std::string, std::unordered_map<std::string, LoadBalance::ptr> > m_datas;
+    std::unordered_map<std::string, std::unordered_map<std::string, ILoadBalance::Type> > m_types;
+    ILoadBalance::Type m_defaultType = ILoadBalance::FAIR;
+    stream_callback m_cb;
 };
 
 }

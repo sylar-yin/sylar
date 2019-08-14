@@ -92,12 +92,24 @@ public:
     bool connect(sylar::Address::ptr addr);
 };
 
-class RockFairLoadBalance : public FairLoadBalance {
+class RockFairLoadBalance : public WeightLoadBalance {
 public:
     typedef std::shared_ptr<RockFairLoadBalance> ptr;
     RockResult::ptr request(RockRequest::ptr req, uint32_t timeout_ms);
 private:
     uint64_t m_lastInitTime = 0;
+};
+
+class RockSDLoadBalance : public SDLoadBalance {
+public:
+    typedef std::shared_ptr<RockSDLoadBalance> ptr;
+    RockSDLoadBalance(IServiceDiscovery::ptr sd);
+
+    virtual void start();
+    virtual void stop();
+
+    RockResult::ptr request(const std::string& domain, const std::string& service,
+                             RockRequest::ptr req, uint32_t timeout_ms, uint64_t idx = -1);
 };
 
 }

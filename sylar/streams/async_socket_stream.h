@@ -25,7 +25,7 @@ public:
         OK = 0,
         TIMEOUT = -1,
         IO_ERROR = -2,
-        NOT_CONNECT = -3
+        NOT_CONNECT = -3,
     };
 protected:
     struct SendCtx {

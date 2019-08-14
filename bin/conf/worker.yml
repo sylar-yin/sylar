@@ -9,3 +9,5 @@ workers:
         thread_num: 8
     notify:
         thread_num: 8
+    service_io:
+        thread_num: 4

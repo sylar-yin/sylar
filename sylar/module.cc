@@ -4,6 +4,7 @@
 #include "library.h"
 #include "util.h"
 #include "log.h"
+#include "application.h"
 
 namespace sylar {
 
@@ -66,6 +67,38 @@ bool Module::onServerReady() {
 
 bool Module::onServerUp() {
     return true;
+}
+
+void Module::registerService(const std::string& server_type,
+            const std::string& domain, const std::string& service) {
+    auto sd = Application::GetInstance()->getServiceDiscovery();
+    if(!sd) {
+        return;
+    }
+    std::vector<TcpServer::ptr> svrs;
+    if(!Application::GetInstance()->getServer(server_type, svrs)) {
+        return;
+    }
+    for(auto& i : svrs) {
+        auto socks = i->getSocks();
+        for(auto& s : socks) {
+            auto addr = std::dynamic_pointer_cast<IPv4Address>(s->getLocalAddress());
+            if(!addr) {
+                continue;
+            }
+            auto str = addr->toString();
+            if(str.find("127.0.0.1") == 0) {
+                continue;
+            }
+            std::string ip_and_port;
+            if(str.find("0.0.0.0") == 0) {
+                ip_and_port = sylar::GetIPv4() + ":" + std::to_string(addr->getPort());
+            } else {
+                ip_and_port = addr->toString();
+            }
+            sd->registerServer(domain, service, ip_and_port, server_type);
+        }
+    }
 }
 
 std::string Module::statusString() {
