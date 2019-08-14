@@ -103,6 +103,7 @@ set(LIB_SRC
     sylar/util/hash_util.cc
     sylar/worker.cc
     sylar/application.cc
+    sylar/zk_client.cc
     )
 
 ragelmaker(sylar/http/http11_parser.rl LIB_SRC ${CMAKE_CURRENT_SOURCE_DIR}/sylar/http)
@@ -138,6 +139,7 @@ set(LIBS
         ${OPENSSL_LIBRARIES}
         ${PROTOBUF_LIBRARIES}
         mysqlclient_r
+        zookeeper_mt
         sqlite3
         tinyxml2
         )
@@ -184,6 +186,7 @@ sylar_add_executable(test_email  "tests/test_email.cc" sylar "${LIBS}")
 sylar_add_executable(test_mysql "tests/test_mysql.cc" sylar "${LIBS}")
 sylar_add_executable(test_nameserver "tests/test_nameserver.cc" sylar "${LIBS}")
 sylar_add_executable(test_bitmap "tests/test_bitmap.cc" sylar "${LIBS}")
+sylar_add_executable(test_zkclient "tests/test_zookeeper.cc" sylar "${LIBS}")
 
 set(ORM_SRCS
     sylar/orm/table.cc
