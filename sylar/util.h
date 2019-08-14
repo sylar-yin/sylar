@@ -245,6 +245,18 @@ const char* TypeToName() {
 
 std::string PBToJsonString(const google::protobuf::Message& message);
 
+template<class Iter>
+std::string Join(Iter begin, Iter end, const std::string& tag) {
+    std::stringstream ss;
+    for(Iter it = begin; it != end; ++it) {
+        if(it != begin) {
+            ss << tag;
+        }
+        ss << *it;
+    }
+    return ss.str();
+}
+
 }
 
 #endif
