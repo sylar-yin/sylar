@@ -57,7 +57,7 @@ RockResult::ptr NSClient::query() {
         data->add_domains(i);
     }
     if(m_queryDomains.empty()) {
-        return std::make_shared<RockResult>(0, nullptr);
+        return std::make_shared<RockResult>(0, 0, nullptr, nullptr);
     }
     lock.unlock();
 

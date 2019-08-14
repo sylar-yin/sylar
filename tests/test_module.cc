@@ -44,11 +44,29 @@ public:
     bool handleRockRequest(sylar::RockRequest::ptr request
                         ,sylar::RockResponse::ptr response
                         ,sylar::RockStream::ptr stream) {
-        SYLAR_LOG_INFO(g_logger) << "handleRockRequest " << request->toString();
+        //SYLAR_LOG_INFO(g_logger) << "handleRockRequest " << request->toString();
+        //sleep(1);
         response->setResult(0);
         response->setResultStr("ok");
         response->setBody("echo: " + request->getBody());
+
+        usleep(100 * 1000);
+        auto addr = stream->getLocalAddressString();
+        if(addr.find("8061") != std::string::npos) {
+            if(rand() % 100 < 50) {
+                usleep(10 * 1000);
+            } else if(rand() % 100 < 10) {
+                response->setResult(-1000);
+            }
+        } else {
+            //if(rand() % 100 < 25) {
+            //    usleep(10 * 1000);
+            //} else if(rand() % 100 < 10) {
+            //    response->setResult(-1000);
+            //}
+        }
         return true;
+        //return rand() % 100 < 90;
     }
 
     bool handleRockNotify(sylar::RockNotify::ptr notify 

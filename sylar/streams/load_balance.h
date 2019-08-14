@@ -26,12 +26,14 @@ public:
     uint32_t incDoing(uint32_t v) { return sylar::Atomic::addFetch(m_doing, v);}
     uint32_t incTimeouts(uint32_t v) { return sylar::Atomic::addFetch(m_timeouts, v);}
     uint32_t incOks(uint32_t v) { return sylar::Atomic::addFetch(m_oks, v);}
-    uint32_t incErrs(uint32_t v) { return sylar::Atomic::addFetch(m_errs, 0);}
+    uint32_t incErrs(uint32_t v) { return sylar::Atomic::addFetch(m_errs, v);}
 
-    uint32_t decDoing(uint32_t v) { return sylar::Atomic::subFetch(m_doing, 0);}
+    uint32_t decDoing(uint32_t v) { return sylar::Atomic::subFetch(m_doing, v);}
     void clear();
 
     float getWeight(float rate = 1.0f);
+
+    std::string toString();
 private:
     uint32_t m_usedTime = 0;
     uint32_t m_total = 0;
@@ -47,6 +49,8 @@ public:
     HolderStats& get(const uint32_t& now = time(0));
 
     float getWeight(const uint32_t& now = time(0));
+
+    HolderStats getTotal();
 private:
     void init(const uint32_t& now);
 private:
@@ -77,6 +81,8 @@ public:
 
     virtual bool isValid();
     void close();
+
+    std::string toString();
 protected:
     uint64_t m_id = 0;
     SocketStream::ptr m_stream;
@@ -112,12 +118,16 @@ public:
     LoadBalanceItem::ptr getById(uint64_t id);
     void update(const std::unordered_map<uint64_t, LoadBalanceItem::ptr>& adds
                 ,std::unordered_map<uint64_t, LoadBalanceItem::ptr>& dels);
-protected:
     void init();
+
+    std::string statusString(const std::string& prefix);
+protected:
     virtual void initNolock() = 0;
+    void checkInit();
 protected:
     RWMutexType m_mutex;
     std::unordered_map<uint64_t, LoadBalanceItem::ptr> m_datas;
+    uint64_t m_lastInitTime = 0;
 };
 
 class RoundRobinLoadBalance : public LoadBalance {
@@ -153,7 +163,7 @@ private:
 protected:
     std::vector<LoadBalanceItem::ptr> m_items;
 private:
-    std::vector<int32_t> m_weights;
+    std::vector<int64_t> m_weights;
 };
 
 
@@ -192,6 +202,8 @@ public:
     LoadBalance::ptr get(const std::string& domain, const std::string& service, bool auto_create = false);
 
     void initConf(const std::unordered_map<std::string, std::unordered_map<std::string, std::string> >& confs);
+
+    std::string statusString();
 private:
     void onServiceChange(const std::string& domain, const std::string& service
                 ,const std::unordered_map<uint64_t, ServiceItemInfo::ptr>& old_value

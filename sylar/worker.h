@@ -61,6 +61,7 @@ public:
     }
 
     bool init();
+    bool init(const std::map<std::string, std::map<std::string, std::string> >& v);
     void stop();
 
     bool isStoped() const { return m_stop;}

@@ -100,6 +100,7 @@ private:
     std::string m_selfData;
     ZKClient::ptr m_client;
     sylar::Timer::ptr m_timer;
+    bool m_isOnTimer = false;
 };
 
 }

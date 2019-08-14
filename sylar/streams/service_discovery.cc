@@ -89,15 +89,9 @@ void ZKServiceDiscovery::start() {
         SYLAR_LOG_ERROR(g_logger) << "ZKClient init fail, hosts=" << m_hosts;
     }
     m_timer = sylar::IOManager::GetThis()->addTimer(60 * 1000, [self, this](){
-        sylar::RWMutex::ReadLock lock(m_mutex);
-        auto qinfo = m_queryInfos;
-        lock.unlock();
-
-        for(auto& i : qinfo) {
-            for(auto& x : i.second) {
-                queryData(i.first, x);
-            }
-        }
+        m_isOnTimer = true;
+        onZKConnect("", m_client);
+        m_isOnTimer = false;
     }, true);
 }
 
@@ -113,7 +107,6 @@ void ZKServiceDiscovery::stop() {
 }
 
 void ZKServiceDiscovery::onZKConnect(const std::string& path, ZKClient::ptr client) {
-    SYLAR_LOG_INFO(g_logger) << "onZKConnect path=" << path;
     sylar::RWMutex::ReadLock lock(m_mutex);
     auto rinfo = m_registerInfos;
     auto qinfo = m_queryInfos;
@@ -132,6 +125,7 @@ void ZKServiceDiscovery::onZKConnect(const std::string& path, ZKClient::ptr clie
         SYLAR_LOG_ERROR(g_logger) << "onZKConnect register fail";
     }
 
+    ok = true;
     for(auto& i : qinfo) {
         for(auto& x : i.second) {
             ok &= queryInfo(i.first, x);
@@ -141,6 +135,7 @@ void ZKServiceDiscovery::onZKConnect(const std::string& path, ZKClient::ptr clie
         SYLAR_LOG_ERROR(g_logger) << "onZKConnect query fail";
     }
 
+    ok = true;
     for(auto& i : qinfo) {
         for(auto& x : i.second) {
             ok &= queryData(i.first, x);
@@ -220,9 +215,11 @@ bool ZKServiceDiscovery::registerInfo(const std::string& domain, const std::stri
     if(rt == ZOK) {
         return true;
     }
-    SYLAR_LOG_ERROR(g_logger) << "create path=" << (path + "/" + ip_and_port) << " fail, error:"
-        << zerror(rt) << " (" << rt << ")";
-    return false;
+    if(!m_isOnTimer) {
+        SYLAR_LOG_ERROR(g_logger) << "create path=" << (path + "/" + ip_and_port) << " fail, error:"
+            << zerror(rt) << " (" << rt << ")";
+    }
+    return rt == ZNODEEXISTS;
 }
 
 bool ZKServiceDiscovery::queryInfo(const std::string& domain, const std::string& service) {
@@ -245,9 +242,11 @@ bool ZKServiceDiscovery::queryInfo(const std::string& domain, const std::string&
         if(rt == ZOK) {
             return true;
         }
-        SYLAR_LOG_ERROR(g_logger) << "create path=" << (path + "/" + m_selfInfo) << " fail, error:"
-            << zerror(rt) << " (" << rt << ")";
-        return false;
+        if(!m_isOnTimer) {
+            SYLAR_LOG_ERROR(g_logger) << "create path=" << (path + "/" + m_selfInfo) << " fail, error:"
+                << zerror(rt) << " (" << rt << ")";
+        }
+        return rt == ZNODEEXISTS;
     } else {
         std::vector<std::string> children;
         m_client->getChildren(GetDomainPath(domain), children, false);
@@ -312,6 +311,8 @@ bool ZKServiceDiscovery::getChildren(const std::string& path) {
 }
 
 bool ZKServiceDiscovery::queryData(const std::string& domain, const std::string& service) {
+    //SYLAR_LOG_INFO(g_logger) << "query_data domain=" << domain
+    //                         << " service=" << service;
     if(service != "all") {
         std::string path = GetProvidersPath(domain, service);
         return getChildren(path);
@@ -327,7 +328,7 @@ bool ZKServiceDiscovery::queryData(const std::string& domain, const std::string&
 }
 
 void ZKServiceDiscovery::onZKChild(const std::string& path, ZKClient::ptr client) {
-    SYLAR_LOG_INFO(g_logger) << "onZKChild path=" << path;
+    //SYLAR_LOG_INFO(g_logger) << "onZKChild path=" << path;
     getChildren(path);
 }
 

@@ -60,9 +60,8 @@ IOManager::ptr WorkerManager::getAsIOManager(const std::string& name) {
     return std::dynamic_pointer_cast<IOManager>(get(name));
 }
 
-bool WorkerManager::init() {
-    auto workers = g_worker_config->getValue();
-    for(auto& i : workers) {
+bool WorkerManager::init(const std::map<std::string, std::map<std::string, std::string> >& v) {
+    for(auto& i : v) {
         std::string name = i.first;
         int32_t thread_num = sylar::GetParamValue(i.second, "thread_num", 1);
         int32_t worker_num = sylar::GetParamValue(i.second, "worker_num", 1);
@@ -79,6 +78,11 @@ bool WorkerManager::init() {
     }
     m_stop = m_datas.empty();
     return true;
+}
+
+bool WorkerManager::init() {
+    auto workers = g_worker_config->getValue();
+    return init(workers);
 }
 
 void WorkerManager::stop() {
