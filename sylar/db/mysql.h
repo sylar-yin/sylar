@@ -8,6 +8,7 @@
 #include <vector>
 #include "sylar/mutex.h"
 #include "db.h"
+#include "sylar/singleton.h"
 
 namespace sylar {
 
@@ -303,6 +304,8 @@ private:
     std::map<std::string, std::list<MySQL*> > m_conns;
     std::map<std::string, std::map<std::string, std::string> > m_dbDefines;
 };
+
+typedef sylar::Singleton<MySQLManager> MySQLMgr;
 
 namespace {
 

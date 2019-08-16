@@ -967,7 +967,9 @@ std::shared_ptr<MySQL> MySQLTransaction::getMySQL() {
 
 MySQLTransaction::MySQLTransaction(MySQL::ptr mysql, bool auto_commit)
     :m_mysql(mysql)
-    ,m_autoCommit(auto_commit) {
+    ,m_autoCommit(auto_commit)
+    ,m_isFinished(false)
+    ,m_hasError(false) {
 }
 
 MySQLManager::MySQLManager()

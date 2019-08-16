@@ -165,7 +165,7 @@ std::string Column::getDefaultValueString() {
 }
 
 std::string Column::getSQLite3Default() {
-    if(m_dtype <= TYPE_DOUBLE) {
+    if(m_dtype <= TYPE_UINT64) {
         if(m_default.empty()) {
             return "0";
         }
