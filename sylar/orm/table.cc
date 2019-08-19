@@ -928,14 +928,14 @@ void Table::gen_dao_src(std::ofstream& ofs) {
     }
 
     ofs << "int " << GetAsClassName(class_name_dao) << "::CreateTableSQLite3(" << m_dbclass << "::ptr conn) {" << std::endl;
-    ofs << "    return conn->execute(\"CREATE TABLE " << m_name << "(";
+    ofs << "    return conn->execute(\"CREATE TABLE " << m_name << "(\"" << std::endl;
     is_first = true;
     bool has_auto_increment = false;
     for(auto& i : m_cols) {
         if(!is_first) {
-            ofs << ", ";
+            ofs << ",\"" << std::endl;
         }
-        ofs << i->getName() << " " << i->getSQLite3TypeString();
+        ofs << "            \"" << i->getName() << " " << i->getSQLite3TypeString();
         if(i->isAutoIncrement()) {
             ofs << " PRIMARY KEY AUTOINCREMENT";
             has_auto_increment = true;
@@ -955,12 +955,12 @@ void Table::gen_dao_src(std::ofstream& ofs) {
         }
         ofs << ")";
     }
-    ofs << ");";
+    ofs << ");\"" << std::endl;
     for(auto& i : m_idxs) {
         if(i->getDType() == Index::TYPE_PK) {
             continue;
         }
-        ofs << "CREATE";
+        ofs << "            \"CREATE";
         if(i->getDType() == Index::TYPE_UNIQ) {
             ofs << " UNIQUE";
         }
@@ -978,19 +978,19 @@ void Table::gen_dao_src(std::ofstream& ofs) {
             ofs << x;
             is_first = false;
         }
-        ofs << ");";
+        ofs << ");\"" << std::endl;
     }
-    ofs << "\");" << std::endl;
-    ofs << "}";
+    ofs << "            );" << std::endl;
+    ofs << "}" << std::endl << std::endl;
 
     ofs << "int " << GetAsClassName(class_name_dao) << "::CreateTableMySQL(" << m_dbclass << "::ptr conn) {" << std::endl;
-    ofs << "    return conn->execute(\"CREATE TABLE " << m_name << "(";
+    ofs << "    return conn->execute(\"CREATE TABLE " << m_name << "(\"" << std::endl;
     is_first = true;
     for(auto& i : m_cols) {
         if(!is_first) {
-            ofs << ", ";
+            ofs << ",\"" << std::endl;
         }
-        ofs << i->getName() << " " << i->getMySQLTypeString();
+        ofs << "            \"`" << i->getName() << "` " << i->getMySQLTypeString();
         if(i->isAutoIncrement()) {
             ofs << " AUTO_INCREMENT";
             has_auto_increment = true;
@@ -1001,42 +1001,49 @@ void Table::gen_dao_src(std::ofstream& ofs) {
         if(!i->getUpdate().empty()) {
             ofs << " ON UPDATE " << i->getUpdate() << " ";
         }
+        if(!i->getDesc().empty()) {
+            ofs << " COMMENT '" << i->getDesc() << "'";
+        }
         is_first = false;
     }
-    ofs << ", PRIMARY KEY(";
+    ofs << ",\"" << std::endl << "            \"PRIMARY KEY(";
     is_first = true;
     for(auto& i : pks) {
         if(!is_first) {
             ofs << ", ";
         }
-        ofs << i->getName();
+        ofs << "`" << i->getName() << "`";
     }
     ofs << ")";
     for(auto& i : m_idxs) {
         if(i->getDType() == Index::TYPE_PK) {
             continue;
         }
+        ofs << ",\"" << std::endl;
         if(i->getDType() == Index::TYPE_UNIQ) {
-            ofs << ", UNIQUE";
+            ofs << "            \"UNIQUE ";
         } else {
-            ofs << ",";
+            ofs << "            \"";
         }
-        ofs << " KEY " << m_name;
+        ofs << "KEY `" << m_name;
         for(auto& x : i->getCols()) {
             ofs << "_" << x;
         }
-        ofs << " (";
+        ofs << "` (";
         is_first = true;
         for(auto& x : i->getCols()) {
             if(!is_first) {
                 ofs << ",";
             }
-            ofs << x;
+            ofs << "`" << x << "`";
             is_first = false;
         }
         ofs << ")";
     }
     ofs << ")";
+    if(!m_desc.empty()) {
+        ofs << " COMMENT='" << m_desc << "'";
+    }
     ofs << "\");" << std::endl;
     ofs << "}";
 }

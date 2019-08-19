@@ -26,6 +26,7 @@ public:
         TYPE_INT64,
         TYPE_UINT64,
         TYPE_STRING,
+        TYPE_TEXT,
         TYPE_BLOB,
         TYPE_TIMESTAMP
     };
