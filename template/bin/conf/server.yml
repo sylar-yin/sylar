@@ -1,15 +1,16 @@
 servers:
-    - address: ["0.0.0.0:8090", "127.0.0.1:8091", "/tmp/test.sock"]
+    - address: ["0.0.0.0:8090", "127.0.0.1:0", "/tmp/test.sock"]
       keepalive: 1
       timeout: 1000
       name: sylar/1.1
       accept_worker: accept
-      process_worker:  io
+      io_worker: http_io
+      process_worker:  http_io
       type: http
-    - address: ["0.0.0.0:8072", "localhost:8071"]
-      keepalive: 1
+    - address: ["0.0.0.0:8062", "0.0.0.0:8061"]
       timeout: 1000
-      name: sylar/2.1
+      name: sylar-rock/1.0
       accept_worker: accept
+      io_worker: io
       process_worker:  io
-      type: http
+      type: rock
