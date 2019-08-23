@@ -3,11 +3,11 @@ logs:
       level: info
       appenders:
           - type: FileLogAppender
-            file: /apps/logs/sylar/root.txt
+            file: /apps/logs/project_name/root.log
           - type: StdoutLogAppender
     - name: system
       level: info
       appenders:
           - type: FileLogAppender
-            file: /apps/logs/sylar/system.txt
+            file: /apps/logs/project_name/system.log
           - type: StdoutLogAppender
