@@ -64,7 +64,7 @@ void Bitmap::writeTo(sylar::ByteArray::ptr ba) const {
     ba->writeFuint8(m_compress);
     ba->writeFuint32(m_size);
     ba->writeFuint32(m_dataSize);
-    ba->write((const char*)m_data, m_dataSize);
+    ba->write((const char*)m_data, m_dataSize * sizeof(base_type));
 }
 
 bool Bitmap::readFrom(sylar::ByteArray::ptr ba) {
@@ -76,7 +76,7 @@ bool Bitmap::readFrom(sylar::ByteArray::ptr ba) {
             free(m_data);
         }
         m_data = (base_type*)malloc(m_dataSize * sizeof(base_type));
-        ba->read((char*)m_data, m_dataSize);
+        ba->read((char*)m_data, m_dataSize * sizeof(base_type));
         return true;
     } catch(...) {
     }
@@ -333,7 +333,7 @@ Bitmap::ptr Bitmap::compress() const{
 
     base_type* data = (base_type*)malloc(m_dataSize * sizeof(base_type));
     bool cur_value = false;
-    uint32_t cur_count = 0;
+    uint64_t cur_count = 0;
     uint32_t dst_cur_pos = 0;
     for(uint32_t i = 0; i < m_dataSize; ++i) {
         base_type cur = m_data[i];
@@ -507,7 +507,7 @@ void Bitmap::foreach(std::function<bool(uint32_t)> cb) {
     }
     for(uint32_t i = max_size * U64_DIV_BASE;
             i < m_dataSize; ++i) {
-        tmp= m_data[i];
+        tmp = m_data[i];
         if(!tmp) {
             cur_pos += VALUE_SIZE;
         } else {
@@ -633,7 +633,7 @@ void Bitmap::listPosAsc(std::vector<uint32_t>& pos) {
         }
     }
     for(uint32_t i = max_size * U64_DIV_BASE; i < m_dataSize; ++i) {
-        tmp= m_data[i];
+        tmp = m_data[i];
         if(!tmp) {
             cur_pos += VALUE_SIZE;
         } else {
@@ -869,36 +869,42 @@ Bitmap::iterator_base::ptr Bitmap::rbegin_new() {
 }
 
 uint32_t Bitmap::getCount() const {
-    uint32_t len = m_dataSize / U64_DIV_BASE;// - (m_dataSize % 8 == 0 ? 1 : 0);
-    uint32_t count = 0;
-    uint32_t cur_pos = 0;
-    for(uint32_t i = 0; i < len; ++i) {
-        uint64_t tmp = ((uint64_t*)(m_data))[i];
-        for(; tmp; ++count) {
-            tmp &= tmp - 1;
+    if(!m_compress) {
+        uint32_t len = m_dataSize / U64_DIV_BASE;// - (m_dataSize % 8 == 0 ? 1 : 0);
+        uint32_t count = 0;
+        uint32_t cur_pos = 0;
+        for(uint32_t i = 0; i < len; ++i) {
+            uint64_t tmp = ((uint64_t*)(m_data))[i];
+            count += count_bits(tmp);
+            cur_pos += U64_VALUE_SIZE;
         }
-        cur_pos += U64_VALUE_SIZE;
-    }
-    for(uint32_t i = len * U64_DIV_BASE; i < m_dataSize; ++i) {
-        base_type tmp= m_data[i];
-        if(tmp) {
-            for(uint32_t n = 0; n < VALUE_SIZE && cur_pos < m_size; ++n, ++cur_pos) {
-                if(tmp & POS[n]) { //(1UL << n)) {
-                    ++count;
+        for(uint32_t i = len * U64_DIV_BASE; i < m_dataSize; ++i) {
+            base_type tmp = m_data[i];
+            if(tmp) {
+                for(uint32_t n = 0; n < VALUE_SIZE && cur_pos < m_size; ++n, ++cur_pos) {
+                    if(tmp & POS[n]) { //(1UL << n)) {
+                        ++count;
+                    }
                 }
+            } else {
+                cur_pos += VALUE_SIZE;
             }
-        } else {
-            cur_pos += VALUE_SIZE;
         }
-        //if(tmp) {
-        //    for(uint32_t n = 0; n < 8 && cur_pos < m_size; ++n, ++cur_pos) {
-        //        if(tmp & (1UL << n)) {
-        //            ++count;
-        //        }
-        //    }
-        //}
+        return count;
+    } else {
+        uint32_t count = 0;
+        for(uint32_t i = 0; i < m_dataSize; ++i) {
+            base_type tmp = m_data[i];
+            if(tmp & COMPRESS_MASK) {
+                if(tmp & VALUE_MASK) {
+                    count += tmp & COUNT_MASK;
+                }
+            } else {
+                count += count_bits(tmp);
+            }
+        }
+        return count;
     }
-    return count;
 }
 
 }

@@ -10,7 +10,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include (cmake/utils.cmake)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
-set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O0 -fPIC -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
+set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
+set(CMAKE_C_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
 
 include_directories(.)
 include_directories(/apps/sylar/include)
@@ -57,6 +58,8 @@ set(LIB_SRC
     sylar/db/redis.cc
     sylar/db/sqlite3.cc
     sylar/ds/bitmap.cc
+    sylar/ds/roaring_bitmap.cc
+    sylar/ds/roaring.c
     sylar/email/email.cc
     sylar/email/smtp.cc
     sylar/env.cc
@@ -142,6 +145,7 @@ set(LIBS
         ${OPENSSL_LIBRARIES}
         ${PROTOBUF_LIBRARIES}
         event
+        jemalloc
         hiredis_vip
         mysqlclient_r
         zookeeper_mt
