@@ -17,6 +17,7 @@ public:
     typedef std::shared_ptr<RoaringBitmap> ptr;
 
     RoaringBitmap();
+    RoaringBitmap(uint32_t size);
     RoaringBitmap(const RoaringBitmap& b);
     ~RoaringBitmap();
 
@@ -31,9 +32,13 @@ public:
 
     RoaringBitmap& operator&=(const RoaringBitmap& b);
     RoaringBitmap& operator|=(const RoaringBitmap& b);
+    RoaringBitmap& operator-=(const RoaringBitmap& b);
+    RoaringBitmap& operator^=(const RoaringBitmap& b);
 
     RoaringBitmap operator& (const RoaringBitmap& b);
     RoaringBitmap operator| (const RoaringBitmap& b);
+    RoaringBitmap operator- (const RoaringBitmap& b);
+    RoaringBitmap operator^ (const RoaringBitmap& b);
 
     //RoaringBitmap& operator~();
 
@@ -69,6 +74,9 @@ public:
 
     reverse_iterator rbegin() const { return m_bitmap.rbegin();}
     reverse_iterator rend() const { return m_bitmap.rend();}
+
+private:
+    RoaringBitmap(const Roaring& b);
 private:
     Roaring m_bitmap;
 };

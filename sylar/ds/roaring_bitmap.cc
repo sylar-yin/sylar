@@ -9,7 +9,15 @@
 namespace sylar {
 namespace ds {
 
+RoaringBitmap::RoaringBitmap(const Roaring& b)
+    :m_bitmap(b) {
+}
+
 RoaringBitmap::RoaringBitmap() {
+}
+
+RoaringBitmap::RoaringBitmap(uint32_t size) {
+    m_bitmap.addRange(0, size);
 }
 
 RoaringBitmap::RoaringBitmap(const RoaringBitmap& b) {
@@ -60,6 +68,16 @@ RoaringBitmap& RoaringBitmap::operator|=(const RoaringBitmap& b) {
     return *this;
 }
 
+RoaringBitmap& RoaringBitmap::operator-=(const RoaringBitmap& b) {
+    m_bitmap -= b.m_bitmap;
+    return *this;
+}
+
+RoaringBitmap& RoaringBitmap::operator^=(const RoaringBitmap& b) {
+    m_bitmap ^= b.m_bitmap;
+    return *this;
+}
+
 bool RoaringBitmap::operator== (const RoaringBitmap& b) const {
     if(this == &b) {
         return true;
@@ -72,13 +90,19 @@ bool RoaringBitmap::operator!= (const RoaringBitmap& b) const {
 }
 
 RoaringBitmap RoaringBitmap::operator& (const RoaringBitmap& b) {
-    RoaringBitmap t(*this);
-    return t &= b;
+    return RoaringBitmap(m_bitmap & b.m_bitmap);
 }
 
 RoaringBitmap RoaringBitmap::operator| (const RoaringBitmap& b) {
-    RoaringBitmap t(*this);
-    return t |= b;
+    return RoaringBitmap(m_bitmap | b.m_bitmap);
+}
+
+RoaringBitmap RoaringBitmap::operator-(const RoaringBitmap& b) {
+    return RoaringBitmap(m_bitmap - b.m_bitmap);
+}
+
+RoaringBitmap RoaringBitmap::operator^(const RoaringBitmap& b) {
+    return RoaringBitmap(m_bitmap ^ b.m_bitmap);
 }
 
 std::string RoaringBitmap::toString() const {
