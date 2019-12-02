@@ -60,6 +60,7 @@ set(LIB_SRC
     sylar/ds/bitmap.cc
     sylar/ds/roaring_bitmap.cc
     sylar/ds/roaring.c
+    sylar/ds/util.cc
     sylar/email/email.cc
     sylar/email/smtp.cc
     sylar/env.cc
@@ -145,18 +146,21 @@ set(LIBS
         ${OPENSSL_LIBRARIES}
         ${PROTOBUF_LIBRARIES}
         event
-        jemalloc
         hiredis_vip
         mysqlclient_r
         zookeeper_mt
         sqlite3
         tinyxml2
         )
+    #jemalloc
+sylar_add_executable(test_util "tests/test_util.cc" sylar "${LIBS}")
+sylar_add_executable(test_hashmultimap "tests/test_hashmultimap.cc" sylar "${LIBS}")
+sylar_add_executable(test_hashmap "tests/test_hashmap.cc" sylar "${LIBS}")
+sylar_add_executable(test_dict "tests/test_dict.cc" sylar "${LIBS}")
 if(BUILD_TEST)
 sylar_add_executable(test1 "tests/test.cc" sylar "${LIBS}")
 sylar_add_executable(test_config "tests/test_config.cc" sylar "${LIBS}")
 sylar_add_executable(test_thread "tests/test_thread.cc" sylar "${LIBS}")
-sylar_add_executable(test_util "tests/test_util.cc" sylar "${LIBS}")
 sylar_add_executable(test_fiber "tests/test_fiber.cc" sylar "${LIBS}")
 sylar_add_executable(test_scheduler "tests/test_scheduler.cc" sylar "${LIBS}")
 sylar_add_executable(test_iomanager "tests/test_iomanager.cc" sylar "${LIBS}")

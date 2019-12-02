@@ -132,12 +132,12 @@ public:
 
 class Atomic {
 public:
-    template<class T, class S>
+    template<class T, class S = T>
     static T addFetch(volatile T& t, S v = 1) {
         return __sync_add_and_fetch(&t, (T)v);
     }
 
-    template<class T, class S>
+    template<class T, class S = T>
     static T subFetch(volatile T& t, S v = 1) {
         return __sync_sub_and_fetch(&t, (T)v);
     }
@@ -213,6 +213,68 @@ void delete_array(T* v) {
     }
 }
 
+template<class T>
+class SharedArray {
+public:
+    explicit SharedArray(const uint64_t& size = 0, T* p = 0)
+        :m_size(size)
+        ,m_ptr(p, delete_array<T>) {
+    }
+    template<class D> SharedArray(const uint64_t& size, T* p, D d)
+        :m_size(size)
+        ,m_ptr(p, d) {
+    };
+
+    SharedArray(const SharedArray& r)
+        :m_size(r.m_size)
+        ,m_ptr(r.m_ptr) {
+    }
+
+    SharedArray& operator=(const SharedArray& r) {
+        m_size = r.m_size;
+        m_ptr = r.m_ptr;
+        return *this;
+    }
+
+    T& operator[](std::ptrdiff_t i) const {
+        return m_ptr.get()[i];
+    }
+
+    T* get() const {
+        return m_ptr.get();
+    }
+
+    bool unique() const {
+        return m_ptr.unique();
+    }
+
+    long use_count() const {
+        return m_ptr.use_count();
+    }
+
+    void swap(SharedArray& b) {
+        std::swap(m_size, b.m_size);
+        m_ptr.swap(b.m_ptr);
+    }
+
+    bool operator!() const {
+        return !m_ptr;
+    }
+
+    operator bool() const {
+        return !!m_ptr;
+    }
+
+    uint64_t size() const {
+        return m_size;
+    }
+private:
+    uint64_t m_size;
+    std::shared_ptr<T> m_ptr;
+};
+
+
+
 class StringUtil {
 public:
     static std::string Format(const char* fmt, ...);
@@ -256,6 +318,149 @@ std::string Join(Iter begin, Iter end, const std::string& tag) {
     }
     return ss.str();
 }
+
+//[begin, end)
+//if rt > 0, 存在,返回对应index
+//   rt < 0, 不存在,返回对于应该存在的-(index + 1)
+template<class T>
+int BinarySearch(const T* arr, int length, const T& v) {
+    int m = 0;
+    int begin = 0;
+    int end = length - 1;
+    while(begin <= end) {
+        m = (begin + end) / 2;
+        if(v < arr[m]) {
+            end = m - 1;
+        } else if(arr[m] < v) {
+            begin = m + 1;
+        } else {
+            return m;
+        }
+    }
+    return -begin - 1;
+}
+
+inline bool ReadFixFromStream(std::istream& is, char* data, const uint64_t& size) {
+    uint64_t pos = 0;
+    while(is && (pos < size)) {
+        is.read(data + pos, size - pos);
+        pos += is.gcount();
+    }
+    return pos == size;
+}
+
+template<class T>
+bool ReadFromStream(std::istream& is, T& v) {
+    return ReadFixFromStream(is, (char*)&v, sizeof(v));
+}
+
+template<class T>
+bool ReadFromStream(std::istream& is, std::vector<T>& v) {
+    return ReadFixFromStream(is, (char*)&v[0], sizeof(T) * v.size());
+}
+
+template<class T>
+bool WriteToStream(std::ostream& os, const T& v) {
+    if(!os) {
+        return false;
+    }
+    os.write((const char*)&v, sizeof(T));
+    return (bool)os;
+}
+
+template<class T>
+bool WriteToStream(std::ostream& os, const std::vector<T>& v) {
+    if(!os) {
+        return false;
+    }
+    os.write((const char*)&v[0], sizeof(T) * v.size());
+    return (bool)os;
+}
+
+class SpeedLimit {
+public:
+    typedef std::shared_ptr<SpeedLimit> ptr;
+    SpeedLimit(uint32_t speed);
+    void add(uint32_t v);
+private:
+    uint32_t m_speed;
+    float m_countPerMS;
+
+    uint32_t m_curCount;
+    uint32_t m_curSec;
+};
+
+bool ReadFixFromStreamWithSpeed(std::istream& is, char* data,
+                    const uint64_t& size, const uint64_t& speed = -1);
+
+bool WriteFixToStreamWithSpeed(std::ostream& os, const char* data,
+                            const uint64_t& size, const uint64_t& speed = -1);
+
+template<class T>
+bool WriteToStreamWithSpeed(std::ostream& os, const T& v,
+                            const uint64_t& speed = -1) {
+    if(os) {
+        return WriteFixToStreamWithSpeed(os, (const char*)&v, sizeof(T), speed);
+    }
+    return false;
+}
+
+template<class T>
+bool WriteToStreamWithSpeed(std::ostream& os, const std::vector<T>& v,
+                            const uint64_t& speed = -1,
+                            const uint64_t& min_duration_ms = 10) {
+    if(os) {
+        return WriteFixToStreamWithSpeed(os, (const char*)&v[0], sizeof(T) * v.size(), speed);
+    }
+    return false;
+}
+
+template<class T>
+bool ReadFromStreamWithSpeed(std::istream& is, const std::vector<T>& v,
+                            const uint64_t& speed = -1) {
+    if(is) {
+        return ReadFixFromStreamWithSpeed(is, (char*)&v[0], sizeof(T) * v.size(), speed);
+    }
+    return false;
+}
+
+template<class T>
+bool ReadFromStreamWithSpeed(std::istream& is, const T& v,
+                            const uint64_t& speed = -1) {
+    if(is) {
+        return ReadFixFromStreamWithSpeed(is, (char*)&v, sizeof(T), speed);
+    }
+    return false;
+}
+
+std::string Format(const char* fmt, ...);
+std::string Formatv(const char* fmt, va_list ap);
+
+template<class T>
+void Slice(std::vector<std::vector<T> >& dst, const std::vector<T>& src, size_t size) {
+    size_t left = src.size();
+    size_t pos = 0;
+    while(left > size) {
+        std::vector<T> tmp;
+        tmp.reserve(size);
+        for(size_t i = 0; i < size; ++i) {
+            tmp.push_back(src[pos + i]);
+        }
+        pos += size;
+        left -= size;
+        dst.push_back(tmp);
+    }
+
+    if(left > 0) {
+        std::vector<T> tmp;
+        tmp.reserve(left);
+        for(size_t i = 0; i < left; ++i) {
+            tmp.push_back(src[pos + i]);
+        }
+        dst.push_back(tmp);
+    }
+}
+
 
 }
 
