@@ -348,8 +348,8 @@ Address::ptr Socket::getRemoteAddress() {
     }
     socklen_t addrlen = result->getAddrLen();
     if(getpeername(m_sock, result->getAddr(), &addrlen)) {
-        SYLAR_LOG_ERROR(g_logger) << "getpeername error sock=" << m_sock
-            << " errno=" << errno << " errstr=" << strerror(errno);
+        //SYLAR_LOG_ERROR(g_logger) << "getpeername error sock=" << m_sock
+        //    << " errno=" << errno << " errstr=" << strerror(errno);
         return Address::ptr(new UnknownAddress(m_family));
     }
     if(m_family == AF_UNIX) {

@@ -250,19 +250,6 @@ public:
         return false;
     }
 private:
-    std::string getString(const K& k) {
-        uint32_t hashvalue = m_posHash(k);
-        sylar::RWMutex::ReadLock lock(m_mutex);
-        uint32_t pos = hashvalue % m_size;
-        sylar::RWMutex::ReadLock lock2(s_mutex[pos % MAX_MUTEX]);
-        auto it = BinarySearch(m_datas[pos].begin(), m_datas[pos].end(), Node(k));
-        //SYLAR_ASSERT(it == std::find(m_datas[pos].begin(), m_datas[pos].end(), Node(k)));
-        if(it == m_datas[pos].end()) {
-            return std::string();
-        }
-        return std::string(it->val, it->size);
-    }
-private:
     struct Node {
         K key;
         V val;
