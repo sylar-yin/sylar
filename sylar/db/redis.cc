@@ -59,6 +59,7 @@ Redis::Redis(const std::map<std::string, std::string>& conf) {
     auto pos = tmp.find(":");
     m_host = tmp.substr(0, pos);
     m_port = sylar::TypeUtil::Atoi(tmp.substr(pos + 1));
+    m_passwd = get_value(conf, "passwd");
     m_logEnable = sylar::TypeUtil::Atoi(get_value(conf, "log_enable", "1"));
 
     tmp = get_value(conf, "timeout_com");
@@ -93,6 +94,32 @@ bool Redis::connect(const std::string& ip, int port, uint64_t ms) {
             setTimeout(m_cmdTimeout.tv_sec * 1000 + m_cmdTimeout.tv_usec / 1000);
         }
         m_context.reset(c, redisFree);
+
+        if(!m_passwd.empty()) {
+            auto r = (redisReply*)redisCommand(c, "auth %s", m_passwd.c_str());
+            if(!r) {
+                SYLAR_LOG_ERROR(g_logger) << "auth error:("
+                    << m_host << ":" << m_port << ", " << m_name << ")";
+                return false;
+            }
+            if(r->type != REDIS_REPLY_STATUS) {
+                SYLAR_LOG_ERROR(g_logger) << "auth reply type error:" << r->type << "("
+                    << m_host << ":" << m_port << ", " << m_name << ")";
+                return false;
+            }
+            if(!r->str) {
+                SYLAR_LOG_ERROR(g_logger) << "auth reply str error: NULL("
+                    << m_host << ":" << m_port << ", " << m_name << ")";
+                return false;
+            }
+            if(strcmp(r->str, "OK") == 0) {
+                return true;
+            } else {
+                SYLAR_LOG_ERROR(g_logger) << "auth error: " << r->str << "("
+                    << m_host << ":" << m_port << ", " << m_name << ")";
+                return false;
+            }
+        }
         return true;
     }
     return false;
@@ -200,6 +227,7 @@ RedisCluster::RedisCluster() {
 RedisCluster::RedisCluster(const std::map<std::string, std::string>& conf) {
     m_type = IRedis::REDIS_CLUSTER;
     m_host = get_value(conf, "host");
+    m_passwd = get_value(conf, "passwd");
     m_logEnable = sylar::TypeUtil::Atoi(get_value(conf, "log_enable", "1"));
     auto tmp = get_value(conf, "timeout_com");
     if(tmp.empty()) {
@@ -233,6 +261,31 @@ bool RedisCluster::connect(const std::string& ip, int port, uint64_t ms) {
     auto c = redisClusterConnectWithTimeout(ip.c_str(), tv, 0);
     if(c) {
         m_context.reset(c, redisClusterFree);
+        if(!m_passwd.empty()) {
+            auto r = (redisReply*)redisClusterCommand(c, "auth %s", m_passwd.c_str());
+            if(!r) {
+                SYLAR_LOG_ERROR(g_logger) << "auth error:("
+                    << m_host << ":" << m_port << ", " << m_name << ")";
+                return false;
+            }
+            if(r->type != REDIS_REPLY_STATUS) {
+                SYLAR_LOG_ERROR(g_logger) << "auth reply type error:" << r->type << "("
+                    << m_host << ":" << m_port << ", " << m_name << ")";
+                return false;
+            }
+            if(!r->str) {
+                SYLAR_LOG_ERROR(g_logger) << "auth reply str error: NULL("
+                    << m_host << ":" << m_port << ", " << m_name << ")";
+                return false;
+            }
+            if(strcmp(r->str, "OK") == 0) {
+                return true;
+            } else {
+                SYLAR_LOG_ERROR(g_logger) << "auth error: " << r->str << "("
+                    << m_host << ":" << m_port << ", " << m_name << ")";
+                return false;
+            }
+        }
         return true;
     }
     return false;
@@ -341,6 +394,7 @@ FoxRedis::FoxRedis(sylar::FoxThread* thr, const std::map<std::string, std::strin
     auto pos = tmp.find(":");
     m_host = tmp.substr(0, pos);
     m_port = sylar::TypeUtil::Atoi(tmp.substr(pos + 1));
+    m_passwd = get_value(conf, "passwd");
     m_ctxCount = 0;
     m_logEnable = sylar::TypeUtil::Atoi(get_value(conf, "log_enable", "1"));
 
@@ -354,6 +408,33 @@ FoxRedis::FoxRedis(sylar::FoxThread* thr, const std::map<std::string, std::strin
     m_cmdTimeout.tv_usec = v % 1000 * 1000;
 }
 
+void FoxRedis::OnAuthCb(redisAsyncContext* c, void* rp, void* priv) {
+    FoxRedis* fr = (FoxRedis*)priv;
+    redisReply* r = (redisReply*)rp;
+    if(!r) {
+        SYLAR_LOG_ERROR(g_logger) << "auth error:("
+            << fr->m_host << ":" << fr->m_port << ", " << fr->m_name << ")";
+        return;
+    }
+    if(r->type != REDIS_REPLY_STATUS) {
+        SYLAR_LOG_ERROR(g_logger) << "auth reply type error:" << r->type << "("
+            << fr->m_host << ":" << fr->m_port << ", " << fr->m_name << ")";
+        return;
+    }
+    if(!r->str) {
+        SYLAR_LOG_ERROR(g_logger) << "auth reply str error: NULL("
+            << fr->m_host << ":" << fr->m_port << ", " << fr->m_name << ")";
+        return;
+    }
+    if(strcmp(r->str, "OK") == 0) {
+        SYLAR_LOG_INFO(g_logger) << "auth ok: " << r->str << "("
+            << fr->m_host << ":" << fr->m_port << ", " << fr->m_name << ")";
+    } else {
+        SYLAR_LOG_ERROR(g_logger) << "auth error: " << r->str << "("
+            << fr->m_host << ":" << fr->m_port << ", " << fr->m_name << ")";
+    }
+}
+
 void FoxRedis::ConnectCb(const redisAsyncContext* c, int status) {
     FoxRedis* ar = static_cast<FoxRedis*>(c->data);
     if(!status) {
@@ -361,6 +442,13 @@ void FoxRedis::ConnectCb(const redisAsyncContext* c, int status) {
                    << c->c.tcp.host << ":" << c->c.tcp.port
                    << " success";
         ar->m_status = CONNECTED;
+        if(!ar->m_passwd.empty()) {
+            int rt = redisAsyncCommand(ar->m_context.get(), FoxRedis::OnAuthCb, ar, "auth %s", ar->m_passwd.c_str());
+            if(rt) {
+                SYLAR_LOG_ERROR(g_logger) << "FoxRedis Auth fail: " << rt;
+            }
+        }
+
     } else {
         SYLAR_LOG_ERROR(g_logger) << "FoxRedis::ConnectCb "
                     << c->c.tcp.host << ":" << c->c.tcp.port
@@ -690,6 +778,7 @@ FoxRedisCluster::FoxRedisCluster(sylar::FoxThread* thr, const std::map<std::stri
 
     m_type = IRedis::FOX_REDIS_CLUSTER;
     m_host = get_value(conf, "host");
+    m_passwd = get_value(conf, "passwd");
     m_logEnable = sylar::TypeUtil::Atoi(get_value(conf, "log_enable", "1"));
     auto tmp = get_value(conf, "timeout_com");
     if(tmp.empty()) {
@@ -701,11 +790,45 @@ FoxRedisCluster::FoxRedisCluster(sylar::FoxThread* thr, const std::map<std::stri
     m_cmdTimeout.tv_usec = v % 1000 * 1000;
 }
 
+void FoxRedisCluster::OnAuthCb(redisClusterAsyncContext* c, void* rp, void* priv) {
+    FoxRedisCluster* fr = (FoxRedisCluster*)priv;
+    redisReply* r = (redisReply*)rp;
+    if(!r) {
+        SYLAR_LOG_ERROR(g_logger) << "auth error:("
+            << fr->m_host << ", " << fr->m_name << ")";
+        return;
+    }
+    if(r->type != REDIS_REPLY_STATUS) {
+        SYLAR_LOG_ERROR(g_logger) << "auth reply type error:" << r->type << "("
+            << fr->m_host << ", " << fr->m_name << ")";
+        return;
+    }
+    if(!r->str) {
+        SYLAR_LOG_ERROR(g_logger) << "auth reply str error: NULL("
+            << fr->m_host << ", " << fr->m_name << ")";
+        return;
+    }
+    if(strcmp(r->str, "OK") == 0) {
+        SYLAR_LOG_INFO(g_logger) << "auth ok: " << r->str << "("
+            << fr->m_host << ", " << fr->m_name << ")";
+    } else {
+        SYLAR_LOG_ERROR(g_logger) << "auth error: " << r->str << "("
+            << fr->m_host << ", " << fr->m_name << ")";
+    }
+}
+
 void FoxRedisCluster::ConnectCb(const redisAsyncContext* c, int status) {
+    FoxRedisCluster* ar = static_cast<FoxRedisCluster*>(c->data);
     if(!status) {
         SYLAR_LOG_INFO(g_logger) << "FoxRedisCluster::ConnectCb "
                    << c->c.tcp.host << ":" << c->c.tcp.port
                    << " success";
+        if(!ar->m_passwd.empty()) {
+            int rt = redisClusterAsyncCommand(ar->m_context.get(), FoxRedisCluster::OnAuthCb, ar, "auth %s", ar->m_passwd.c_str());
+            if(rt) {
+                SYLAR_LOG_ERROR(g_logger) << "FoxRedisCluster Auth fail: " << rt;
+            }
+        }
     } else {
         SYLAR_LOG_ERROR(g_logger) << "FoxRedisCluster::ConnectCb "
                     << c->c.tcp.host << ":" << c->c.tcp.port
@@ -1087,6 +1210,7 @@ void RedisManager::init() {
     for(auto& i : m_config) {
         auto type = get_value(i.second, "type");
         auto pool = sylar::TypeUtil::Atoi(get_value(i.second, "pool"));
+        auto passwd = get_value(i.second, "passwd");
         total += pool;
         for(int n = 0; n < pool; ++n) {
             if(type == "redis") {
