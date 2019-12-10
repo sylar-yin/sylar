@@ -935,19 +935,20 @@ bool FoxRedisCluster::pinit() {
     }
     SYLAR_LOG_INFO(g_logger) << "FoxRedisCluster pinit:" << m_host;
     auto ctx = redisClusterAsyncConnect(m_host.c_str(), 0);
+    ctx->data = this;
+    redisClusterLibeventAttach(ctx, m_thread->getBase());
+    redisClusterAsyncSetConnectCallback(ctx, ConnectCb);
+    redisClusterAsyncSetDisconnectCallback(ctx, DisconnectCb);
     if(!ctx) {
         SYLAR_LOG_ERROR(g_logger) << "redisClusterAsyncConnect (" << m_host
                     << ") null";
         return false;
     }
     if(ctx->err) {
-        SYLAR_LOG_ERROR(g_logger) << "Error:(" << ctx->err << ")" << ctx->errstr;
+        SYLAR_LOG_ERROR(g_logger) << "Error:(" << ctx->err << ")" << ctx->errstr
+            << " passwd=" << m_passwd;
         return false;
     }
-    ctx->data = this;
-    redisClusterLibeventAttach(ctx, m_thread->getBase());
-    redisClusterAsyncSetConnectCallback(ctx, ConnectCb);
-    redisClusterAsyncSetDisconnectCallback(ctx, DisconnectCb);
     m_status = CONNECTED;
     //m_context.reset(ctx, redisAsyncFree);
     m_context.reset(ctx, sylar::nop<redisClusterAsyncContext>);
@@ -1296,6 +1297,31 @@ ReplyPtr RedisUtil::Cmd(const std::string& name, const std::vector<std::string>&
         return nullptr;
     }
     return rds->cmd(args);
+}
+
+
+ReplyPtr RedisUtil::TryCmd(const std::string& name, uint32_t count, const char* fmt, ...) {
+    for(uint32_t i = 0; i < count; ++i) {
+        va_list ap;
+        va_start(ap, fmt);
+        ReplyPtr rt = Cmd(name, fmt, ap);
+        va_end(ap);
+
+        if(rt) {
+            return rt;
+        }
+    }
+    return nullptr;
+}
+
+ReplyPtr RedisUtil::TryCmd(const std::string& name, uint32_t count, const std::vector<std::string>& args) {
+    for(uint32_t i = 0; i < count; ++i) {
+        ReplyPtr rt = Cmd(name, args);
+        if(rt) {
+            return rt;
+        }
+    }
+    return nullptr;
 }
 
 }

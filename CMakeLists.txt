@@ -151,8 +151,8 @@ set(LIBS
         zookeeper_mt
         sqlite3
         tinyxml2
+        jemalloc
         )
-    #jemalloc
 sylar_add_executable(test_util "tests/test_util.cc" sylar "${LIBS}")
 sylar_add_executable(test_hashmultimap "tests/test_hashmultimap.cc" sylar "${LIBS}")
 sylar_add_executable(test_hashmap "tests/test_hashmap.cc" sylar "${LIBS}")

@@ -67,7 +67,7 @@ static MYSQL* mysql_init(std::map<std::string, std::string>& params,
     }
     bool close = false;
     mysql_options(mysql, MYSQL_OPT_RECONNECT, &close);
-    mysql_options(mysql, MYSQL_SET_CHARSET_NAME, "UTF8");
+    mysql_options(mysql, MYSQL_SET_CHARSET_NAME, "utf8mb4");
 
     int port = sylar::GetParamValue(params, "port", 0);
     std::string host = sylar::GetParamValue<std::string>(params, "host");
@@ -89,7 +89,8 @@ static MYSQL* mysql_init(std::map<std::string, std::string>& params,
 MySQL::MySQL(const std::map<std::string, std::string>& args)
     :m_params(args)
     ,m_lastUsedTime(0)
-    ,m_hasError(false) {
+    ,m_hasError(false)
+    ,m_poolSize(10) {
 }
 
 bool MySQL::connect() {
@@ -103,6 +104,7 @@ bool MySQL::connect() {
         return false;
     }
     m_hasError = false;
+    m_poolSize = sylar::GetParamValue(m_params, "pool", 5);
     m_mysql.reset(m, mysql_close);
     return true;
 }
@@ -1136,12 +1138,110 @@ MySQLTransaction::ptr MySQLManager::openTransaction(const std::string& name, boo
 void MySQLManager::freeMySQL(const std::string& name, MySQL* m) {
     if(m->m_mysql) {
         MutexType::Lock lock(m_mutex);
-        if(m_conns[name].size() < m_maxConn) {
+        if(m_conns[name].size() < (size_t)m->m_poolSize) {
             m_conns[name].push_back(m);
             return;
         }
     }
     delete m;
+}
+
+ISQLData::ptr MySQLUtil::Query(const std::string& name, const char* format, ...) {
+    va_list ap;
+    va_start(ap, format);
+    auto rpy = Query(name, format, ap);
+    va_end(ap);
+    return rpy;
+}
+
+ISQLData::ptr MySQLUtil::Query(const std::string& name, const char* format,va_list ap) {
+    auto m = MySQLMgr::GetInstance()->get(name);
+    if(!m) {
+        return nullptr;
+    }
+    return m->query(format, ap);
+}
+
+ISQLData::ptr MySQLUtil::Query(const std::string& name, const std::string& sql) {
+    auto m = MySQLMgr::GetInstance()->get(name);
+    if(!m) {
+        return nullptr;
+    }
+    return m->query(sql);
+}
+
+ISQLData::ptr MySQLUtil::TryQuery(const std::string& name, uint32_t count, const char* format, ...) {
+    for(uint32_t i = 0; i < count; ++i) {
+        va_list ap;
+        va_start(ap, format);
+        auto rpy = Query(name, format, ap);
+        va_end(ap);
+        if(rpy) {
+            return rpy;
+        }
+    }
+    return nullptr;
+}
+
+ISQLData::ptr MySQLUtil::TryQuery(const std::string& name, uint32_t count, const std::string& sql) {
+    for(uint32_t i = 0; i < count; ++i) {
+        auto rpy = Query(name, sql);
+        if(rpy) {
+            return rpy;
+        }
+    }
+    return nullptr;
+
+}
+
+int MySQLUtil::Execute(const std::string& name, const char* format, ...) {
+    va_list ap;
+    va_start(ap, format);
+    auto rpy = Execute(name, format, ap);
+    va_end(ap);
+    return rpy;
+}
+
+int MySQLUtil::Execute(const std::string& name, const char* format, va_list ap) {
+    auto m = MySQLMgr::GetInstance()->get(name);
+    if(!m) {
+        return -1;
+    }
+    return m->execute(format, ap);
+}
+
+int MySQLUtil::Execute(const std::string& name, const std::string& sql) {
+    auto m = MySQLMgr::GetInstance()->get(name);
+    if(!m) {
+        return -1;
+    }
+    return m->execute(sql);
+
+}
+
+int MySQLUtil::TryExecute(const std::string& name, uint32_t count, const char* format, ...) {
+    int rpy = 0;
+    for(uint32_t i = 0; i < count; ++i) {
+        va_list ap;
+        va_start(ap, format);
+        rpy = Execute(name, format, ap);
+        va_end(ap);
+        if(!rpy) {
+            return rpy;
+        }
+    }
+    return rpy;
+}
+
+int MySQLUtil::TryExecute(const std::string& name, uint32_t count, const std::string& sql) {
+    int rpy = 0;
+    for(uint32_t i = 0; i < count; ++i) {
+        rpy = Execute(name, sql);
+        if(!rpy) {
+            return rpy;
+        }
+    }
+    return rpy;
 }
 
 }
