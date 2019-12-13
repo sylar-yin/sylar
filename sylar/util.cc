@@ -795,4 +795,77 @@ std::string PBToJsonString(const google::protobuf::Message& message) {
     return sylar::JsonUtil::ToString(jnode);
 }
 
+SpeedLimit::SpeedLimit(uint32_t speed)
+    :m_speed(speed)
+    ,m_countPerMS(0)
+    ,m_curCount(0)
+    ,m_curSec(0) {
+    if(speed == 0) {
+        m_speed = (uint32_t)-1;
+    }
+    m_countPerMS = m_speed / 1000.0;
+}
+
+void SpeedLimit::add(uint32_t v) {
+    uint64_t curms = sylar::GetCurrentMS();
+    if(curms / 1000 != m_curSec) {
+        m_curSec = curms / 1000;
+        m_curCount = v;
+        return;
+    }
+
+    m_curCount += v;
+
+    int usedms = curms % 1000;
+    int limitms = m_curCount / m_countPerMS;
+
+    if(usedms < limitms) {
+        usleep(1000 * (limitms - usedms));
+    }
+}
+
+
+bool ReadFixFromStreamWithSpeed(std::istream& is, char* data,
+                               const uint64_t& size, const uint64_t& speed) {
+    SpeedLimit::ptr limit;
+    if(dynamic_cast<std::ifstream*>(&is)) {
+        limit.reset(new SpeedLimit(speed));
+    }
+
+    uint64_t offset = 0;
+    uint64_t per = std::max((uint64_t)ceil(speed / 100.0), (uint64_t)1024 * 64);
+    while(is && (offset < size)) {
+        uint64_t s = size - offset > per ? per : size - offset;
+        is.read(data + offset, s);
+        offset += is.gcount();
+
+        if(limit) {
+            limit->add(is.gcount());
+        }
+    }
+    return offset == size;
+}
+
+bool WriteFixToStreamWithSpeed(std::ostream& os, const char* data,
+                               const uint64_t& size, const uint64_t& speed) {
+     SpeedLimit::ptr limit;
+    if(dynamic_cast<std::ofstream*>(&os)) {
+        limit.reset(new SpeedLimit(speed));
+    }
+
+    uint64_t offset = 0;
+    uint64_t per = std::max((uint64_t)ceil(speed / 100.0), (uint64_t)1024 * 64);
+    while(os && (offset < size)) {
+        uint64_t s = size - offset > per ? per : size - offset;
+        os.write(data + offset, s);
+        offset += s;
+
+        if(limit) {
+            limit->add(s);
+        }
+    }
+
+    return offset == size;
+}
+
 }

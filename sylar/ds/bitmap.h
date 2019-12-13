@@ -17,7 +17,7 @@ namespace ds {
 #define BITMAP_TYPE_UINT64   4
 
 #ifndef BITMAP_TYPE
-#define BITMAP_TYPE BITMAP_TYPE_UINT8
+#define BITMAP_TYPE BITMAP_TYPE_UINT16
 #endif
 
 class Bitmap {

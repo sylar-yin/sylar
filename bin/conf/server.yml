@@ -1,5 +1,5 @@
 servers:
-    - address: ["0.0.0.0:8090", "127.0.0.1:0", "/tmp/test.sock"]
+    - address: ["0.0.0.0:8090", "127.0.0.1:8091", "/tmp/test.sock"]
       keepalive: 1
       timeout: 1000
       name: sylar/1.1

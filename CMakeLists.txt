@@ -10,7 +10,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include (cmake/utils.cmake)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
-set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O0 -fPIC -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
+set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
+set(CMAKE_C_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
 
 include_directories(.)
 include_directories(/apps/sylar/include)
@@ -57,6 +58,9 @@ set(LIB_SRC
     sylar/db/redis.cc
     sylar/db/sqlite3.cc
     sylar/ds/bitmap.cc
+    sylar/ds/roaring_bitmap.cc
+    sylar/ds/roaring.c
+    sylar/ds/util.cc
     sylar/email/email.cc
     sylar/email/smtp.cc
     sylar/env.cc
@@ -147,12 +151,17 @@ set(LIBS
         zookeeper_mt
         sqlite3
         tinyxml2
+        jemalloc
         )
+sylar_add_executable(test_util "tests/test_util.cc" sylar "${LIBS}")
+sylar_add_executable(test_hashmultimap "tests/test_hashmultimap.cc" sylar "${LIBS}")
+sylar_add_executable(test_hashmap "tests/test_hashmap.cc" sylar "${LIBS}")
+sylar_add_executable(test_dict "tests/test_dict.cc" sylar "${LIBS}")
+sylar_add_executable(test_array "tests/test_array.cc" sylar "${LIBS}")
 if(BUILD_TEST)
 sylar_add_executable(test1 "tests/test.cc" sylar "${LIBS}")
 sylar_add_executable(test_config "tests/test_config.cc" sylar "${LIBS}")
 sylar_add_executable(test_thread "tests/test_thread.cc" sylar "${LIBS}")
-sylar_add_executable(test_util "tests/test_util.cc" sylar "${LIBS}")
 sylar_add_executable(test_fiber "tests/test_fiber.cc" sylar "${LIBS}")
 sylar_add_executable(test_scheduler "tests/test_scheduler.cc" sylar "${LIBS}")
 sylar_add_executable(test_iomanager "tests/test_iomanager.cc" sylar "${LIBS}")
