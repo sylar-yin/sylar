@@ -51,6 +51,7 @@ void Backtrace(std::vector<std::string>& bt, int size, int skip) {
     char** strings = backtrace_symbols(array, s);
     if(strings == NULL) {
         SYLAR_LOG_ERROR(g_logger) << "backtrace_synbols error";
+        free(array);
         return;
     }
 
