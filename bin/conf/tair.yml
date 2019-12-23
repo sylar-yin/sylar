@@ -1,0 +1,12 @@
+tair:
+    config:
+        local:
+            master_addr: 127.0.0.1:5198
+            slave_addr: 127.0.0.1:5199
+            group_name: group_1
+            log_level: error
+            log_file: ./tair.log
+            timeout: 2000
+            thread_count: 4
+            cache.1: 10000,5000
+

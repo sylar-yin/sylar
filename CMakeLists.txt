@@ -10,18 +10,21 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include (cmake/utils.cmake)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
-set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
+set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations -Wno-class-memaccess")
 set(CMAKE_C_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
 
 include_directories(.)
 include_directories(/apps/sylar/include)
+include_directories(/apps/sylar/tair/include)
 #include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart)
 #include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/yaml-cpp/include)
 #include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/jsoncpp-1.8.4/include)
 #include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/sqlite-3.28.0)
 #include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/tinyxml2-7.0.1)
+link_directories(/usr/lib64)
 link_directories(/apps/sylar/lib)
 link_directories(/apps/sylar/lib64)
+link_directories(/apps/sylar/tair/lib)
 
 option(BUILD_TEST "ON for complile test" OFF)
 
@@ -56,6 +59,7 @@ set(LIB_SRC
     sylar/db/fox_thread.cc
     sylar/db/mysql.cc
     sylar/db/redis.cc
+    sylar/db/tair.cc
     sylar/db/sqlite3.cc
     sylar/ds/bitmap.cc
     sylar/ds/roaring_bitmap.cc
@@ -152,12 +156,16 @@ set(LIBS
         sqlite3
         tinyxml2
         jemalloc
+        tairclientapi
+        tbsys
+        snappy
         )
 sylar_add_executable(test_util "tests/test_util.cc" sylar "${LIBS}")
 sylar_add_executable(test_hashmultimap "tests/test_hashmultimap.cc" sylar "${LIBS}")
 sylar_add_executable(test_hashmap "tests/test_hashmap.cc" sylar "${LIBS}")
 sylar_add_executable(test_dict "tests/test_dict.cc" sylar "${LIBS}")
 sylar_add_executable(test_array "tests/test_array.cc" sylar "${LIBS}")
+sylar_add_executable(test_tair "tests/test_tair.cc" sylar "${LIBS}")
 if(BUILD_TEST)
 sylar_add_executable(test1 "tests/test.cc" sylar "${LIBS}")
 sylar_add_executable(test_config "tests/test_config.cc" sylar "${LIBS}")
