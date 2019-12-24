@@ -160,10 +160,10 @@ bool RockNotify::parseFromByteArray(ByteArray::ptr bytearray) {
     return false;
 }
 
-static const uint8_t s_rock_magic[2] = {0xab, 0xcd};
+static const uint8_t s_rock_magic[2] = {0x12, 0x21};
 
 RockMsgHeader::RockMsgHeader()
-    :magic{0xab, 0xcd}
+    :magic{s_rock_magic[0], s_rock_magic[1]}
     ,version(1)
     ,flag(0)
     ,length(0) {
