@@ -99,15 +99,14 @@ bool Tair::startup() {
     rt = m_client->startup(m_masterAddr.c_str(), m_slaveAddr.c_str(), m_groupName.c_str());
     //m_client->set_log_file(m_logFile.c_str());
     if(rt) {
-        //std::set<uint64_t> servers;
-        //m_client->get_servers(servers);
-        //for(auto& i : servers) {
-        //    for(int x = 0; x < 5; ++x) {
-        //        if(!m_client->ping(i)) {
-        //            break;
-        //        }
-        //    }
-        //}
+        std::set<uint64_t> servers;
+        m_client->get_servers(servers);
+        m_client->set_timeout(10);
+        for(auto& i : servers) {
+            if(!m_client->ping(i)) {
+            }
+        }
+        m_client->set_timeout(m_timeout);
     } else {
         SYLAR_LOG_ERROR(g_logger) << "tair startup err: " << toString();
     }
@@ -130,6 +129,7 @@ int32_t Tair::get(const std::string& key, std::string& val, int area, int timeou
     c->fiber = sylar::Fiber::GetThis();
     c->client = this;
     c->key = key;
+    c->start = sylar::GetCurrentMS();
     do {
         sylar::Mutex::Lock lock(m_mutex);
         m_ctxs[sn] = c;
@@ -166,6 +166,7 @@ int32_t Tair::put(const std::string& key, const std::string& val, int area, int 
     c->fiber = sylar::Fiber::GetThis();
     c->key = key;
     c->client = this;
+    c->start = sylar::GetCurrentMS();
     do {
         sylar::Mutex::Lock lock(m_mutex);
         m_ctxs[sn] = c;
@@ -191,6 +192,7 @@ int32_t Tair::remove(const std::string& key, int area) {
     c->fiber = sylar::Fiber::GetThis();
     c->client = this;
     c->key = key;
+    c->start = sylar::GetCurrentMS();
     do {
         sylar::Mutex::Lock lock(m_mutex);
         m_ctxs[sn] = c;
@@ -229,7 +231,8 @@ void Tair::OnGetCb(int result, const tair::common::data_entry *key, const tair::
     if(result) {
         SYLAR_LOG_ERROR(g_logger) << "OnGetCb result=" << result
             << " key=" << ctx->key
-            << " sn=" << ctx->sn;
+            << " sn=" << ctx->sn
+            << " used=" << (sylar::GetCurrentMS() - ctx->start);
     }
 
     do {
@@ -248,7 +251,7 @@ void Tair::OnGetCb(int result, const tair::common::data_entry *key, const tair::
         ctx->timer->cancel();
         ctx->timer = nullptr;
     }
-    ctx->result = (result == TAIR_RETURN_DATA_NOT_EXIST ? 0 : result);
+    ctx->result = result;
     ctx->scheduler->schedule(&ctx->fiber);
 }
 
@@ -305,7 +308,8 @@ void Tair::OnPutCb(int result, void *args) {
     if(result) {
             SYLAR_LOG_ERROR(g_logger) << "OnPutCb result=" << result
                 << " key=" << ctx->key
-                << " sn=" << ctx->sn;
+                << " sn=" << ctx->sn
+                << " used=" << (sylar::GetCurrentMS() - ctx->start);
     }
 
     if(ctx->timer) {
@@ -318,7 +322,9 @@ void Tair::OnPutCb(int result, void *args) {
 }
 
 void Tair::onTimer(Ctx::ptr ctx) {
-    SYLAR_LOG_ERROR(g_logger) << "onTimer sn=" << ctx->sn;
+    SYLAR_LOG_ERROR(g_logger) << "onTimer sn=" << ctx->sn
+        << " key=" << ctx->key
+        << " used=" << (sylar::GetCurrentMS() - ctx->start);
     sylar::Mutex::Lock lock(m_mutex);
     if(ctx->fiber) {
         auto it = m_ctxs.find(ctx->sn);
@@ -337,6 +343,7 @@ std::string Tair::Ctx::toString() const {
     std::stringstream ss;
     ss << "[ctx"
        << " result=" << result
+       << " key=" << key
        << " val=" << val
        << " sn=" << sn
        << "]";

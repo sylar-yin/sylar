@@ -59,10 +59,11 @@ private:
     struct Ctx {
         typedef std::shared_ptr<Ctx> ptr;
         typedef std::weak_ptr<Ctx> weak_ptr;
-        Ctx() : result(0), sn(0) {}
+        Ctx() : result(0), sn(0), start(0) {}
 
         int result;
         uint32_t sn;
+        uint64_t start;
 
         std::string key;
         std::string val;
