@@ -1,0 +1,6 @@
+dns.bak:
+    config:
+        - domain: sylar.top:80
+          type: 1
+        - domain: sylar.top:8080
+          type: 1

@@ -352,6 +352,7 @@ std::string Tair::Ctx::toString() const {
 
 TairManager::TairManager()
     :m_idx(0) {
+    init();
 }
 
 Tair::ptr TairManager::get(const std::string& name) {

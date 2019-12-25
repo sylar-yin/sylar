@@ -56,6 +56,7 @@ set(LIB_SRC
     sylar/address.cc
     sylar/bytearray.cc
     sylar/config.cc
+    sylar/dns.cc
     sylar/db/fox_thread.cc
     sylar/db/mysql.cc
     sylar/db/redis.cc

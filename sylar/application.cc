@@ -17,6 +17,7 @@
 #include "sylar/db/fox_thread.h"
 #include "sylar/db/redis.h"
 #include "sylar/db/tair.h"
+#include "sylar/dns.h"
 
 namespace sylar {
 
@@ -168,6 +169,8 @@ int Application::run_fiber() {
     FoxThreadMgr::GetInstance()->start();
     RedisMgr::GetInstance();
     TairMgr::GetInstance();
+    DnsMgr::GetInstance()->init();
+    DnsMgr::GetInstance()->start();
 
     auto http_confs = g_servers_conf->getValue();
     std::vector<TcpServer::ptr> svrs;

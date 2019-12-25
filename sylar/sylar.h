@@ -41,6 +41,8 @@
 #include "db/db.h"
 #include "db/mysql.h"
 #include "db/sqlite3.h"
+#include "db/redis.h"
+#include "db/tair.h"
 
 #include "ds/cache_status.h"
 #include "ds/lru_cache.h"

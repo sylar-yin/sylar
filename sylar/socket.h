@@ -318,6 +318,8 @@ public:
      */
     bool isConnected() const { return m_isConnected;}
 
+    bool checkConnected();
+
     /**
      * @brief 是否有效(m_sock != -1)
      */

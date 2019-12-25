@@ -68,6 +68,14 @@ Socket::~Socket() {
     close();
 }
 
+bool Socket::checkConnected() {
+    struct tcp_info info;
+    int len = sizeof(info);
+    getsockopt(m_sock, IPPROTO_TCP, TCP_INFO, &info, (socklen_t *)&len);
+    m_isConnected = (info.tcpi_state == TCP_ESTABLISHED);
+    return m_isConnected;
+}
+
 int64_t Socket::getSendTimeout() {
     FdCtx::ptr ctx = FdMgr::GetInstance()->get(m_sock);
     if(ctx) {
