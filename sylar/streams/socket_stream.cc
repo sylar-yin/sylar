@@ -18,6 +18,10 @@ bool SocketStream::isConnected() const {
     return m_socket && m_socket->isConnected();
 }
 
+bool SocketStream::checkConnected() {
+    return m_socket && m_socket->checkConnected();
+}
+
 int SocketStream::read(void* buffer, size_t length) {
     if(!isConnected()) {
         return -1;

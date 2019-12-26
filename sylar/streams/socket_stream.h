@@ -94,6 +94,7 @@ public:
      * @brief 返回是否连接
      */
     bool isConnected() const;
+    bool checkConnected();
 
     Address::ptr getRemoteAddress();
     Address::ptr getLocalAddress();

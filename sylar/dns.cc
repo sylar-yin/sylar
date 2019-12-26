@@ -68,7 +68,7 @@ public:
     }
 };
 
-sylar::ConfigVar<std::set<DnsDefine> >::ptr g_dns_defines =
+static sylar::ConfigVar<std::set<DnsDefine> >::ptr g_dns_defines =
     sylar::Config::Lookup("dns.config", std::set<DnsDefine>(), "dns config");
 
 struct DnsIniter {
@@ -211,8 +211,11 @@ sylar::Address::ptr DnsManager::getAddress(const std::string& service, bool cach
     }
 
     if(cache) {
-        dns.reset(new Dns(service, Dns::TYPE_DOMAIN));
-        add(dns);
+        sylar::IOManager::GetThis()->schedule([service, this](){
+            Dns::ptr dns(new Dns(service, Dns::TYPE_DOMAIN));
+            dns->refresh();
+            add(dns);
+        });
     }
 
     return sylar::Address::LookupAny(service, sylar::Socket::IPv4, sylar::Socket::TCP);

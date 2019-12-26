@@ -327,6 +327,7 @@ private:
     uint32_t m_maxAliveTime;
     uint32_t m_maxRequest;
     bool m_isHttps;
+    std::string m_service;
 
     MutexType m_mutex;
     std::list<HttpConnection*> m_conns;

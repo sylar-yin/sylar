@@ -2,6 +2,7 @@
 #include "http_parser.h"
 #include "sylar/log.h"
 #include "sylar/streams/zlib_stream.h"
+#include "sylar/dns.h"
 
 namespace sylar {
 namespace http {
@@ -37,6 +38,7 @@ HttpResponse::ptr HttpConnection::recvResponse() {
     int offset = 0;
     do {
         int len = read(data + offset, buff_size - offset);
+        //SYLAR_LOG_INFO(g_logger) << "read len=" << len;
         if(len <= 0) {
             close();
             return nullptr;
@@ -57,6 +59,7 @@ HttpResponse::ptr HttpConnection::recvResponse() {
             break;
         }
     } while(true);
+    //SYLAR_LOG_INFO(g_logger) << "after header";
     auto& client_parser = parser->getParser();
     std::string body;
     if(client_parser.chunked) {
@@ -148,6 +151,7 @@ HttpResponse::ptr HttpConnection::recvResponse() {
         }
         parser->getData()->setBody(body);
     }
+    parser->getData()->initConnection();
     return parser->getData();
 }
 
@@ -155,6 +159,7 @@ int HttpConnection::sendRequest(HttpRequest::ptr rsp) {
     std::stringstream ss;
     ss << *rsp;
     std::string data = ss.str();
+    //SYLAR_LOG_INFO(g_logger) << ss.str() << "|";
     //std::cout << ss.str() << std::endl;
     return writeFixSize(data.c_str(), data.size());
 }
@@ -313,6 +318,7 @@ HttpConnectionPool::HttpConnectionPool(const std::string& host
     ,m_maxAliveTime(max_alive_time)
     ,m_maxRequest(max_request)
     ,m_isHttps(is_https) {
+    m_service = m_host + ":" + std::to_string(m_port);
 }
 
 HttpConnection::ptr HttpConnectionPool::getConnection(uint64_t& timeout_ms) {
@@ -323,11 +329,12 @@ HttpConnection::ptr HttpConnectionPool::getConnection(uint64_t& timeout_ms) {
     while(!m_conns.empty()) {
         auto conn = *m_conns.begin();
         m_conns.pop_front();
-        if(!conn->isConnected()) {
+        
+        if((conn->m_createTime + m_maxAliveTime) > now_ms) {
             invalid_conns.push_back(conn);
             continue;
         }
-        if((conn->m_createTime + m_maxAliveTime) > now_ms) {
+        if(!conn->checkConnected()) {
             invalid_conns.push_back(conn);
             continue;
         }
@@ -341,12 +348,13 @@ HttpConnection::ptr HttpConnectionPool::getConnection(uint64_t& timeout_ms) {
     m_total -= invalid_conns.size();
 
     if(!ptr) {
-        IPAddress::ptr addr = Address::LookupAnyIPAddress(m_host);
+        //IPAddress::ptr addr = Address::LookupAnyIPAddress(m_host);
+        auto addr = DnsMgr::GetInstance()->getAddress(m_service, true);
         if(!addr) {
             SYLAR_LOG_ERROR(g_logger) << "get addr fail: " << m_host;
             return nullptr;
         }
-        addr->setPort(m_port);
+        //addr->setPort(m_port);
         Socket::ptr sock = m_isHttps ? SSLSocket::CreateTCP(addr) : Socket::CreateTCP(addr);
         if(!sock) {
             SYLAR_LOG_ERROR(g_logger) << "create sock fail: " << *addr;
@@ -369,6 +377,7 @@ HttpConnection::ptr HttpConnectionPool::getConnection(uint64_t& timeout_ms) {
 void HttpConnectionPool::ReleasePtr(HttpConnection* ptr, HttpConnectionPool* pool) {
     ++ptr->m_request;
     if(!ptr->isConnected()
+            || !ptr->checkConnected()
             || ((ptr->m_createTime + pool->m_maxAliveTime) >= sylar::GetCurrentMS())
             || (ptr->m_request >= pool->m_maxRequest)) {
         delete ptr;
