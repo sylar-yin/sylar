@@ -41,7 +41,7 @@ bool Response::serializeToByteArray(ByteArray::ptr bytearray) {
     bytearray->writeUint32(m_sn);
     bytearray->writeUint32(m_cmd);
     bytearray->writeUint32(m_result);
-    bytearray->writeStringVint(m_resultStr);
+    bytearray->writeStringF32(m_resultStr);
     return true;
 }
 
@@ -49,7 +49,7 @@ bool Response::parseFromByteArray(ByteArray::ptr bytearray) {
     m_sn = bytearray->readUint32();
     m_cmd = bytearray->readUint32();
     m_result = bytearray->readUint32();
-    m_resultStr = bytearray->readStringVint();
+    m_resultStr = bytearray->readStringF32();
     return true;
 }
 
