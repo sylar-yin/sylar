@@ -21,6 +21,7 @@ class IOManager : public Scheduler, public TimerManager {
 public:
     typedef std::shared_ptr<IOManager> ptr;
     typedef RWMutex RWMutexType;
+    //typedef RWSpinlock RWMutexType;
 
     /**
      * @brief IO事件
@@ -38,7 +39,8 @@ private:
      * @brief Socket事件上线文类
      */
     struct FdContext {
-        typedef Mutex MutexType;
+        //typedef Mutex MutexType;
+        typedef Spinlock MutexType;
         /**
          * @brief 事件上线文类
          */

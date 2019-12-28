@@ -26,7 +26,8 @@ namespace sylar {
 class Scheduler {
 public:
     typedef std::shared_ptr<Scheduler> ptr;
-    typedef Mutex MutexType;
+    //typedef Mutex MutexType;
+    typedef Spinlock MutexType;
 
     /**
      * @brief 构造函数

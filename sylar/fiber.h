@@ -11,7 +11,16 @@
 
 #include <memory>
 #include <functional>
+
+#define FIBER_UCONTEXT      1
+#define FIBER_FCONTEXT      2
+#define FIBER_CONTEXT_TYPE  FIBER_UCONTEXT
+
+#if FIBER_CONTEXT_TYPE == FIBER_UCONTEXT
 #include <ucontext.h>
+#elif FIBER_CONTEXT_TYPE == FIBER_FCONTEXT
+#include "sylar/fcontext/fcontext.h"
+#endif
 
 namespace sylar {
 
@@ -138,13 +147,21 @@ public:
      * @brief 协程执行函数
      * @post 执行完成返回到线程主协程
      */
+#if FIBER_CONTEXT_TYPE == FIBER_UCONTEXT
     static void MainFunc();
+#elif FIBER_CONTEXT_TYPE == FIBER_FCONTEXT
+    static void MainFunc(intptr_t vp);
+#endif
 
     /**
      * @brief 协程执行函数
      * @post 执行完成返回到线程调度协程
      */
+#if FIBER_CONTEXT_TYPE == FIBER_UCONTEXT
     static void CallerMainFunc();
+#elif FIBER_CONTEXT_TYPE == FIBER_FCONTEXT
+    static void CallerMainFunc(intptr_t vp);
+#endif
 
     /**
      * @brief 获取当前协程的id
@@ -158,7 +175,11 @@ private:
     /// 协程状态
     State m_state = INIT;
     /// 协程上下文
+#if FIBER_CONTEXT_TYPE == FIBER_UCONTEXT
     ucontext_t m_ctx;
+#elif FIBER_CONTEXT_TYPE == FIBER_FCONTEXT
+    fcontext_t m_ctx = nullptr;
+#endif
     /// 协程运行栈指针
     void* m_stack = nullptr;
     /// 协程运行函数

@@ -56,6 +56,7 @@ public:
         typename RWMutexType::WriteLock lock(m_mutex);
         auto it = m_cache.find(k);
         if(it != m_cache.end()) {
+            m_timed.erase(it->second);
             m_cache.erase(it);
         }
         auto sit = m_timed.insert(Item(k, v, expired + sylar::GetCurrentMS()));
@@ -113,6 +114,7 @@ public:
             return true;
         }
         auto item = *it->second;
+        item.ts = tts;
         m_timed.erase(it->second);
         auto iit = m_timed.insert(item);
         it->second = iit.first;

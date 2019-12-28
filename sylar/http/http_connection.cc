@@ -376,10 +376,11 @@ HttpConnection::ptr HttpConnectionPool::getConnection(uint64_t& timeout_ms) {
 
 void HttpConnectionPool::ReleasePtr(HttpConnection* ptr, HttpConnectionPool* pool) {
     ++ptr->m_request;
-    if(!ptr->isConnected()
-            || !ptr->checkConnected()
+    if(pool->m_total >= (int32_t)pool->m_maxSize
+            || !ptr->isConnected()
+            || (ptr->m_request >= pool->m_maxRequest)
             || ((ptr->m_createTime + pool->m_maxAliveTime) >= sylar::GetCurrentMS())
-            || (ptr->m_request >= pool->m_maxRequest)) {
+            || !ptr->checkConnected()) {
         delete ptr;
         --pool->m_total;
         return;

@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <atomic>
 #include <list>
+#include <tbb/spin_rw_mutex.h>
 
 #include "noncopyable.h"
 #include "fiber.h"
@@ -423,6 +424,57 @@ private:
     /// 原子状态
     volatile std::atomic_flag m_mutex;
 };
+
+/**
+ * @brief 读写自旋锁
+ */
+class RWSpinlock : Noncopyable{
+public:
+
+    /// 局部读锁
+    typedef ReadScopedLockImpl<RWSpinlock> ReadLock;
+
+    /// 局部写锁
+    typedef WriteScopedLockImpl<RWSpinlock> WriteLock;
+
+    /**
+     * @brief 构造函数
+     */
+    RWSpinlock() {
+    }
+    
+    /**
+     * @brief 析构函数
+     */
+    ~RWSpinlock() {
+    }
+
+    /**
+     * @brief 上读锁
+     */
+    void rdlock() {
+        m_lock.lock_read();
+    }
+
+    /**
+     * @brief 上写锁
+     */
+    void wrlock() {
+        m_lock.lock();
+    }
+
+    /**
+     * @brief 解锁
+     */
+    void unlock() {
+        m_lock.unlock();
+    }
+private:
+    /// 读写锁
+    tbb::spin_rw_mutex m_lock;
+};
+
+
 
 class Scheduler;
 class FiberSemaphore : Noncopyable {

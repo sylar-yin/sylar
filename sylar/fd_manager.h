@@ -113,6 +113,7 @@ private:
 class FdManager {
 public:
     typedef RWMutex RWMutexType;
+    //typedef RWSpinlock RWMutexType;
     /**
      * @brief 无参构造函数
      */
