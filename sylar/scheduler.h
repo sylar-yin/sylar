@@ -27,7 +27,8 @@ class Scheduler {
 public:
     typedef std::shared_ptr<Scheduler> ptr;
     //typedef Mutex MutexType;
-    typedef Spinlock MutexType;
+    //typedef Spinlock MutexType;
+    typedef RWSpinlock RWMutexType;
 
     /**
      * @brief 构造函数
@@ -76,7 +77,7 @@ public:
     void schedule(FiberOrCb fc, int thread = -1) {
         bool need_tickle = false;
         {
-            MutexType::Lock lock(m_mutex);
+            RWMutexType::WriteLock lock(m_mutex);
             need_tickle = scheduleNoLock(fc, thread);
         }
 
@@ -94,7 +95,7 @@ public:
     void schedule(InputIterator begin, InputIterator end) {
         bool need_tickle = false;
         {
-            MutexType::Lock lock(m_mutex);
+            RWMutexType::WriteLock lock(m_mutex);
             while(begin != end) {
                 need_tickle = scheduleNoLock(&*begin, -1) || need_tickle;
                 ++begin;
@@ -220,7 +221,7 @@ private:
     };
 private:
     /// Mutex
-    MutexType m_mutex;
+    RWMutexType m_mutex;
     /// 线程池
     std::vector<Thread::ptr> m_threads;
     /// 待执行的协程队列

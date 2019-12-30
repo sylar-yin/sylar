@@ -4,6 +4,7 @@
 #include "log.h"
 #include "scheduler.h"
 #include <atomic>
+#include <sys/mman.h>
 
 namespace sylar {
 
@@ -29,13 +30,101 @@ public:
     }
 };
 
+class MMapStackAllocator {
+public:
+    static void* Alloc(size_t size) {
+        return mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    }
+
+    static void Dealloc(void* vp, size_t size) {
+        munmap(vp, size);
+    }
+};
+
 using StackAllocator = MallocStackAllocator;
+//using StackAllocator = MMapStackAllocator;
+
+//class FiberPool {
+//public:
+//    FiberPool(size_t max_size)
+//        :m_maxSize(max_size) {
+//    }
+//    ~FiberPool() {
+//        for(auto& i : m_mems) {
+//            free(i);
+//        }
+//    }
+//    void* alloc(size_t size);
+//    void dealloc(void* ptr);
+//private:
+//    struct MemItem {
+//        size_t size;
+//        char data[];
+//    };
+//private:
+//    size_t m_maxSize;
+//    std::list<MemItem*> m_mems;
+//};
+//
+//void* FiberPool::alloc(size_t size) {
+//    for(auto it = m_mems.begin();
+//            it != m_mems.end(); ++it) {
+//        if((*it)->size >= size) {
+//            auto p = (*it)->data;
+//            m_mems.erase(it);
+//            return p;
+//        }
+//    }
+//    MemItem* mi = (MemItem*)malloc(sizeof(size_t) + size);
+//    mi->size = size;
+//    return mi->data;
+//}
+//
+//void FiberPool::dealloc(void* ptr) {
+//    MemItem* mi = (MemItem*)((char*)ptr - sizeof(size_t));
+//    m_mems.push_front(mi);
+//    if(m_mems.size() > m_maxSize) {
+//        MemItem* v = m_mems.back();
+//        m_mems.pop_back();
+//        free(v);
+//        SYLAR_LOG_INFO(g_logger) << "poll full";
+//    }
+//}
+//
+//static thread_local FiberPool s_fiber_pool(1024);
 
 uint64_t Fiber::GetFiberId() {
     if(t_fiber) {
         return t_fiber->getId();
     }
     return 0;
+}
+
+
+Fiber* NewFiber() {
+    //Fiber* p = (Fiber*)malloc(sizeof(Fiber));
+    //return new (p) Fiber();
+    //p->Fiber();
+    //return p;
+    return new Fiber();
+}
+
+Fiber* NewFiber(std::function<void()> cb, size_t stacksize, bool use_caller) {
+    stacksize = stacksize ? stacksize : g_fiber_stack_size->getValue();
+    //Fiber* p = (Fiber*)malloc(sizeof(Fiber) + stacksize);
+    //Fiber* p = (Fiber*)s_fiber_pool.alloc(sizeof(Fiber) + stacksize);
+    Fiber* p = (Fiber*)StackAllocator::Alloc(sizeof(Fiber) + stacksize);
+    return new (p) Fiber(cb, stacksize, use_caller);
+    //p->Fiber(cb, stacksize, use_caller);
+    //return p;
+}
+
+void FreeFiber(Fiber* ptr) {
+    ptr->~Fiber();
+    //free(ptr);
+    //s_fiber_pool.dealloc(ptr);
+    //StackAllocator::Dealloc(ptr, ptr->m_stacksize + sizeof(Fiber));
+    StackAllocator::Dealloc(ptr, 0);
 }
 
 Fiber::Fiber() {
@@ -58,9 +147,10 @@ Fiber::Fiber(std::function<void()> cb, size_t stacksize, bool use_caller)
     :m_id(++s_fiber_id)
     ,m_cb(cb) {
     ++s_fiber_count;
-    m_stacksize = stacksize ? stacksize : g_fiber_stack_size->getValue();
+    //m_stacksize = stacksize ? stacksize : g_fiber_stack_size->getValue();
+    m_stacksize = stacksize;
 
-    m_stack = StackAllocator::Alloc(m_stacksize);
+    //m_stack = StackAllocator::Alloc(m_stacksize);
 #if FIBER_CONTEXT_TYPE == FIBER_UCONTEXT
     if(getcontext(&m_ctx)) {
         SYLAR_ASSERT2(false, "getcontext");
@@ -100,7 +190,7 @@ Fiber::~Fiber() {
                 || m_state == EXCEPT
                 || m_state == INIT);
 
-        StackAllocator::Dealloc(m_stack, m_stacksize);
+        //StackAllocator::Dealloc(m_stack, m_stacksize);
     } else {
         SYLAR_ASSERT(!m_cb);
         SYLAR_ASSERT(m_state == EXEC);
@@ -208,7 +298,8 @@ Fiber::ptr Fiber::GetThis() {
     if(t_fiber) {
         return t_fiber->shared_from_this();
     }
-    Fiber::ptr main_fiber(new Fiber);
+    Fiber::ptr main_fiber(NewFiber());
+    //Fiber::ptr main_fiber(new Fiber);
     SYLAR_ASSERT(t_fiber == main_fiber.get());
     t_threadFiber = main_fiber;
     return t_fiber->shared_from_this();
