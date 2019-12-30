@@ -75,6 +75,8 @@ set(LIB_SRC
     sylar/fd_manager.cc
     sylar/fiber.cc
     sylar/fcontext/fcontext.S
+    sylar/libco/coctx.cc
+    sylar/libco/coctx_swap.S
     sylar/http/http.cc
     sylar/http/http_connection.cc
     sylar/http/http_parser.cc
