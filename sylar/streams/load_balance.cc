@@ -411,8 +411,8 @@ LoadBalanceItem::ptr SDLoadBalance::createLoadBalanceItem(ILoadBalance::Type typ
 void SDLoadBalance::onServiceChange(const std::string& domain, const std::string& service
                             ,const std::unordered_map<uint64_t, ServiceItemInfo::ptr>& old_value
                             ,const std::unordered_map<uint64_t, ServiceItemInfo::ptr>& new_value) {
-    SYLAR_LOG_INFO(g_logger) << "onServiceChange domain=" << domain
-                             << " service=" << service;
+    //SYLAR_LOG_INFO(g_logger) << "onServiceChange domain=" << domain
+    //                         << " service=" << service;
     auto type = getType(domain, service);
     auto lb = get(domain, service, true);
     std::unordered_map<uint64_t, ServiceItemInfo::ptr> add_values;
@@ -428,6 +428,7 @@ void SDLoadBalance::onServiceChange(const std::string& domain, const std::string
             add_values.insert(i);
         }
     }
+    //TODO update
 
     std::unordered_map<uint64_t, LoadBalanceItem::ptr> add_infos;
     for(auto& i : add_values) {
@@ -477,6 +478,8 @@ void SDLoadBalance::initConf(const std::unordered_map<std::string
                 t = ILoadBalance::ROUNDROBIN;
             } else if(n.second == "weight") {
                 t = ILoadBalance::WEIGHT;
+            } else if(n.second == "fair") {
+                t = ILoadBalance::FAIR;
             }
             types[i.first][n.first] = t;
             query_infos[i.first].insert(n.first);

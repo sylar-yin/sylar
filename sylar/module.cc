@@ -75,9 +75,16 @@ void Module::registerService(const std::string& server_type,
     if(!sd) {
         return;
     }
+    auto ip_and_port = getServiceIPPort(server_type);
+    if(!ip_and_port.empty()) {
+        sd->registerServer(domain, service, ip_and_port, server_type);
+    }
+}
+
+std::string Module::getServiceIPPort(const std::string& server_type) {
     std::vector<TcpServer::ptr> svrs;
     if(!Application::GetInstance()->getServer(server_type, svrs)) {
-        return;
+        return "";
     }
     for(auto& i : svrs) {
         auto socks = i->getSocks();
@@ -96,9 +103,18 @@ void Module::registerService(const std::string& server_type,
             } else {
                 ip_and_port = addr->toString();
             }
-            sd->registerServer(domain, service, ip_and_port, server_type);
+            return ip_and_port;
         }
     }
+    return "";
+}
+
+void Module::addRegisterParam(const std::string& key, const std::string& val) {
+    auto sd = Application::GetInstance()->getServiceDiscovery();
+    if(!sd) {
+        return;
+    }
+    sd->addParam(key, val);
 }
 
 std::string Module::statusString() {

@@ -1,5 +1,7 @@
 service_discovery:
-    zk: 127.0.0.1:21811
+    zk.1: 127.0.0.1:21811
+    redis:
+        name: local
 rock_services:
     sylar.top:
         "all" : fair

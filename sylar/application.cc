@@ -38,6 +38,10 @@ static sylar::ConfigVar<std::string>::ptr g_service_discovery_zk =
             ,std::string("")
             , "service discovery zookeeper");
 
+static sylar::ConfigVar<std::string>::ptr g_service_discovery_redis =
+    sylar::Config::Lookup("service_discovery.redis.name"
+            ,std::string("")
+            , "service discovery redis name");
 
 static sylar::ConfigVar<std::vector<TcpServerConf> >::ptr g_servers_conf
     = sylar::Config::Lookup("servers", std::vector<TcpServerConf>(), "http server config");
@@ -286,36 +290,39 @@ int Application::run_fiber() {
     if(!g_service_discovery_zk->getValue().empty()) {
         m_serviceDiscovery.reset(new ZKServiceDiscovery(g_service_discovery_zk->getValue()));
         m_rockSDLoadBalance.reset(new RockSDLoadBalance(m_serviceDiscovery));
-
-        std::vector<TcpServer::ptr> svrs;
-        if(!getServer("http", svrs)) {
-            m_serviceDiscovery->setSelfInfo(sylar::GetIPv4() + ":0:" + sylar::GetHostName());
-        } else {
-            std::string ip_and_port;
-            for(auto& i : svrs) {
-                auto socks = i->getSocks();
-                for(auto& s : socks) {
-                    auto addr = std::dynamic_pointer_cast<IPv4Address>(s->getLocalAddress());
-                    if(!addr) {
-                        continue;
-                    }
-                    auto str = addr->toString();
-                    if(str.find("127.0.0.1") == 0) {
-                        continue;
-                    }
-                    if(str.find("0.0.0.0") == 0) {
-                        ip_and_port = sylar::GetIPv4() + ":" + std::to_string(addr->getPort());
-                        break;
-                    } else {
-                        ip_and_port = addr->toString();
-                    }
-                }
-                if(!ip_and_port.empty()) {
-                    break;
-                }
-            }
-            m_serviceDiscovery->setSelfInfo(ip_and_port + ":" + sylar::GetHostName());
-        }
+        //std::vector<TcpServer::ptr> svrs;
+        //if(!getServer("http", svrs)) {
+        //    m_serviceDiscovery->setSelfInfo(sylar::GetIPv4() + ":0:" + sylar::GetHostName());
+        //} else {
+        //    std::string ip_and_port;
+        //    for(auto& i : svrs) {
+        //        auto socks = i->getSocks();
+        //        for(auto& s : socks) {
+        //            auto addr = std::dynamic_pointer_cast<IPv4Address>(s->getLocalAddress());
+        //            if(!addr) {
+        //                continue;
+        //            }
+        //            auto str = addr->toString();
+        //            if(str.find("127.0.0.1") == 0) {
+        //                continue;
+        //            }
+        //            if(str.find("0.0.0.0") == 0) {
+        //                ip_and_port = sylar::GetIPv4() + ":" + std::to_string(addr->getPort());
+        //                break;
+        //            } else {
+        //                ip_and_port = addr->toString();
+        //            }
+        //        }
+        //        if(!ip_and_port.empty()) {
+        //            break;
+        //        }
+        //    }
+        //    m_serviceDiscovery->setSelfInfo(ip_and_port + ":" + sylar::GetHostName());
+        //}
+    } else if(!g_service_discovery_redis->getValue().empty()) {
+        m_serviceDiscovery.reset(new RedisServiceDiscovery(g_service_discovery_redis->getValue()));
+        m_rockSDLoadBalance.reset(new RockSDLoadBalance(m_serviceDiscovery));
+        //m_serviceDiscovery->registerServer("mre", "dataproxy", "xxxx:1111", "xxxx");
     }
 
     for(auto& i : modules) {

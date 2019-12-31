@@ -1,5 +1,7 @@
 #include "service_discovery.h"
+#include "sylar/config.h"
 #include "sylar/log.h"
+#include "sylar/db/redis.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -7,6 +9,23 @@
 namespace sylar {
 
 static sylar::Logger::ptr g_logger = SYLAR_LOG_NAME("system");
+
+static sylar::ConfigVar<uint32_t>::ptr g_service_discover_redis_ttl =
+    sylar::Config::Lookup("service_discovery.redis.ttl", (uint32_t)10, "service discovery redis ttl");
+static sylar::ConfigVar<uint32_t>::ptr g_service_discover_redis_check =
+    sylar::Config::Lookup("service_discovery.redis.check_interval", (uint32_t)3, "service discovery redis check interval");
+
+static std::string MapToStr(const std::map<std::string, std::string>& m) {
+    std::stringstream ss;
+    for(auto it = m.begin();
+            it != m.end(); ++it) {
+        if(it != m.begin()) {
+            ss << "&";
+        }
+        ss << it->first << "=" << it->second;
+    }
+    return ss.str();
+}
 
 ServiceItemInfo::ptr ServiceItemInfo::Create(const std::string& ip_and_port, const std::string& data) {
     auto pos = ip_and_port.find(':');
@@ -25,6 +44,16 @@ ServiceItemInfo::ptr ServiceItemInfo::Create(const std::string& ip_and_port, con
     rt->m_ip = ip;
     rt->m_port = port;
     rt->m_data = data;
+
+    std::vector<std::string> parts = sylar::split(data, '&');
+    for(auto& i : parts) {
+        auto pos = i.find('=');
+        if(pos == std::string::npos) {
+            continue;
+        }
+        rt->m_datas[i.substr(0, pos)] = i.substr(pos + 1);
+    }
+    rt->m_updateTime = rt->getDataAs<uint64_t>("update_time");
     return rt;
 }
 
@@ -36,6 +65,22 @@ std::string ServiceItemInfo::toString() const {
        << " data=" << m_data
        << "]";
     return ss.str();
+}
+
+std::string ServiceItemInfo::getData(const std::string& key, const std::string& def) const {
+    auto it = m_datas.find(key);
+    return it == m_datas.end() ? def : it->second;
+}
+
+void IServiceDiscovery::addParam(const std::string& key, const std::string& val) {
+    sylar::RWMutex::WriteLock lock(m_mutex);
+    m_params[key] = val;
+}
+
+std::string IServiceDiscovery::getParam(const std::string& key, const std::string& def) {
+    sylar::RWMutex::ReadLock lock(m_mutex);
+    auto it = m_params.find(key);
+    return it == m_params.end() ? def : it->second;
 }
 
 void IServiceDiscovery::setQueryServer(const std::unordered_map<std::string, std::unordered_set<std::string> >& v) {
@@ -364,6 +409,116 @@ void ZKServiceDiscovery::onWatch(int type, int stat, const std::string& path, ZK
     SYLAR_LOG_ERROR(g_logger) << "onWatch hosts=" << m_hosts
         << " type=" << type << " stat=" << stat
         << " path=" << path << " client=" << client;
+}
+
+RedisServiceDiscovery::RedisServiceDiscovery(const std::string& name)
+    :m_name(name) {
+}
+
+bool RedisServiceDiscovery::registerSelf() {
+    sylar::RWMutex::ReadLock lock(m_mutex);
+    auto rinfo = m_registerInfos;
+    auto params = m_params;
+    lock.unlock();
+
+    for(auto& i : rinfo) {
+        std::stringstream ss;
+        ss << "hmset sylar:" << i.first;
+        for(auto& n : i.second) {
+            ss << " " << n.first << " " << time(0);
+            for(auto& v : n.second) {
+                std::map<std::string, std::string> m = params;
+                if(!v.second.empty()) {
+                    m["data"] = v.second;
+                }
+                m["update_time"] = std::to_string(time(0));
+                if(!sylar::RedisUtil::TryCmd(m_name, 5, "hset sylar:%s:%s %s %s",
+                        i.first.c_str(), n.first.c_str(), v.first.c_str(), MapToStr(m).c_str())) {
+                    SYLAR_LOG_ERROR(g_logger) << "register hset sylar:" << i.first
+                        << ":" << n.first << " " << v.first << " " << MapToStr(m) << " fail";
+                }
+            }
+        }
+        if(!i.second.empty()) {
+            if(!sylar::RedisUtil::TryCmd(m_name, 5, ss.str().c_str())) {
+                SYLAR_LOG_ERROR(g_logger) << "register server fail:" << ss.str();
+            }
+        }
+    }
+    return true;
+}
+
+bool RedisServiceDiscovery::queryInfo() {
+    sylar::RWMutex::ReadLock lock(m_mutex);
+    auto infos = m_queryInfos;
+    lock.unlock();
+
+    time_t now = time(0);
+    for(auto& i : infos) {
+        std::unordered_map<uint64_t, ServiceItemInfo::ptr> sinfos;
+        auto services = i.second;
+        if(i.second.count("all")) {
+            auto rpy = sylar::RedisUtil::TryCmd(m_name, 5, "hkeys sylar:%s", i.first.c_str());
+            if(!rpy) {
+                SYLAR_LOG_ERROR(g_logger) << "query_info error, hkeys sylar:" << i.first;
+                continue;
+            }
+            for(size_t i = 0; i < rpy->elements; ++i) {
+                services.insert(std::string(rpy->element[i]->str, rpy->element[i]->len));
+            }
+        }
+        for(auto& n : services) {
+            auto rpy = sylar::RedisUtil::TryCmd(m_name, 5, "hgetall sylar:%s:%s", i.first.c_str()
+                    , n.c_str());
+            if(!rpy) {
+                SYLAR_LOG_ERROR(g_logger) << "query_info error, hgetall sylar:" << i.first
+                    << ":" << n;
+                continue;
+            }
+
+            for(size_t x = 0; (x + 1) < rpy->elements; x += 2) {
+                auto info = ServiceItemInfo::Create(
+                        std::string(rpy->element[x]->str, rpy->element[x]->len),
+                        std::string(rpy->element[x + 1]->str, rpy->element[x + 1]->len));
+                if(!info) {
+                    SYLAR_LOG_ERROR(g_logger) << "invalid data format sylar:" << i.first
+                        << ":" << n << " " << std::string(rpy->element[x]->str, rpy->element[x]->len);
+                    continue;
+                }
+                if(!info || (now - info->getUpdateTime()) > g_service_discover_redis_ttl->getValue()) {
+                    continue;
+                }
+                sinfos[info->getId()] = info;
+            }
+
+            auto new_vals = sinfos;
+            sylar::RWMutex::WriteLock lock(m_mutex);
+            m_datas[i.first][n].swap(sinfos);
+            lock.unlock();
+
+            m_cb(i.first, n, sinfos, new_vals);
+        }
+    }
+    return true;
+}
+
+void RedisServiceDiscovery::start() {
+    registerSelf();
+    queryInfo();
+
+    if(!m_timer) {
+        m_timer = sylar::IOManager::GetThis()->addTimer(g_service_discover_redis_check->getValue() * 1000, [this](){
+            registerSelf();
+            queryInfo();
+        }, true);
+    }
+}
+
+void RedisServiceDiscovery::stop() {
+    if(m_timer) {
+        m_timer->cancel();
+        m_timer = nullptr;
+    }
 }
 
 }

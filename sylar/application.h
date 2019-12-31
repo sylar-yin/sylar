@@ -18,7 +18,7 @@ public:
     bool getServer(const std::string& type, std::vector<TcpServer::ptr>& svrs);
     void listAllServer(std::map<std::string, std::vector<TcpServer::ptr> >& servers);
 
-    ZKServiceDiscovery::ptr getServiceDiscovery() const { return m_serviceDiscovery;}
+    IServiceDiscovery::ptr getServiceDiscovery() const { return m_serviceDiscovery;}
     RockSDLoadBalance::ptr getRockSDLoadBalance() const { return m_rockSDLoadBalance;}
 private:
     int main(int argc, char** argv);
@@ -32,7 +32,7 @@ private:
     IOManager::ptr m_mainIOManager;
     static Application* s_instance;
 
-    ZKServiceDiscovery::ptr m_serviceDiscovery;
+    IServiceDiscovery::ptr m_serviceDiscovery;
     RockSDLoadBalance::ptr m_rockSDLoadBalance;
 };
 
