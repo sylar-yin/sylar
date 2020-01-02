@@ -4,6 +4,7 @@
 #include "sylar/streams/async_socket_stream.h"
 #include "rock_protocol.h"
 #include "sylar/streams/load_balance.h"
+#include "sylar/singleton.h"
 #include <boost/any.hpp>
 
 namespace sylar {

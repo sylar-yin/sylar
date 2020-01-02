@@ -131,6 +131,18 @@ int32_t StatusServlet::handle(sylar::http::HttpRequest::ptr request
         }
     }
     ss << "===================================================" << std::endl;
+    ss << "<ServiceDiscovery>" << std::endl;
+    auto sd = Application::GetInstance()->getServiceDiscovery();
+    if(sd) {
+        ss << sd->toString() << std::endl;
+    }
+    ss << "===================================================" << std::endl;
+    ss << "<LoadBalance>" << std::endl;
+    auto rlb = Application::GetInstance()->getRockSDLoadBalance();
+    if(rlb) {
+        ss << rlb->statusString() << std::endl;
+    }
+    ss << "===================================================" << std::endl;
     for(size_t i = 0; i < ms.size(); ++i) {
         if(i) {
             ss << "***************************************************" << std::endl;

@@ -182,6 +182,7 @@ RockSDLoadBalance::RockSDLoadBalance(IServiceDiscovery::ptr sd)
 }
 
 static SocketStream::ptr create_rock_stream(ServiceItemInfo::ptr info) {
+    //SYLAR_LOG_INFO(g_logger) << "create_rock_stream: " << info->toString();
     sylar::IPAddress::ptr addr = sylar::Address::LookupAnyIPAddress(info->getIp());
     if(!addr) {
         SYLAR_LOG_ERROR(g_logger) << "invalid service info: " << info->toString();

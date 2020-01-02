@@ -121,9 +121,10 @@ public:
     void init();
 
     std::string statusString(const std::string& prefix);
+
+    void checkInit();
 protected:
     virtual void initNolock() = 0;
-    void checkInit();
 protected:
     RWMutexType m_mutex;
     std::unordered_map<uint64_t, LoadBalanceItem::ptr> m_datas;
@@ -212,6 +213,9 @@ private:
     ILoadBalance::Type getType(const std::string& domain, const std::string& service);
     LoadBalance::ptr createLoadBalance(ILoadBalance::Type type);
     LoadBalanceItem::ptr createLoadBalanceItem(ILoadBalance::Type type);
+
+private:
+    void refresh();
 protected:
     RWMutexType m_mutex;
     IServiceDiscovery::ptr m_sd;
@@ -220,6 +224,9 @@ protected:
     std::unordered_map<std::string, std::unordered_map<std::string, ILoadBalance::Type> > m_types;
     ILoadBalance::Type m_defaultType = ILoadBalance::FAIR;
     stream_callback m_cb;
+
+    sylar::Timer::ptr m_timer;
+    bool m_isRefresh = false;
 };
 
 }

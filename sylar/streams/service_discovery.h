@@ -48,6 +48,9 @@ public:
                 ,const std::unordered_map<uint64_t, ServiceItemInfo::ptr>& new_value)> service_callback;
     virtual ~IServiceDiscovery() { }
 
+    virtual bool doRegister() = 0;
+    virtual bool doQuery() = 0;
+
     void registerServer(const std::string& domain, const std::string& service,
                         const std::string& ip_and_port, const std::string& data);
     void queryServer(const std::string& domain, const std::string& service);
@@ -72,6 +75,8 @@ public:
 
     void addParam(const std::string& key, const std::string& val);
     std::string getParam(const std::string& key, const std::string& def = "");
+
+    std::string toString();
 protected:
     sylar::RWMutex m_mutex;
     //domain -> [service -> [id -> ServiceItemInfo] ]
@@ -99,6 +104,9 @@ public:
 
     virtual void start();
     virtual void stop();
+
+    virtual bool doRegister();
+    virtual bool doQuery();
 private:
     void onWatch(int type, int stat, const std::string& path, ZKClient::ptr);
     void onZKConnect(const std::string& path, ZKClient::ptr client);
@@ -129,6 +137,9 @@ public:
 
     virtual void start();
     virtual void stop();
+
+    virtual bool doRegister();
+    virtual bool doQuery();
 private:
     bool registerSelf();
     bool queryInfo();

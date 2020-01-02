@@ -64,6 +64,7 @@ public:
     void registerService(const std::string& server_type,
             const std::string& domain, const std::string& service);
     void addRegisterParam(const std::string& key, const std::string& val);
+    void queryService(const std::string& domain, const std::string& service);
 protected:
     std::string getServiceIPPort(const std::string& server_type);
 protected:

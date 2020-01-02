@@ -117,8 +117,57 @@ void IServiceDiscovery::listQueryServer(std::unordered_map<std::string
     infos = m_queryInfos;
 }
 
+std::string IServiceDiscovery::toString() {
+    std::stringstream ss;
+    sylar::RWMutex::ReadLock lock(m_mutex);
+    ss << "[Params]" << std::endl;
+    for(auto& i : m_params) {
+        ss << "\t" << i.first << ":" << i.second << std::endl;
+    }
+    ss << std::endl;
+    ss << "[register_infos]" << std::endl;
+    for(auto& i : m_registerInfos) {
+        ss << "\t" << i.first << ":" << std::endl;
+        for(auto& n : i.second) {
+            ss << "\t\t" << n.first << ":" << std::endl;
+            for(auto& x : n.second) {
+                ss << "\t\t\t" << x.first << ":" << x.second << std::endl;
+            }
+        }
+    }
+    ss << std::endl;
+    ss << "[query_infos]" << std::endl;
+    for(auto& i : m_queryInfos) {
+        ss << "\t" << i.first << ":" << std::endl;
+        for(auto& n : i.second) {
+            ss << "\t\t" << n << std::endl;
+        }
+    }
+    ss << std::endl;
+    ss << "[services]" << std::endl;
+    for(auto& i : m_datas) {
+        ss << "\t" << i.first << ":" << std::endl;
+        for(auto& n : i.second) {
+            ss << "\t\t" << n.first << ":" << std::endl;
+            for(auto& x : n.second) {
+                ss << "\t\t\t" << x.first << ": " << x.second->toString() << std::endl;
+            }
+        }
+    }
+    lock.unlock();
+    return ss.str();
+}
+
 ZKServiceDiscovery::ZKServiceDiscovery(const std::string& hosts)
     :m_hosts(hosts) {
+}
+
+bool ZKServiceDiscovery::doRegister() {
+    return true;
+}
+
+bool ZKServiceDiscovery::doQuery() {
+    return true;
 }
 
 void ZKServiceDiscovery::start() {
@@ -512,6 +561,14 @@ void RedisServiceDiscovery::start() {
             queryInfo();
         }, true);
     }
+}
+
+bool RedisServiceDiscovery::doRegister() {
+    return registerSelf();
+}
+
+bool RedisServiceDiscovery::doQuery() {
+    return queryInfo();
 }
 
 void RedisServiceDiscovery::stop() {

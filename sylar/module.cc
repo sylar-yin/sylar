@@ -81,6 +81,14 @@ void Module::registerService(const std::string& server_type,
     }
 }
 
+void Module::queryService(const std::string& domain, const std::string& service) {
+    auto sd = Application::GetInstance()->getServiceDiscovery();
+    if(!sd) {
+        return;
+    }
+    sd->queryServer(domain, service);
+}
+
 std::string Module::getServiceIPPort(const std::string& server_type) {
     std::vector<TcpServer::ptr> svrs;
     if(!Application::GetInstance()->getServer(server_type, svrs)) {
