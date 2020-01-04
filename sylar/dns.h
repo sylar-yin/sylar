@@ -13,6 +13,7 @@ namespace sylar {
 class Dns {
 public:
     typedef std::shared_ptr<Dns> ptr;
+    typedef sylar::RWMutex RWMutexType;
     enum Type {
         TYPE_DOMAIN = 1,
         TYPE_ADDRESS = 2
@@ -41,13 +42,14 @@ private:
     std::string m_domain;
     int m_type;
     uint32_t m_idx;
-    sylar::RWMutex m_mutex;
+    RWMutexType m_mutex;
     std::vector<AddressItem> m_address;
     std::set<std::string> m_addrs;
 };
 
 class DnsManager {
 public:
+    typedef sylar::RWMutex RWMutexType;
     void init();
 
     void add(Dns::ptr v);
@@ -61,7 +63,7 @@ public:
 
     std::ostream& dump(std::ostream& os);
 private:
-    sylar::RWMutex m_mutex;
+    RWMutexType m_mutex;
     std::map<std::string, Dns::ptr> m_dns;
     sylar::Timer::ptr m_timer;
     bool m_refresh = false;
