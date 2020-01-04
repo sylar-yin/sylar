@@ -20,7 +20,7 @@ public:
     template<class T>
     std::shared_ptr<T> getAsPB() const {
         try {
-            std::shared_ptr<T> data(new T);
+            std::shared_ptr<T> data = std::make_shared<T>();
             if(data->ParseFromString(m_body)) {
                 return data;
             }

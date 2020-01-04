@@ -429,10 +429,16 @@ public:
     }
 
     std::string get(const uint64_t& id) {
+        if(id == 0) {
+            return "";
+        }
         return m_dict.getString(id);
     }
 
     SharedArray<char> getRaw(const uint64_t& id, bool duplicate = true) {
+        if(id == 0) {
+            return SharedArray<char>();
+        }
         return m_dict.get(id, duplicate);
     }
 

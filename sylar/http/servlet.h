@@ -123,7 +123,7 @@ public:
     }
 
     Servlet::ptr get() const override {
-        return Servlet::ptr(new T);
+        return std::make_shared<T>();
     }
 
     std::string getName() const override {

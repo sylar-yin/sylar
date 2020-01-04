@@ -27,9 +27,9 @@
  */
 #define SYLAR_LOG_LEVEL(logger, level) \
     if(logger->getLevel() <= level) \
-        sylar::LogEventWrap(sylar::LogEvent::ptr(new sylar::LogEvent(logger, level, \
+        sylar::LogEventWrap(std::make_shared<sylar::LogEvent>(logger, level, \
                         __FILE__, __LINE__, 0, sylar::GetThreadId(),\
-                sylar::GetFiberId(), time(0), sylar::Thread::GetName()))).getSS()
+                sylar::GetFiberId(), time(0), sylar::Thread::GetName())).getSS()
 
 /**
  * @brief 使用流式方式将日志级别debug的日志写入到logger
@@ -61,9 +61,9 @@
  */
 #define SYLAR_LOG_FMT_LEVEL(logger, level, fmt, ...) \
     if(logger->getLevel() <= level) \
-        sylar::LogEventWrap(sylar::LogEvent::ptr(new sylar::LogEvent(logger, level, \
+        sylar::LogEventWrap(std::make_shared<sylar::LogEvent>(logger, level, \
                         __FILE__, __LINE__, 0, sylar::GetThreadId(),\
-                sylar::GetFiberId(), time(0), sylar::Thread::GetName()))).getEvent()->format(fmt, __VA_ARGS__)
+                sylar::GetFiberId(), time(0), sylar::Thread::GetName())).getEvent()->format(fmt, __VA_ARGS__)
 
 /**
  * @brief 使用格式化方式将日志级别debug的日志写入到logger

@@ -23,7 +23,7 @@ T& GetInstanceX() {
 
 template<class T, class X, int N>
 std::shared_ptr<T> GetInstancePtr() {
-    static std::shared_ptr<T> v(new T);
+    static std::shared_ptr<T> v = std::make_shared<T>();
     return v;
 }
 
@@ -62,7 +62,7 @@ public:
      * @brief 返回单例智能指针
      */
     static std::shared_ptr<T> GetInstance() {
-        static std::shared_ptr<T> v(new T);
+        static std::shared_ptr<T> v = std::make_shared<T>();
         return v;
         //return GetInstancePtr<T, X, N>();
     }
