@@ -39,7 +39,7 @@ public:
         return m_datas.empty();
     }
 private:
-    Semaphore m_sem;
+    sylar::FiberSemaphore m_sem;
     sylar::Mutex m_mutex;
     std::list<data_type> m_datas;
 };

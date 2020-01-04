@@ -118,6 +118,7 @@ set(LIB_SRC
     sylar/util/crypto_util.cc
     sylar/util/json_util.cc
     sylar/util/hash_util.cc
+    sylar/util/trace.cc
     sylar/worker.cc
     sylar/application.cc
     sylar/zk_client.cc

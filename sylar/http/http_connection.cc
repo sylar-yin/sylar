@@ -256,6 +256,45 @@ HttpResult::ptr HttpConnection::DoRequest(HttpRequest::ptr req
         return std::make_shared<HttpResult>((int)HttpResult::Error::INVALID_HOST
                 , nullptr, "invalid host: " + uri->getHost());
     }
+    return DoRequest(req, addr, is_ssl, timeout_ms);
+    //Socket::ptr sock = is_ssl ? SSLSocket::CreateTCP(addr) : Socket::CreateTCP(addr);
+    //if(!sock) {
+    //    return std::make_shared<HttpResult>((int)HttpResult::Error::CREATE_SOCKET_ERROR
+    //            , nullptr, "create socket fail: " + addr->toString()
+    //                    + " errno=" + std::to_string(errno)
+    //                    + " errstr=" + std::string(strerror(errno)));
+    //}
+    //uint64_t ts1 = sylar::GetCurrentMS();
+    //if(!sock->connect(addr, timeout_ms)) {
+    //    return std::make_shared<HttpResult>((int)HttpResult::Error::CONNECT_FAIL
+    //            , nullptr, "connect fail: " + addr->toString());
+    //}
+    //timeout_ms -= sylar::GetCurrentMS() - ts1;
+    //sock->setRecvTimeout(timeout_ms);
+    //HttpConnection::ptr conn = std::make_shared<HttpConnection>(sock);
+    //int rt = conn->sendRequest(req);
+    //if(rt == 0) {
+    //    return std::make_shared<HttpResult>((int)HttpResult::Error::SEND_CLOSE_BY_PEER
+    //            , nullptr, "send request closed by peer: " + addr->toString());
+    //}
+    //if(rt < 0) {
+    //    return std::make_shared<HttpResult>((int)HttpResult::Error::SEND_SOCKET_ERROR
+    //                , nullptr, "send request socket error errno=" + std::to_string(errno)
+    //                + " errstr=" + std::string(strerror(errno)));
+    //}
+    //auto rsp = conn->recvResponse();
+    //if(!rsp) {
+    //    return std::make_shared<HttpResult>((int)HttpResult::Error::TIMEOUT
+    //                , nullptr, "recv response timeout: " + addr->toString()
+    //                + " timeout_ms:" + std::to_string(timeout_ms));
+    //}
+    //return std::make_shared<HttpResult>((int)HttpResult::Error::OK, rsp, "ok");
+}
+
+HttpResult::ptr HttpConnection::DoRequest(HttpRequest::ptr req
+                                          ,Address::ptr addr
+                                          ,bool is_ssl
+                                          ,uint64_t timeout_ms) {
     Socket::ptr sock = is_ssl ? SSLSocket::CreateTCP(addr) : Socket::CreateTCP(addr);
     if(!sock) {
         return std::make_shared<HttpResult>((int)HttpResult::Error::CREATE_SOCKET_ERROR
@@ -269,12 +308,38 @@ HttpResult::ptr HttpConnection::DoRequest(HttpRequest::ptr req
                 , nullptr, "connect fail: " + addr->toString());
     }
     timeout_ms -= sylar::GetCurrentMS() - ts1;
+    return DoRequest(req, sock, timeout_ms);
+    //sock->setRecvTimeout(timeout_ms);
+    //HttpConnection::ptr conn = std::make_shared<HttpConnection>(sock);
+    //int rt = conn->sendRequest(req);
+    //if(rt == 0) {
+    //    return std::make_shared<HttpResult>((int)HttpResult::Error::SEND_CLOSE_BY_PEER
+    //            , nullptr, "send request closed by peer: " + addr->toString());
+    //}
+    //if(rt < 0) {
+    //    return std::make_shared<HttpResult>((int)HttpResult::Error::SEND_SOCKET_ERROR
+    //                , nullptr, "send request socket error errno=" + std::to_string(errno)
+    //                + " errstr=" + std::string(strerror(errno)));
+    //}
+    //auto rsp = conn->recvResponse();
+    //if(!rsp) {
+    //    return std::make_shared<HttpResult>((int)HttpResult::Error::TIMEOUT
+    //                , nullptr, "recv response timeout: " + addr->toString()
+    //                + " timeout_ms:" + std::to_string(timeout_ms));
+    //}
+    //return std::make_shared<HttpResult>((int)HttpResult::Error::OK, rsp, "ok");
+}
+
+
+HttpResult::ptr HttpConnection::DoRequest(HttpRequest::ptr req
+                                          ,Socket::ptr sock
+                                          ,uint64_t timeout_ms) {
     sock->setRecvTimeout(timeout_ms);
     HttpConnection::ptr conn = std::make_shared<HttpConnection>(sock);
     int rt = conn->sendRequest(req);
     if(rt == 0) {
         return std::make_shared<HttpResult>((int)HttpResult::Error::SEND_CLOSE_BY_PEER
-                , nullptr, "send request closed by peer: " + addr->toString());
+                , nullptr, "send request closed by peer: " + conn->getRemoteAddressString());
     }
     if(rt < 0) {
         return std::make_shared<HttpResult>((int)HttpResult::Error::SEND_SOCKET_ERROR
@@ -284,7 +349,7 @@ HttpResult::ptr HttpConnection::DoRequest(HttpRequest::ptr req
     auto rsp = conn->recvResponse();
     if(!rsp) {
         return std::make_shared<HttpResult>((int)HttpResult::Error::TIMEOUT
-                    , nullptr, "recv response timeout: " + addr->toString()
+                    , nullptr, "recv response timeout: " + conn->getRemoteAddressString()
                     + " timeout_ms:" + std::to_string(timeout_ms));
     }
     return std::make_shared<HttpResult>((int)HttpResult::Error::OK, rsp, "ok");

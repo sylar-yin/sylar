@@ -102,7 +102,7 @@ Dns::Dns(const std::string& domain, int type)
 }
 
 static bool check_service_alive(sylar::Address::ptr addr) {
-    sylar::Socket::ptr sock = sylar::Socket::CreateTCPSocket();
+    sylar::Socket::ptr sock = sylar::Socket::CreateTCP(addr);
     return sock->connect(addr, 20);
 }
 

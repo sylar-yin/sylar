@@ -210,6 +210,9 @@ int socket(int domain, int type, int protocol) {
 
 int connect_with_timeout(int fd, const struct sockaddr* addr, socklen_t addrlen, uint64_t timeout_ms) {
     if(!sylar::t_hook_enable) {
+        struct timeval tv {int(timeout_ms / 1000), int(timeout_ms % 1000 * 1000)};
+        socklen_t optlen = sizeof(tv);
+        setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, optlen);
         return connect_f(fd, addr, addrlen);
     }
     sylar::FdCtx::ptr ctx = sylar::FdMgr::GetInstance()->get(fd);

@@ -177,6 +177,15 @@ public:
                             , Uri::ptr uri
                             , uint64_t timeout_ms);
 
+    static HttpResult::ptr DoRequest(HttpRequest::ptr req
+                            , Address::ptr addr
+                            , bool is_https
+                            , uint64_t timeout_ms);
+
+    static HttpResult::ptr DoRequest(HttpRequest::ptr req
+                            , Socket::ptr sock
+                            , uint64_t timeout_ms);
+
     /**
      * @brief 构造函数
      * @param[in] sock Socket类

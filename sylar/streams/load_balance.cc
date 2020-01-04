@@ -482,6 +482,7 @@ void SDLoadBalance::refresh() {
     if(m_isRefresh) {
         return;
     }
+    m_isRefresh = true;
 
     RWMutexType::ReadLock lock(m_mutex);
     auto datas = m_datas;
@@ -492,6 +493,7 @@ void SDLoadBalance::refresh() {
             n.second->checkInit();
         }
     }
+    m_isRefresh = false;
 }
 
 void SDLoadBalance::initConf(const std::unordered_map<std::string
