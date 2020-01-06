@@ -829,7 +829,7 @@ bool ReadFixFromStreamWithSpeed(std::istream& is, char* data,
                                const uint64_t& size, const uint64_t& speed) {
     SpeedLimit::ptr limit;
     if(dynamic_cast<std::ifstream*>(&is)) {
-        limit.reset(new SpeedLimit(speed));
+        limit = std::make_shared<SpeedLimit>(speed);
     }
 
     uint64_t offset = 0;
@@ -850,7 +850,7 @@ bool WriteFixToStreamWithSpeed(std::ostream& os, const char* data,
                                const uint64_t& size, const uint64_t& speed) {
      SpeedLimit::ptr limit;
     if(dynamic_cast<std::ofstream*>(&os)) {
-        limit.reset(new SpeedLimit(speed));
+        limit = std::make_shared<SpeedLimit>(speed);
     }
 
     uint64_t offset = 0;

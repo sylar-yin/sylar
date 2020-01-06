@@ -27,7 +27,7 @@ HttpConnection::~HttpConnection() {
 }
 
 HttpResponse::ptr HttpConnection::recvResponse() {
-    HttpResponseParser::ptr parser(new HttpResponseParser);
+    HttpResponseParser::ptr parser = std::make_shared<HttpResponseParser>();
     uint64_t buff_size = HttpRequestParser::GetHttpRequestBufferSize();
     //uint64_t buff_size = 100;
     std::shared_ptr<char> buffer(

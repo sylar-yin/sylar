@@ -71,9 +71,8 @@ std::string HttpRequest::getHeader(const std::string& key
 }
 
 std::shared_ptr<HttpResponse> HttpRequest::createResponse() {
-    HttpResponse::ptr rsp(new HttpResponse(getVersion()
-                            ,isClose()));
-    return rsp;
+    return std::make_shared<HttpResponse>(getVersion()
+                            ,isClose());
 }
 
 std::string HttpRequest::getParam(const std::string& key

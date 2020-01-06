@@ -42,7 +42,7 @@ public:
      * @param[in] from_now 是否从当前时间开始计算
      */
     bool reset(uint64_t ms, bool from_now);
-private:
+protected:
     /**
      * @brief 构造函数
      * @param[in] ms 定时器执行间隔时间

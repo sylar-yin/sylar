@@ -20,20 +20,19 @@ SQLite3::~SQLite3() {
 }
 
 SQLite3::ptr SQLite3::Create(sqlite3* db) {
-    SQLite3::ptr rt(new SQLite3(db));
-    return rt;
+    return sylar::protected_make_shared<SQLite3>(db);
 }
 
 SQLite3::ptr SQLite3::Create(const std::string& dbname ,int flags) {
     sqlite3* db;
     if(sqlite3_open_v2(dbname.c_str(), &db, flags, nullptr) == SQLITE_OK) {
-        return SQLite3::ptr(new SQLite3(db));
+        return sylar::protected_make_shared<SQLite3>(db);
     }
     return nullptr;
 }
 
 ITransaction::ptr SQLite3::openTransaction(bool auto_commit) {
-    ITransaction::ptr trans(new SQLite3Transaction(shared_from_this(), auto_commit));
+    ITransaction::ptr trans = std::make_shared<SQLite3Transaction>(shared_from_this(), auto_commit);
     if(trans->begin()) {
         return trans;
     }
@@ -105,7 +104,7 @@ int64_t SQLite3::getLastInsertId() {
 }
 
 SQLite3Stmt::ptr SQLite3Stmt::Create(SQLite3::ptr db, const char* stmt) {
-    SQLite3Stmt::ptr rt(new SQLite3Stmt(db));
+    SQLite3Stmt::ptr rt = sylar::protected_make_shared<SQLite3Stmt>(db);
     if(rt->prepare(stmt) != SQLITE_OK) {
         return nullptr;
     }
@@ -307,7 +306,7 @@ SQLite3Stmt::~SQLite3Stmt() {
 }
 
 ISQLData::ptr SQLite3Stmt::query() {
-    return SQLite3Data::ptr(new SQLite3Data(shared_from_this(), 0, ""));
+    return std::make_shared<SQLite3Data>(shared_from_this(), 0, "");
 }
 
 int SQLite3Stmt::execute() {
@@ -662,8 +661,7 @@ SQLite3Transaction::ptr SQLite3Manager::openTransaction(const std::string& name,
             << ") fail";
         return nullptr;
     }
-    SQLite3Transaction::ptr trans(new SQLite3Transaction(conn, auto_commit));
-    return trans;
+    return std::make_shared<SQLite3Transaction>(conn, auto_commit);
 }
 
 void SQLite3Manager::freeSQLite3(const std::string& name, SQLite3* m) {

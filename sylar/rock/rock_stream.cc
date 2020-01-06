@@ -28,7 +28,7 @@ std::string RockResult::toString() const {
 
 RockStream::RockStream(Socket::ptr sock)
     :AsyncSocketStream(sock, true)
-    ,m_decoder(new RockMessageDecoder) {
+    ,m_decoder(std::make_shared<RockMessageDecoder>()) {
     SYLAR_LOG_DEBUG(g_logger) << "RockStream::RockStream "
         << this << " "
         << (sock ? sock->toString() : "");
@@ -42,7 +42,7 @@ RockStream::~RockStream() {
 
 int32_t RockStream::sendMessage(Message::ptr msg) {
     if(isConnected()) {
-        RockSendCtx::ptr ctx(new RockSendCtx);
+        RockSendCtx::ptr ctx = std::shared_ptr<RockSendCtx>();
         ctx->msg = msg;
         enqueue(ctx);
         return 1;
@@ -53,7 +53,7 @@ int32_t RockStream::sendMessage(Message::ptr msg) {
 
 RockResult::ptr RockStream::request(RockRequest::ptr req, uint32_t timeout_ms) {
     if(isConnected()) {
-        RockCtx::ptr ctx(new RockCtx);
+        RockCtx::ptr ctx = std::make_shared<RockCtx>();
         ctx->request = req;
         ctx->sn = req->getSn();
         ctx->timeout = timeout_ms;
@@ -190,7 +190,7 @@ static SocketStream::ptr create_rock_stream(ServiceItemInfo::ptr info) {
     }
     addr->setPort(info->getPort());
 
-    RockConnection::ptr conn(new RockConnection);
+    RockConnection::ptr conn = std::make_shared<RockConnection>();
 
     sylar::WorkerMgr::GetInstance()->schedule("service_io", [conn, addr](){
         conn->connect(addr);

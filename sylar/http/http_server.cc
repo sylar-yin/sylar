@@ -14,11 +14,11 @@ HttpServer::HttpServer(bool keepalive
                ,sylar::IOManager* accept_worker)
     :TcpServer(worker, io_worker, accept_worker)
     ,m_isKeepalive(keepalive) {
-    m_dispatch.reset(new ServletDispatch);
+    m_dispatch = std::make_shared<ServletDispatch>();
 
     m_type = "http";
-    m_dispatch->addServlet("/_/status", Servlet::ptr(new StatusServlet));
-    m_dispatch->addServlet("/_/config", Servlet::ptr(new ConfigServlet));
+    m_dispatch->addServlet("/_/status", std::make_shared<StatusServlet>());
+    m_dispatch->addServlet("/_/config", std::make_shared<ConfigServlet>());
 }
 
 void HttpServer::setName(const std::string& v) {
@@ -28,7 +28,7 @@ void HttpServer::setName(const std::string& v) {
 
 void HttpServer::handleClient(Socket::ptr client) {
     SYLAR_LOG_DEBUG(g_logger) << "handleClient " << *client;
-    HttpSession::ptr session(new HttpSession(client));
+    HttpSession::ptr session = std::make_shared<HttpSession>(client);
     do {
         auto req = session->recvRequest();
         if(!req) {
@@ -38,8 +38,8 @@ void HttpServer::handleClient(Socket::ptr client) {
             break;
         }
 
-        HttpResponse::ptr rsp(new HttpResponse(req->getVersion()
-                            ,req->isClose() || !m_isKeepalive));
+        HttpResponse::ptr rsp = std::make_shared<HttpResponse>(req->getVersion()
+                            ,req->isClose() || !m_isKeepalive);
         rsp->setHeader("Server", getName());
         m_dispatch->handle(req, rsp, session);
         session->sendResponse(rsp);

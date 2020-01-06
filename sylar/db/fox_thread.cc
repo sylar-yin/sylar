@@ -466,11 +466,11 @@ void FoxThreadManager::init() {
             continue;
         }
         if(num == 1) {
-            m_threads[i.first] = FoxThread::ptr(new FoxThread(i.first));
+            m_threads[i.first] = std::make_shared<FoxThread>(i.first);
             SYLAR_LOG_INFO(g_logger) << "init thread : " << i.first;
         } else {
-            m_threads[i.first] = FoxThreadPool::ptr(new FoxThreadPool(
-                            num, name, advance));
+            m_threads[i.first] = std::make_shared<FoxThreadPool>(
+                            num, name, advance);
             SYLAR_LOG_INFO(g_logger) << "init thread pool:" << name
                        << " num:" << num
                        << " advance:" << advance;

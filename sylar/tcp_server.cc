@@ -29,7 +29,7 @@ TcpServer::~TcpServer() {
 }
 
 void TcpServer::setConf(const TcpServerConf& v) {
-    m_conf.reset(new TcpServerConf(v));
+    m_conf = std::make_shared<TcpServerConf>(v);
 }
 
 bool TcpServer::bind(sylar::Address::ptr addr, bool ssl) {

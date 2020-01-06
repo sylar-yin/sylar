@@ -3,6 +3,7 @@
 #include "sylar/config.h"
 #include "sylar/endian.h"
 #include "sylar/streams/zlib_stream.h"
+#include "sylar/macro.h"
 
 namespace sylar {
 
@@ -27,7 +28,7 @@ bool RockBody::parseFromByteArray(ByteArray::ptr bytearray) {
 }
 
 std::shared_ptr<RockResponse> RockRequest::createResponse() {
-    RockResponse::ptr rt(new RockResponse);
+    RockResponse::ptr rt = std::make_shared<RockResponse>();
     rt->setSn(m_sn);
     rt->setCmd(m_cmd);
     return rt;
@@ -196,7 +197,7 @@ Message::ptr RockMessageDecoder::parseFrom(Stream::ptr stream) {
                                       << g_rock_protocol_max_length->getValue();
             return nullptr;
         }
-        sylar::ByteArray::ptr ba(new sylar::ByteArray);
+        sylar::ByteArray::ptr ba = std::make_shared<sylar::ByteArray>();
         rt = stream->readFixSize(ba, header.length);
         if(rt <= 0) {
             SYLAR_LOG_ERROR(g_logger) << "RockMessageDecoder read body fail length=" << header.length << " rt=" << rt;
@@ -221,13 +222,13 @@ Message::ptr RockMessageDecoder::parseFrom(Stream::ptr stream) {
         Message::ptr msg;
         switch(type) {
             case Message::REQUEST:
-                msg.reset(new RockRequest);
+                msg = std::make_shared<RockRequest>();
                 break;
             case Message::RESPONSE:
-                msg.reset(new RockResponse);
+                msg = std::make_shared<RockResponse>();
                 break;
             case Message::NOTIFY:
-                msg.reset(new RockNotify);
+                msg = std::make_shared<RockNotify>();
                 break;
             default:
                 SYLAR_LOG_ERROR(g_logger) << "RockMessageDecoder invalid type=" << (int)type;

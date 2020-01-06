@@ -144,7 +144,7 @@ void on_request_http_field(void *data, const char *field, size_t flen
 
 HttpRequestParser::HttpRequestParser()
     :m_error(0) {
-    m_data.reset(new sylar::http::HttpRequest);
+    m_data = std::make_shared<sylar::http::HttpRequest>();
     http_parser_init(&m_parser);
     m_parser.request_method = on_request_method;
     m_parser.request_uri = on_request_uri;
@@ -229,7 +229,7 @@ void on_response_http_field(void *data, const char *field, size_t flen
 
 HttpResponseParser::HttpResponseParser()
     :m_error(0) {
-    m_data.reset(new sylar::http::HttpResponse);
+    m_data = std::make_shared<sylar::http::HttpResponse>();
     httpclient_parser_init(&m_parser);
     m_parser.reason_phrase = on_response_reason;
     m_parser.status_code = on_response_status;

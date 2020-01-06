@@ -89,7 +89,7 @@ FdCtx::ptr FdManager::get(int fd, bool auto_create) {
     lock.unlock();
 
     RWMutexType::WriteLock lock2(m_mutex);
-    FdCtx::ptr ctx(new FdCtx(fd));
+    FdCtx::ptr ctx = std::make_shared<FdCtx>(fd);
     if(fd >= (int)m_datas.size()) {
         m_datas.resize(fd * 1.5);
     }

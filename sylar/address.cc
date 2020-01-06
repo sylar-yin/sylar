@@ -169,10 +169,10 @@ bool Address::GetInterfaceAddresses(std::vector<std::pair<Address::ptr, uint32_t
                     ,const std::string& iface, int family) {
     if(iface.empty() || iface == "*") {
         if(family == AF_INET || family == AF_UNSPEC) {
-            result.push_back(std::make_pair(Address::ptr(new IPv4Address()), 0u));
+            result.push_back(std::make_pair(std::make_shared<IPv4Address>(), 0u));
         }
         if(family == AF_INET6 || family == AF_UNSPEC) {
-            result.push_back(std::make_pair(Address::ptr(new IPv6Address()), 0u));
+            result.push_back(std::make_pair(std::make_shared<IPv6Address>(), 0u));
         }
         return true;
     }
@@ -209,13 +209,13 @@ Address::ptr Address::Create(const sockaddr* addr, socklen_t addrlen) {
     Address::ptr result;
     switch(addr->sa_family) {
         case AF_INET:
-            result.reset(new IPv4Address(*(const sockaddr_in*)addr));
+            result = std::make_shared<IPv4Address>(*(const sockaddr_in*)addr);
             break;
         case AF_INET6:
-            result.reset(new IPv6Address(*(const sockaddr_in6*)addr));
+            result = std::make_shared<IPv6Address>(*(const sockaddr_in6*)addr);
             break;
         default:
-            result.reset(new UnknownAddress(*addr));
+            result = std::make_shared<UnknownAddress>(*addr);
             break;
     }
     return result;
@@ -273,7 +273,7 @@ IPAddress::ptr IPAddress::Create(const char* address, uint16_t port) {
 }
 
 IPv4Address::ptr IPv4Address::Create(const char* address, uint16_t port) {
-    IPv4Address::ptr rt(new IPv4Address);
+    IPv4Address::ptr rt = std::make_shared<IPv4Address>();
     rt->m_addr.sin_port = byteswapOnLittleEndian(port);
     int result = inet_pton(AF_INET, address, &rt->m_addr.sin_addr);
     if(result <= 0) {
@@ -326,7 +326,7 @@ IPAddress::ptr IPv4Address::broadcastAddress(uint32_t prefix_len) {
     sockaddr_in baddr(m_addr);
     baddr.sin_addr.s_addr |= byteswapOnLittleEndian(
             CreateMask<uint32_t>(prefix_len));
-    return IPv4Address::ptr(new IPv4Address(baddr));
+    return std::make_shared<IPv4Address>(baddr);
 }
 
 IPAddress::ptr IPv4Address::networdAddress(uint32_t prefix_len) {
@@ -337,7 +337,7 @@ IPAddress::ptr IPv4Address::networdAddress(uint32_t prefix_len) {
     sockaddr_in baddr(m_addr);
     baddr.sin_addr.s_addr &= byteswapOnLittleEndian(
             CreateMask<uint32_t>(prefix_len));
-    return IPv4Address::ptr(new IPv4Address(baddr));
+    return std::make_shared<IPv4Address>(baddr);
 }
 
 IPAddress::ptr IPv4Address::subnetMask(uint32_t prefix_len) {
@@ -345,7 +345,7 @@ IPAddress::ptr IPv4Address::subnetMask(uint32_t prefix_len) {
     memset(&subnet, 0, sizeof(subnet));
     subnet.sin_family = AF_INET;
     subnet.sin_addr.s_addr = ~byteswapOnLittleEndian(CreateMask<uint32_t>(prefix_len));
-    return IPv4Address::ptr(new IPv4Address(subnet));
+    return std::make_shared<IPv4Address>(subnet);
 }
 
 uint32_t IPv4Address::getPort() const {
@@ -357,7 +357,7 @@ void IPv4Address::setPort(uint16_t v) {
 }
 
 IPv6Address::ptr IPv6Address::Create(const char* address, uint16_t port) {
-    IPv6Address::ptr rt(new IPv6Address);
+    IPv6Address::ptr rt = std::make_shared<IPv6Address>();
     rt->m_addr.sin6_port = byteswapOnLittleEndian(port);
     int result = inet_pton(AF_INET6, address, &rt->m_addr.sin6_addr);
     if(result <= 0) {
@@ -430,7 +430,7 @@ IPAddress::ptr IPv6Address::broadcastAddress(uint32_t prefix_len) {
     for(int i = prefix_len / 8 + 1; i < 16; ++i) {
         baddr.sin6_addr.s6_addr[i] = 0xff;
     }
-    return IPv6Address::ptr(new IPv6Address(baddr));
+    return std::make_shared<IPv6Address>(baddr);
 }
 
 IPAddress::ptr IPv6Address::networdAddress(uint32_t prefix_len) {
@@ -440,7 +440,7 @@ IPAddress::ptr IPv6Address::networdAddress(uint32_t prefix_len) {
     for(int i = prefix_len / 8 + 1; i < 16; ++i) {
         baddr.sin6_addr.s6_addr[i] = 0x00;
     }
-    return IPv6Address::ptr(new IPv6Address(baddr));
+    return std::make_shared<IPv6Address>(baddr);
 }
 
 IPAddress::ptr IPv6Address::subnetMask(uint32_t prefix_len) {
@@ -453,7 +453,7 @@ IPAddress::ptr IPv6Address::subnetMask(uint32_t prefix_len) {
     for(uint32_t i = 0; i < prefix_len / 8; ++i) {
         subnet.sin6_addr.s6_addr[i] = 0xff;
     }
-    return IPv6Address::ptr(new IPv6Address(subnet));
+    return std::make_shared<IPv6Address>(subnet);
 }
 
 uint32_t IPv6Address::getPort() const {

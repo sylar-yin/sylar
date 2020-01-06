@@ -11,49 +11,44 @@ namespace sylar {
 static sylar::Logger::ptr g_logger = SYLAR_LOG_NAME("system");
 
 Socket::ptr Socket::CreateTCP(sylar::Address::ptr address) {
-    Socket::ptr sock(new Socket(address->getFamily(), TCP, 0));
-    return sock;
+    return std::make_shared<Socket>(address->getFamily(), TCP, 0);
 }
 
 Socket::ptr Socket::CreateUDP(sylar::Address::ptr address) {
-    Socket::ptr sock(new Socket(address->getFamily(), UDP, 0));
+    Socket::ptr sock = std::make_shared<Socket>(address->getFamily(), UDP, 0);
     sock->newSock();
     sock->m_isConnected = true;
     return sock;
 }
 
 Socket::ptr Socket::CreateTCPSocket() {
-    Socket::ptr sock(new Socket(IPv4, TCP, 0));
-    return sock;
+    return std::make_shared<Socket>(IPv4, TCP, 0);
 }
 
 Socket::ptr Socket::CreateUDPSocket() {
-    Socket::ptr sock(new Socket(IPv4, UDP, 0));
+    Socket::ptr sock = std::make_shared<Socket>(IPv4, UDP, 0);
     sock->newSock();
     sock->m_isConnected = true;
     return sock;
 }
 
 Socket::ptr Socket::CreateTCPSocket6() {
-    Socket::ptr sock(new Socket(IPv6, TCP, 0));
-    return sock;
+    return std::make_shared<Socket>(IPv6, TCP, 0);
 }
 
 Socket::ptr Socket::CreateUDPSocket6() {
-    Socket::ptr sock(new Socket(IPv6, UDP, 0));
+    Socket::ptr sock = std::make_shared<Socket>(IPv6, UDP, 0);
     sock->newSock();
     sock->m_isConnected = true;
     return sock;
 }
 
 Socket::ptr Socket::CreateUnixTCPSocket() {
-    Socket::ptr sock(new Socket(UNIX, TCP, 0));
-    return sock;
+    return std::make_shared<Socket>(UNIX, TCP, 0);
 }
 
 Socket::ptr Socket::CreateUnixUDPSocket() {
-    Socket::ptr sock(new Socket(UNIX, UDP, 0));
-    return sock;
+    return std::make_shared<Socket>(UNIX, UDP, 0);
 }
 
 Socket::Socket(int family, int type, int protocol)
@@ -124,7 +119,7 @@ bool Socket::setOption(int level, int option, const void* result, socklen_t len)
 }
 
 Socket::ptr Socket::accept() {
-    Socket::ptr sock(new Socket(m_family, m_type, m_protocol));
+    Socket::ptr sock = std::make_shared<Socket>(m_family, m_type, m_protocol);
     int newsock = ::accept(m_sock, nullptr, nullptr);
     if(newsock == -1) {
         SYLAR_LOG_ERROR(g_logger) << "accept(" << m_sock << ") errno="
@@ -342,23 +337,23 @@ Address::ptr Socket::getRemoteAddress() {
     Address::ptr result;
     switch(m_family) {
         case AF_INET:
-            result.reset(new IPv4Address());
+            result = std::make_shared<IPv4Address>();
             break;
         case AF_INET6:
-            result.reset(new IPv6Address());
+            result = std::make_shared<IPv6Address>();
             break;
         case AF_UNIX:
-            result.reset(new UnixAddress());
+            result = std::make_shared<UnixAddress>();
             break;
         default:
-            result.reset(new UnknownAddress(m_family));
+            result = std::make_shared<UnknownAddress>(m_family);
             break;
     }
     socklen_t addrlen = result->getAddrLen();
     if(getpeername(m_sock, result->getAddr(), &addrlen)) {
         //SYLAR_LOG_ERROR(g_logger) << "getpeername error sock=" << m_sock
         //    << " errno=" << errno << " errstr=" << strerror(errno);
-        return Address::ptr(new UnknownAddress(m_family));
+        return std::make_shared<UnknownAddress>(m_family);
     }
     if(m_family == AF_UNIX) {
         UnixAddress::ptr addr = std::dynamic_pointer_cast<UnixAddress>(result);
@@ -376,23 +371,23 @@ Address::ptr Socket::getLocalAddress() {
     Address::ptr result;
     switch(m_family) {
         case AF_INET:
-            result.reset(new IPv4Address());
+            result = std::make_shared<IPv4Address>();
             break;
         case AF_INET6:
-            result.reset(new IPv6Address());
+            result = std::make_shared<IPv6Address>();
             break;
         case AF_UNIX:
-            result.reset(new UnixAddress());
+            result = std::make_shared<UnixAddress>();
             break;
         default:
-            result.reset(new UnknownAddress(m_family));
+            result = std::make_shared<UnknownAddress>(m_family);
             break;
     }
     socklen_t addrlen = result->getAddrLen();
     if(getsockname(m_sock, result->getAddr(), &addrlen)) {
         SYLAR_LOG_ERROR(g_logger) << "getsockname error sock=" << m_sock
             << " errno=" << errno << " errstr=" << strerror(errno);
-        return Address::ptr(new UnknownAddress(m_family));
+        return std::make_shared<UnknownAddress>(m_family);
     }
     if(m_family == AF_UNIX) {
         UnixAddress::ptr addr = std::dynamic_pointer_cast<UnixAddress>(result);
@@ -491,7 +486,7 @@ SSLSocket::SSLSocket(int family, int type, int protocol)
 }
 
 Socket::ptr SSLSocket::accept() {
-    SSLSocket::ptr sock(new SSLSocket(m_family, m_type, m_protocol));
+    SSLSocket::ptr sock = std::make_shared<SSLSocket>(m_family, m_type, m_protocol);
     int newsock = ::accept(m_sock, nullptr, nullptr);
     if(newsock == -1) {
         SYLAR_LOG_ERROR(g_logger) << "accept(" << m_sock << ") errno="
@@ -629,18 +624,15 @@ bool SSLSocket::loadCertificates(const std::string& cert_file, const std::string
 }
 
 SSLSocket::ptr SSLSocket::CreateTCP(sylar::Address::ptr address) {
-    SSLSocket::ptr sock(new SSLSocket(address->getFamily(), TCP, 0));
-    return sock;
+    return std::make_shared<SSLSocket>(address->getFamily(), TCP, 0);
 }
 
 SSLSocket::ptr SSLSocket::CreateTCPSocket() {
-    SSLSocket::ptr sock(new SSLSocket(IPv4, TCP, 0));
-    return sock;
+    return std::make_shared<SSLSocket>(IPv4, TCP, 0);
 }
 
 SSLSocket::ptr SSLSocket::CreateTCPSocket6() {
-    SSLSocket::ptr sock(new SSLSocket(IPv6, TCP, 0));
-    return sock;
+    return std::make_shared<SSLSocket>(IPv6, TCP, 0);
 }
 
 std::ostream& SSLSocket::dump(std::ostream& os) const {

@@ -132,7 +132,7 @@ namespace sylar {
 }%%
 
 Uri::ptr Uri::Create(const std::string& uristr) {
-    Uri::ptr uri(new Uri);
+    Uri::ptr uri = std::make_shared<Uri>();
     int cs = 0;
     const char* mark = 0;
     %% write init;

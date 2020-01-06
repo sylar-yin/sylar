@@ -8,13 +8,13 @@ static sylar::Logger::ptr g_logger = SYLAR_LOG_NAME("system");
 
 WSServer::WSServer(sylar::IOManager* worker, sylar::IOManager* io_worker, sylar::IOManager* accept_worker)
     :TcpServer(worker, io_worker, accept_worker) {
-    m_dispatch.reset(new WSServletDispatch);
+    m_dispatch = std::make_shared<WSServletDispatch>();
     m_type = "websocket_server";
 }
 
 void WSServer::handleClient(Socket::ptr client) {
     SYLAR_LOG_DEBUG(g_logger) << "handleClient " << *client;
-    WSSession::ptr session(new WSSession(client));
+    WSSession::ptr session = std::make_shared<WSSession>(client);
     do {
         HttpRequest::ptr header = session->handleShake();
         if(!header) {

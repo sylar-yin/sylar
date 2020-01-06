@@ -77,11 +77,11 @@ struct DnsIniter {
                     const std::set<DnsDefine>& new_value){
             for(auto& n : new_value) {
                 if(n.type == Dns::TYPE_DOMAIN) {
-                    Dns::ptr dns(new Dns(n.domain, n.type));
+                    Dns::ptr dns = std::make_shared<Dns>(n.domain, n.type);
                     dns->refresh();
                     DnsMgr::GetInstance()->add(dns);
                 } else if(n.type == Dns::TYPE_ADDRESS) {
-                    Dns::ptr dns(new Dns(n.domain, n.type));
+                    Dns::ptr dns = std::make_shared<Dns>(n.domain, n.type);
                     dns->set(n.addrs);
                     DnsMgr::GetInstance()->add(dns);
                 } else {
@@ -212,7 +212,7 @@ sylar::Address::ptr DnsManager::getAddress(const std::string& service, bool cach
 
     if(cache) {
         sylar::IOManager::GetThis()->schedule([service, this](){
-            Dns::ptr dns(new Dns(service, Dns::TYPE_DOMAIN));
+            Dns::ptr dns = std::make_shared<Dns>(service, Dns::TYPE_DOMAIN);
             dns->refresh();
             add(dns);
         });

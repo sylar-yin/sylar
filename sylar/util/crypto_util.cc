@@ -131,7 +131,7 @@ RSACipher::ptr RSACipher::Create(const std::string& pubkey_file
                       ,const std::string& prikey_file) {
     FILE* fp = nullptr;
     do {
-        RSACipher::ptr rt(new RSACipher);
+        RSACipher::ptr rt = std::make_shared<RSACipher>();
         fp = fopen(pubkey_file.c_str(), "r+");
         if(!fp) {
             break;

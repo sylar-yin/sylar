@@ -19,7 +19,7 @@ int32_t FunctionServlet::handle(sylar::http::HttpRequest::ptr request
 
 ServletDispatch::ServletDispatch()
     :Servlet("ServletDispatch") {
-    m_default.reset(new NotFoundServlet("sylar/1.0"));
+    m_default = std::make_shared<NotFoundServlet>("sylar/1.0");
 }
 
 int32_t ServletDispatch::handle(sylar::http::HttpRequest::ptr request

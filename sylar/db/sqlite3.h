@@ -69,7 +69,7 @@ public:
     int close();
 
     sqlite3* getDB() const { return m_db;}
-private:
+protected:
     SQLite3(sqlite3* db);
 private:
     sqlite3* m_db;

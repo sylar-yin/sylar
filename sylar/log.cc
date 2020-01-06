@@ -236,7 +236,7 @@ LogEvent::LogEvent(std::shared_ptr<Logger> logger, LogLevel::Level level
 Logger::Logger(const std::string& name)
     :m_name(name)
     ,m_level(LogLevel::DEBUG) {
-    m_formatter.reset(new LogFormatter("%d{%Y-%m-%d %H:%M:%S}%T%t%T%N%T%F%T[%p]%T[%c]%T%f:%l%T%m%n"));
+    m_formatter = std::make_shared<LogFormatter>("%d{%Y-%m-%d %H:%M:%S}%T%t%T%N%T%F%T[%p]%T[%c]%T%f:%l%T%m%n");
 }
 
 void Logger::setFormatter(LogFormatter::ptr val) {
@@ -252,7 +252,7 @@ void Logger::setFormatter(LogFormatter::ptr val) {
 }
 
 void Logger::setFormatter(const std::string& val) {
-    sylar::LogFormatter::ptr new_val(new sylar::LogFormatter(val));
+    sylar::LogFormatter::ptr new_val = std::make_shared<sylar::LogFormatter>(val);
     if(new_val->isError()) {
         std::cout << "Logger setFormatter name=" << m_name
                   << " value=" << val << " invalid formatter"
@@ -508,7 +508,7 @@ void LogFormatter::init() {
     }
     static std::map<std::string, std::function<FormatItem::ptr(const std::string& str)> > s_format_items = {
 #define XX(str, C) \
-        {#str, [](const std::string& fmt) { return FormatItem::ptr(new C(fmt));}}
+        {#str, [](const std::string& fmt) { return FormatItem::ptr(std::make_shared<C>(fmt));}}
 
         XX(m, MessageFormatItem),           //m:消息
         XX(p, LevelFormatItem),             //p:日志级别
@@ -527,11 +527,11 @@ void LogFormatter::init() {
 
     for(auto& i : vec) {
         if(std::get<2>(i) == 0) {
-            m_items.push_back(FormatItem::ptr(new StringFormatItem(std::get<0>(i))));
+            m_items.push_back(std::make_shared<StringFormatItem>(std::get<0>(i)));
         } else {
             auto it = s_format_items.find(std::get<0>(i));
             if(it == s_format_items.end()) {
-                m_items.push_back(FormatItem::ptr(new StringFormatItem("<<error_format %" + std::get<0>(i) + ">>")));
+                m_items.push_back(std::make_shared<StringFormatItem>("<<error_format %" + std::get<0>(i) + ">>"));
                 m_error = true;
             } else {
                 m_items.push_back(it->second(std::get<1>(i)));
@@ -545,8 +545,8 @@ void LogFormatter::init() {
 
 
 LoggerManager::LoggerManager() {
-    m_root.reset(new Logger);
-    m_root->addAppender(LogAppender::ptr(new StdoutLogAppender));
+    m_root = std::make_shared<Logger>();
+    m_root->addAppender(std::make_shared<StdoutLogAppender>());
 
     m_loggers[m_root->m_name] = m_root;
 
@@ -560,7 +560,7 @@ Logger::ptr LoggerManager::getLogger(const std::string& name) {
         return it->second;
     }
 
-    Logger::ptr logger(new Logger(name));
+    Logger::ptr logger = std::make_shared<Logger>(name);
     logger->m_root = m_root;
     m_loggers[name] = logger;
     return logger;
@@ -729,17 +729,17 @@ struct LogIniter {
                 for(auto& a : i.appenders) {
                     sylar::LogAppender::ptr ap;
                     if(a.type == 1) {
-                        ap.reset(new FileLogAppender(a.file));
+                        ap = std::make_shared<FileLogAppender>(a.file);
                     } else if(a.type == 2) {
                         if(!sylar::EnvMgr::GetInstance()->has("d")) {
-                            ap.reset(new StdoutLogAppender);
+                            ap = std::make_shared<StdoutLogAppender>();
                         } else {
                             continue;
                         }
                     }
                     ap->setLevel(a.level);
                     if(!a.formatter.empty()) {
-                        LogFormatter::ptr fmt(new LogFormatter(a.formatter));
+                        LogFormatter::ptr fmt = std::make_shared<LogFormatter>(a.formatter);
                         if(!fmt->isError()) {
                             ap->setFormatter(fmt);
                         } else {

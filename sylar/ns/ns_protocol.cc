@@ -116,7 +116,7 @@ std::string NSDomain::toString(const std::string& prefix) {
 void NSDomain::add(uint32_t cmd, NSNode::ptr info) {
     auto ns = get(cmd);
     if(!ns) {
-        ns.reset(new NSNodeSet(cmd));
+        ns = std::make_shared<NSNodeSet>(cmd);
         add(ns);
     }
     ns->add(info);
@@ -175,7 +175,7 @@ NSDomain::ptr NSDomainSet::get(const std::string& domain, bool auto_create) {
     if(it != m_datas.end()) {
         return it->second;
     }
-    NSDomain::ptr d(new NSDomain(domain));
+    NSDomain::ptr d = std::make_shared<NSDomain>(domain);
     m_datas[domain] = d;
     return d;
 }

@@ -228,7 +228,7 @@ MySQLStmt::ptr MySQLStmt::Create(MySQL::ptr db, const std::string& stmt) {
         return nullptr;
     }
     int count = mysql_stmt_param_count(st);
-    MySQLStmt::ptr rt(new MySQLStmt(db, st));
+    MySQLStmt::ptr rt = sylar::protected_make_shared<MySQLStmt>(db, st);
     rt->m_binds.resize(count);
     memset(&rt->m_binds[0], 0, sizeof(rt->m_binds[0]) * count);
     return rt;
@@ -613,14 +613,14 @@ bool MySQLRes::next() {
 MySQLStmtRes::ptr MySQLStmtRes::Create(std::shared_ptr<MySQLStmt> stmt) {
     int eno = mysql_stmt_errno(stmt->getRaw());
     const char* errstr = mysql_stmt_error(stmt->getRaw());
-    MySQLStmtRes::ptr rt(new MySQLStmtRes(stmt, eno, errstr));
+    MySQLStmtRes::ptr rt = sylar::protected_make_shared<MySQLStmtRes>(stmt, eno, errstr);
     if(eno) {
         return rt;
     }
     MYSQL_RES* res = mysql_stmt_result_metadata(stmt->getRaw());
     if(!res) {
-        return MySQLStmtRes::ptr(new MySQLStmtRes(stmt, stmt->getErrno()
-                                 ,stmt->getErrStr()));
+        return sylar::protected_make_shared<MySQLStmtRes>(stmt, stmt->getErrno()
+                                 ,stmt->getErrStr());
     }
 
     int num = mysql_num_fields(res);
@@ -662,15 +662,15 @@ MySQLStmtRes::ptr MySQLStmtRes::Create(std::shared_ptr<MySQLStmt> stmt) {
     }
 
     if(mysql_stmt_bind_result(stmt->getRaw(), &rt->m_binds[0])) {
-        return MySQLStmtRes::ptr(new MySQLStmtRes(stmt, stmt->getErrno()
-                                    , stmt->getErrStr()));
+        return sylar::protected_make_shared<MySQLStmtRes>(stmt, stmt->getErrno()
+                                    , stmt->getErrStr());
     }
 
     stmt->execute();
 
     if(mysql_stmt_store_result(stmt->getRaw())) {
-        return MySQLStmtRes::ptr(new MySQLStmtRes(stmt, stmt->getErrno()
-                                    , stmt->getErrStr()));
+        return sylar::protected_make_shared<MySQLStmtRes>(stmt, stmt->getErrno()
+                                    , stmt->getErrStr());
     }
     //rt->next();
     return rt;
@@ -816,8 +816,8 @@ ISQLData::ptr MySQL::query(const char* format, va_list ap) {
         return nullptr;
     }
     m_hasError = false;
-    ISQLData::ptr rt(new MySQLRes(res, mysql_errno(m_mysql.get())
-                        ,mysql_error(m_mysql.get())));
+    ISQLData::ptr rt = std::make_shared<MySQLRes>(res, mysql_errno(m_mysql.get())
+                        ,mysql_error(m_mysql.get()));
     return rt;
 }
 
@@ -829,8 +829,8 @@ ISQLData::ptr MySQL::query(const std::string& sql) {
         return nullptr;
     }
     m_hasError = false;
-    ISQLData::ptr rt(new MySQLRes(res, mysql_errno(m_mysql.get())
-                        ,mysql_error(m_mysql.get())));
+    ISQLData::ptr rt = std::make_shared<MySQLRes>(res, mysql_errno(m_mysql.get())
+                        ,mysql_error(m_mysql.get()));
     return rt;
 
 }
@@ -883,7 +883,7 @@ uint64_t MySQL::getInsertId() {
 }
 
 MySQLTransaction::ptr MySQLTransaction::Create(MySQL::ptr mysql, bool auto_commit) {
-    MySQLTransaction::ptr rt(new MySQLTransaction(mysql, auto_commit));
+    MySQLTransaction::ptr rt = sylar::protected_make_shared<MySQLTransaction>(mysql, auto_commit);
     if(rt->begin()) {
         return rt;
     }

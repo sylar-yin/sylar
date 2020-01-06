@@ -9,7 +9,7 @@ EMailEntity::ptr EMailEntity::CreateAttach(const std::string& filename) {
     std::ifstream ifs(filename, std::ios::binary);
     std::string buf;
     buf.resize(1024);
-    EMailEntity::ptr entity(new EMailEntity);
+    EMailEntity::ptr entity = std::make_shared<EMailEntity>();
     while(!ifs.eof()) {
         ifs.read(&buf[0], buf.size());
         entity->m_content.append(buf.c_str(), ifs.gcount());
@@ -44,7 +44,7 @@ EMail::ptr EMail::Create(const std::string& from_address, const std::string& fro
                          ,const std::vector<std::string>& to_address
                          ,const std::vector<std::string>& cc_address
                          ,const std::vector<std::string>& bcc_address) {
-    EMail::ptr email(new EMail);
+    EMail::ptr email = std::make_shared<EMail>();
     email->setFromEMailAddress(from_address);
     email->setFromEMailPasswd(from_passwd);
     email->setTitle(title);

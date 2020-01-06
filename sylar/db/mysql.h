@@ -109,7 +109,7 @@ public:
     std::string getBlob(int idx) override;
     time_t getTime(int idx) override;
     bool next() override;
-private:
+protected:
     MySQLStmtRes(std::shared_ptr<MySQLStmt> stmt, int eno, const std::string& estr);
     struct Data {
         Data();
@@ -206,7 +206,7 @@ public:
     bool isAutoCommit() const { return m_autoCommit;}
     bool isFinished() const { return m_isFinished;}
     bool isError() const { return m_hasError;}
-private:
+protected:
     MySQLTransaction(MySQL::ptr mysql, bool auto_commit);
 private:
     MySQL::ptr m_mysql;
@@ -265,7 +265,7 @@ public:
     ISQLData::ptr query() override;
 
     MYSQL_STMT* getRaw() const { return m_stmt;}
-private:
+protected:
     MySQLStmt(MySQL::ptr db, MYSQL_STMT* stmt);
 private:
     MySQL::ptr m_mysql;

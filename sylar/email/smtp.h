@@ -32,7 +32,7 @@ public:
     std::string getDebugInfo();
 private:
     SmtpResult::ptr doCmd(const std::string& cmd, bool debug);
-private:
+protected:
     SmtpClient(Socket::ptr sock);
 private:
     std::string m_host;

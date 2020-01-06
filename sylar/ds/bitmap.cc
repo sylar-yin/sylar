@@ -328,7 +328,7 @@ uint64_t count_bits(const uint64_t& v) {
 
 Bitmap::ptr Bitmap::compress() const{
     if(m_compress) {
-        return ptr(new Bitmap(*this));
+        return std::make_shared<Bitmap>(*this);
     }
 
     base_type* data = (base_type*)malloc(m_dataSize * sizeof(base_type));
@@ -383,7 +383,7 @@ Bitmap::ptr Bitmap::compress() const{
         }
     }
 
-    Bitmap::ptr b(new Bitmap);
+    Bitmap::ptr b = sylar::protected_make_shared<Bitmap>();
     b->m_compress = true;
     b->m_size = m_size;
     b->m_dataSize = dst_cur_pos;
@@ -395,9 +395,9 @@ Bitmap::ptr Bitmap::compress() const{
 
 Bitmap::ptr Bitmap::uncompress() const {
     if(!m_compress) {
-        return ptr(new Bitmap(*this));
+        return std::make_shared<Bitmap>(*this);
     }
-    Bitmap::ptr b(new Bitmap(m_size));
+    Bitmap::ptr b = std::make_shared<Bitmap>(m_size);
     uint32_t cur_pos = 0;
     for(uint32_t i = 0; i < m_dataSize;) {
         base_type cur = m_data[i];

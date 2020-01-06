@@ -126,14 +126,14 @@ void RoaringBitmap::set(uint32_t idx, bool v) {
 }
 
 RoaringBitmap::ptr RoaringBitmap::compress() const{
-    RoaringBitmap::ptr rt(new RoaringBitmap(*this));
+    RoaringBitmap::ptr rt = std::make_shared<RoaringBitmap>(*this);
     rt->m_bitmap.shrinkToFit();
     rt->m_bitmap.runOptimize();
     return rt;
 }
 
 RoaringBitmap::ptr RoaringBitmap::uncompress() const {
-    RoaringBitmap::ptr rt(new RoaringBitmap(*this));
+    RoaringBitmap::ptr rt = std::make_shared<RoaringBitmap>(*this);
     rt->m_bitmap.removeRunCompression();
     return rt;
 }

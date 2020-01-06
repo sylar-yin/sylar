@@ -123,7 +123,7 @@ bool Tair::startup(const char* master_addr, const char* slave_addr, const char* 
 int32_t Tair::get(const std::string& key, std::string& val, int area, int timeout_ms) {
     tair::common::data_entry dbkey(key.c_str(), key.size(), false);
     auto sn = sylar::Atomic::addFetch(m_sn);
-    Ctx::ptr c(new Ctx);
+    Ctx::ptr c = std::make_shared<Ctx>();
     c->sn = sn;
     c->scheduler = sylar::Scheduler::GetThis();
     c->fiber = sylar::Fiber::GetThis();
@@ -160,7 +160,7 @@ int32_t Tair::put(const std::string& key, const std::string& val, int area, int 
     tair::common::data_entry dbkey(key.c_str(), key.size(), false);
     tair::common::data_entry dbval(val.c_str(), val.size(), false);
     auto sn = sylar::Atomic::addFetch(m_sn);
-    Ctx::ptr c(new Ctx);
+    Ctx::ptr c = std::make_shared<Ctx>();
     c->sn = sn;
     c->scheduler = sylar::Scheduler::GetThis();
     c->fiber = sylar::Fiber::GetThis();
@@ -186,7 +186,7 @@ int32_t Tair::put(const std::string& key, const std::string& val, int area, int 
 int32_t Tair::remove(const std::string& key, int area) {
     tair::common::data_entry dbkey(key.c_str(), key.size(), false);
     auto sn = sylar::Atomic::addFetch(m_sn);
-    Ctx::ptr c(new Ctx);
+    Ctx::ptr c = std::make_shared<Ctx>();
     c->sn = sn;
     c->scheduler = sylar::Scheduler::GetThis();
     c->fiber = sylar::Fiber::GetThis();
@@ -445,7 +445,7 @@ void TairManager::init() {
         int pool = sylar::GetParamValue(i.second, "pool", 1);
         total += pool;
         for(int n = 0; n < pool; ++n) {
-            sylar::Tair::ptr t(new sylar::Tair);
+            sylar::Tair::ptr t = std::make_shared<sylar::Tair>();
             t->init(i.second);
             if(!t->startup()) {
                 SYLAR_LOG_ERROR(g_logger) << "tair name=" << i.first << " startup fail";

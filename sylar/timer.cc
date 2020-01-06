@@ -98,7 +98,7 @@ TimerManager::~TimerManager() {
 
 Timer::ptr TimerManager::addTimer(uint64_t ms, std::function<void()> cb
                                   ,bool recurring) {
-    Timer::ptr timer(new Timer(ms, cb, recurring, this));
+    Timer::ptr timer = sylar::protected_make_shared<Timer>(ms, cb, recurring, this);
     RWMutexType::WriteLock lock(m_mutex);
     addTimer(timer, lock);
     return timer;
@@ -151,7 +151,7 @@ void TimerManager::listExpiredCb(std::vector<std::function<void()> >& cbs) {
         return;
     }
 
-    Timer::ptr now_timer(new Timer(now_ms));
+    Timer::ptr now_timer = sylar::protected_make_shared<Timer>(now_ms);
     auto it = rollover ? m_timers.end() : m_timers.lower_bound(now_timer);
     while(it != m_timers.end() && (*it)->m_next == now_ms) {
         ++it;
