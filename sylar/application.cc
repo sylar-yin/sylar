@@ -145,8 +145,9 @@ int Application::main(int argc, char** argv) {
 
     m_mainIOManager = std::make_shared<sylar::IOManager>(1, true, "main");
     m_mainIOManager->schedule(std::bind(&Application::run_fiber, this));
-    m_mainIOManager->addTimer(2000, [](){
+    m_mainIOManager->addTimer(2000, [conf_path](){
             //SYLAR_LOG_INFO(g_logger) << "hello";
+        sylar::Config::LoadFromConfDir(conf_path);
     }, true);
     m_mainIOManager->stop();
     return 0;

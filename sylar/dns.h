@@ -19,11 +19,12 @@ public:
         TYPE_ADDRESS = 2
     };
     //domain: www.sylar.top:80
-    Dns(const std::string& domain, int type);
+    Dns(const std::string& domain, int type, uint32_t pool_size = 0);
 
     //type == 2,
     void set(const std::set<std::string>& addrs);
     sylar::Address::ptr get(uint32_t seed = -1);
+    sylar::Socket::ptr getSock(uint32_t seed = -1);
 
     const std::string& getDomain() const { return m_domain;}
     int getType() const { return m_type;}
@@ -31,19 +32,37 @@ public:
     std::string toString();
 
     void refresh();
-private:
-    struct AddressItem {
+public:
+    struct AddressItem : public std::enable_shared_from_this<AddressItem> {
+        typedef std::shared_ptr<AddressItem> ptr;
+        ~AddressItem();
         sylar::Address::ptr addr;
+        std::list<Socket*> socks;
+        sylar::Spinlock m_mutex;
         bool valid = false;
+        uint32_t pool_size = 0;
+        
+        bool isValid();
+        bool checkValid();
+
+        void push(Socket* sock);
+        Socket::ptr pop();
+        Socket::ptr getSock();
+        
+        std::string toString();
     };
+private:
 
     void init();
+
+    void initAddress(const std::vector<Address::ptr>& result);
 private:
     std::string m_domain;
     int m_type;
     uint32_t m_idx;
+    uint32_t m_poolSize = 0;
     RWMutexType m_mutex;
-    std::vector<AddressItem> m_address;
+    std::vector<AddressItem::ptr> m_address;
     std::set<std::string> m_addrs;
 };
 
@@ -58,6 +77,7 @@ public:
     //service: www.sylar.top:80
     //cache: 是否需要缓存
     sylar::Address::ptr getAddress(const std::string& service, bool cache, uint32_t seed = -1);
+    sylar::Socket::ptr getSocket(const std::string& service, bool cache, uint32_t seed = -1);
 
     void start();
 

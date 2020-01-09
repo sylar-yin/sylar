@@ -177,16 +177,30 @@ bool JsonUtil::FromString(Json::Value& json, const std::string& v) {
 }
 
 static Json::StreamWriter* GetJsonStreamWriter() {
-    Json::StreamWriterBuilder builder;
+    static Json::StreamWriterBuilder builder;
     builder["commentStyle"] = "None";
     builder["indentation"] = "";
     return builder.newStreamWriter();
 }
 
+static Json::StreamWriterBuilder GetJsonStreamBuilder() {
+    Json::StreamWriterBuilder builder;
+    builder["commentStyle"] = "None";
+    builder["indentation"] = "";
+    return builder;
+}
+
 std::string JsonUtil::ToString(const Json::Value& json) {
-    static Json::StreamWriter* s_writer = GetJsonStreamWriter();
+    //static Json::StreamWriter* s_writer = GetJsonStreamWriter();
+
+    //static Json::StreamWriterBuilder builder = GetJsonStreamBuilder();
+    Json::StreamWriterBuilder builder;
+    builder["commentStyle"] = "None";
+    builder["indentation"] = "";
+    std::unique_ptr<Json::StreamWriter> const writer(
+      builder.newStreamWriter());
     std::stringstream ss;
-    s_writer->write(json, &ss);
+    writer->write(json, &ss);
     return ss.str();
     //Json::FastWriter w;
     //return w.write(json);
