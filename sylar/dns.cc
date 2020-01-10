@@ -196,7 +196,7 @@ std::string Dns::AddressItem::toString() {
     return ss.str();
 }
 
-bool Dns::AddressItem::checkValid() {
+bool Dns::AddressItem::checkValid(uint32_t timeout_ms) {
     if(pool_size > 0) {
         std::vector<Socket*> tmp;
         sylar::Spinlock::Lock lock(m_mutex);
@@ -216,7 +216,7 @@ bool Dns::AddressItem::checkValid() {
     }
 
     sylar::Socket* sock = new sylar::Socket(addr->getFamily(), sylar::Socket::TCP, 0);
-    valid = sock->connect(addr, 20);
+    valid = sock->connect(addr, timeout_ms);
 
     if(valid) {
         if(pool_size > 0) {
@@ -310,14 +310,14 @@ void Dns::initAddress(const std::vector<Address::ptr>& result) {
     for(size_t i = 0; i < result.size(); ++i) {
         auto it = old_address.find(result[i]->toString());
         if(it != old_address.end()) {
-            it->second->checkValid();
+            it->second->checkValid(50);
             address[i] = it->second;
             continue;
         }
         auto info = std::make_shared<AddressItem>();
         info->addr = result[i];
         info->pool_size = m_poolSize;
-        info->checkValid();
+        info->checkValid(50);
         address[i] = info;
     }
 
@@ -405,7 +405,7 @@ void DnsManager::start() {
     if(m_timer) {
         return;
     }
-    m_timer = sylar::IOManager::GetThis()->addTimer(2000, std::bind(&DnsManager::init, this), true);
+    m_timer = sylar::IOManager::GetThis()->addTimer(1000, std::bind(&DnsManager::init, this), true);
 }
 
 std::ostream& DnsManager::dump(std::ostream& os) {
