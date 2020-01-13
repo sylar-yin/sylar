@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <sys/resource.h>
 
 namespace sylar {
 
@@ -45,8 +46,7 @@ static int real_daemon(int argc, char** argv,
     ProcessInfoMgr::GetInstance()->parent_id = getpid();
     ProcessInfoMgr::GetInstance()->parent_start_time = time(0);
     while(true) {
-        PInfo::GetInstance()->start = time(0);
-        if(PInfo::GetInstance()->crash == 0) {
+        if(ProcessInfoMgr::GetInstance()->restart_count == 0) {
             ulimitc(g_daemon_core->getValue());
         } else {
             ulimitc(0);
