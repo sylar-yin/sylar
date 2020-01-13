@@ -12,6 +12,7 @@ include (cmake/utils.cmake)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations -Wno-class-memaccess")
 set(CMAKE_C_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
+#set(CMAKE_CXX_FLAGS "-static ${CMAKE_CXX_FLAGS}")
 
 ENABLE_LANGUAGE(ASM)
 
@@ -136,8 +137,8 @@ protobufmaker(sylar/ns/ns_protobuf.proto LIB_SRC ${CMAKE_CURRENT_SOURCE_DIR})
 #
 message(STATUS ${LIB_SRC})
 
-#add_library(sylar SHARED ${LIB_SRC})
 add_library(sylar STATIC ${LIB_SRC})
+#add_library(sylar SHARED ${LIB_SRC})
 force_redefine_file_macro_for_sources(sylar)
 #add_library(sylar_static STATIC ${LIB_SRC})
 #SET_TARGET_PROPERTIES (sylar_static PROPERTIES OUTPUT_NAME "sylar")

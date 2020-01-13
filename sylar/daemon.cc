@@ -13,6 +13,9 @@ static sylar::Logger::ptr g_logger = SYLAR_LOG_NAME("system");
 static sylar::ConfigVar<uint32_t>::ptr g_daemon_restart_interval
     = sylar::Config::Lookup("daemon.restart_interval", (uint32_t)5, "daemon restart interval");
 
+static sylar::ConfigVar<int64_t>::ptr g_daemon_core =
+    sylar::Config::Lookup("daemon.core", (int64_t)-1, "daemon core size");
+
 std::string ProcessInfo::toString() const {
     std::stringstream ss;
     ss << "[ProcessInfo parent_id=" << parent_id
@@ -21,6 +24,12 @@ std::string ProcessInfo::toString() const {
        << " main_start_time=" << sylar::Time2Str(main_start_time)
        << " restart_count=" << restart_count << "]";
     return ss.str();
+}
+
+static void ulimitc(const rlim_t& s) {
+    struct rlimit limit;
+    limit.rlim_max = limit.rlim_cur = s;
+    setrlimit(RLIMIT_CORE, &limit);
 }
 
 static int real_start(int argc, char** argv,
@@ -36,6 +45,12 @@ static int real_daemon(int argc, char** argv,
     ProcessInfoMgr::GetInstance()->parent_id = getpid();
     ProcessInfoMgr::GetInstance()->parent_start_time = time(0);
     while(true) {
+        PInfo::GetInstance()->start = time(0);
+        if(PInfo::GetInstance()->crash == 0) {
+            ulimitc(g_daemon_core->getValue());
+        } else {
+            ulimitc(0);
+        }
         pid_t pid = fork();
         if(pid == 0) {
             //子进程返回
