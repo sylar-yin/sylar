@@ -552,18 +552,21 @@ bool RedisServiceDiscovery::queryInfo() {
 }
 
 void RedisServiceDiscovery::start() {
-    registerSelf();
+    //registerSelf();
     queryInfo();
 
     if(!m_timer) {
         m_timer = sylar::IOManager::GetThis()->addTimer(g_service_discover_redis_check->getValue() * 1000, [this](){
-            registerSelf();
+            if(m_startRegister) {
+                registerSelf();
+            }
             queryInfo();
         }, true);
     }
 }
 
 bool RedisServiceDiscovery::doRegister() {
+    m_startRegister = true;
     return registerSelf();
 }
 

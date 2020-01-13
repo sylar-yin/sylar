@@ -291,39 +291,18 @@ int Application::run_fiber() {
     if(!g_service_discovery_zk->getValue().empty()) {
         m_serviceDiscovery = std::make_shared<ZKServiceDiscovery>(g_service_discovery_zk->getValue());
         m_rockSDLoadBalance = std::make_shared<RockSDLoadBalance>(m_serviceDiscovery);
-        //std::vector<TcpServer::ptr> svrs;
-        //if(!getServer("http", svrs)) {
-        //    m_serviceDiscovery->setSelfInfo(sylar::GetIPv4() + ":0:" + sylar::GetHostName());
-        //} else {
-        //    std::string ip_and_port;
-        //    for(auto& i : svrs) {
-        //        auto socks = i->getSocks();
-        //        for(auto& s : socks) {
-        //            auto addr = std::dynamic_pointer_cast<IPv4Address>(s->getLocalAddress());
-        //            if(!addr) {
-        //                continue;
-        //            }
-        //            auto str = addr->toString();
-        //            if(str.find("127.0.0.1") == 0) {
-        //                continue;
-        //            }
-        //            if(str.find("0.0.0.0") == 0) {
-        //                ip_and_port = sylar::GetIPv4() + ":" + std::to_string(addr->getPort());
-        //                break;
-        //            } else {
-        //                ip_and_port = addr->toString();
-        //            }
-        //        }
-        //        if(!ip_and_port.empty()) {
-        //            break;
-        //        }
-        //    }
-        //    m_serviceDiscovery->setSelfInfo(ip_and_port + ":" + sylar::GetHostName());
-        //}
     } else if(!g_service_discovery_redis->getValue().empty()) {
         m_serviceDiscovery = std::make_shared<RedisServiceDiscovery>(g_service_discovery_redis->getValue());
         m_rockSDLoadBalance = std::make_shared<RockSDLoadBalance>(m_serviceDiscovery);
-        //m_serviceDiscovery->registerServer("mre", "dataproxy", "xxxx:1111", "xxxx");
+    }
+
+    //if(m_rockSDLoadBalance) {
+    //    m_rockSDLoadBalance->doQuery();
+    //}
+
+    if(m_rockSDLoadBalance) {
+        m_rockSDLoadBalance->start();
+        sleep(1);
     }
 
     for(auto& i : modules) {
@@ -334,13 +313,14 @@ int Application::run_fiber() {
         i->start();
     }
 
-    if(m_rockSDLoadBalance) {
-        m_rockSDLoadBalance->start();
-    }
-
     for(auto& i : modules) {
         i->onServerUp();
     }
+
+    if(m_rockSDLoadBalance) {
+        m_rockSDLoadBalance->doRegister();
+    }
+
     //ZKServiceDiscovery::ptr m_serviceDiscovery;
     //RockSDLoadBalance::ptr m_rockSDLoadBalance;
     //sylar::ZKServiceDiscovery::ptr zksd(new sylar::ZKServiceDiscovery("127.0.0.1:21811"));
@@ -351,6 +331,28 @@ int Application::run_fiber() {
     //static RockSDLoadBalance::ptr rsdlb(new RockSDLoadBalance(zksd));
     //rsdlb->start();
     return 0;
+}
+
+void Application::initEnv() {
+    sylar::WorkerMgr::GetInstance()->init();
+    FoxThreadMgr::GetInstance()->init();
+    FoxThreadMgr::GetInstance()->start();
+    RedisMgr::GetInstance();
+    TairMgr::GetInstance();
+    DnsMgr::GetInstance()->init();
+    DnsMgr::GetInstance()->start();
+
+    if(!g_service_discovery_zk->getValue().empty()) {
+        m_serviceDiscovery = std::make_shared<ZKServiceDiscovery>(g_service_discovery_zk->getValue());
+        m_rockSDLoadBalance = std::make_shared<RockSDLoadBalance>(m_serviceDiscovery);
+    } else if(!g_service_discovery_redis->getValue().empty()) {
+        m_serviceDiscovery = std::make_shared<RedisServiceDiscovery>(g_service_discovery_redis->getValue());
+        m_rockSDLoadBalance = std::make_shared<RockSDLoadBalance>(m_serviceDiscovery);
+    }
+
+    if(m_rockSDLoadBalance) {
+        m_rockSDLoadBalance->start();
+    }
 }
 
 bool Application::getServer(const std::string& type, std::vector<TcpServer::ptr>& svrs) {

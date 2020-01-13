@@ -99,7 +99,7 @@ public:
             Node node(k);
             node.val = v;
 
-            m_datas[pos].push_back(node);
+            m_datas[pos].emplace_back(node);
             SortLast(&m_datas[pos][0], m_datas[pos].size());
             //std::sort(m_datas[pos].begin(), m_datas[pos].end());
             sylar::Atomic::addFetch(m_total);
@@ -152,7 +152,7 @@ public:
         std::vector<std::pair<K, V> > tmp;
         tmp.reserve(oth.getTotal());
         oth.rforeach([&tmp](const K& k, const V& v){
-            tmp.push_back(std::make_pair(k, v));
+            tmp.emplace_back(std::make_pair(k, v));
             return true;
         });
 
@@ -180,6 +180,7 @@ public:
 
     //for K,V is POD
     bool writeTo(std::ostream& os, uint64_t speed = -1) {
+        //sylar::TimeCalc tc;
         sylar::RWMutex::ReadLock lock(m_mutex);
         os.write((const char*)&m_size, sizeof(m_size));
 
@@ -189,9 +190,11 @@ public:
         for(size_t i = 0; i < m_size; ++i) {
             sylar::RWMutex::ReadLock lock2(s_mutex[i % MAX_MUTEX]);
             for(auto n : m_datas[i]) {
-                ns.push_back(n);
+                ns.emplace_back(n);
             }
         }
+        lock.unlock();
+        //tc.tick("copy");
 
         size_t size = ns.size() * sizeof(Node);
         os.write((const char*)&size, sizeof(size));
@@ -200,7 +203,8 @@ public:
         } else {
             sylar::WriteFixToStreamWithSpeed(os, (const char*)&ns[0], size, speed);
         }
-
+        //tc.tick("write");
+        //std::cout << "used: " << tc.elapse() / 1000.0 << "ms " << tc.toString() << std::endl;
         //std::cout << "writeTo size: " << os.tellp() << std::endl;
         return (bool)os;
     }
@@ -236,7 +240,7 @@ public:
 
                 m_datas = new std::vector<Node>[m_size]();
                 for(auto& n : ns) {
-                    m_datas[m_posHash(n.key) % m_size].push_back(n);
+                    m_datas[m_posHash(n.key) % m_size].emplace_back(n);
                 }
                 for(size_t i = 0; i < m_size; ++i) {
                     std::sort(m_datas[i].begin(), m_datas[i].end());
@@ -248,6 +252,10 @@ public:
             }
         } while(0);
         return false;
+    }
+
+    float getRate() const {
+        return m_total * 1.0 / m_size;
     }
 private:
     struct Node {
@@ -276,7 +284,7 @@ private:
         std::vector<Node>* datas = new std::vector<Node>[size]();
         for(size_t i = 0; i < m_size; ++i) {
             for(auto& n : m_datas[i]) {
-                datas[m_posHash(n.key) % size].push_back(n);
+                datas[m_posHash(n.key) % size].emplace_back(n);
             }
         }
         for(size_t i = 0; i < size; ++i) {
@@ -296,10 +304,6 @@ private:
         }
         delete[] datas;
         datas = nullptr;
-    }
-
-    float getRate() const {
-        return m_total * 1.0 / m_size;
     }
 
     bool needRehash() const {

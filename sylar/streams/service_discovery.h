@@ -145,6 +145,7 @@ private:
     bool queryInfo();
 private:
     std::string m_name;
+    bool m_startRegister = false;
     sylar::Timer::ptr m_timer;
 };
 
