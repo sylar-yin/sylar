@@ -7783,7 +7783,7 @@ void roaring_bitmap_remove_range_closed(roaring_bitmap_t *ra, uint32_t min, uint
         uint32_t container_max = (max_key == ra->high_low_container.keys[src]) ? (max & 0xffff) : 0xffff;
         ra_unshare_container_at_index(&ra->high_low_container, src);
         void *new_container;
-        uint8_t new_type;
+        uint8_t new_type = 0;
         new_container = container_remove_range(ra->high_low_container.containers[src],
                                                ra->high_low_container.typecodes[src],
                                                container_min, container_max,

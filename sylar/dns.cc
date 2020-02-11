@@ -65,8 +65,8 @@ public:
         n["domain"] = i.domain;
         n["type"] = i.type;
         n["pool"] = i.pool_size;
-        for(auto& i : i.addrs) {
-            n["addrs"].push_back(i);
+        for(auto& x : i.addrs) {
+            n["addrs"].push_back(x);
         }
         std::stringstream ss;
         ss << n;
