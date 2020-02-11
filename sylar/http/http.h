@@ -269,6 +269,8 @@ public:
      */
     const std::string& getQuery() const { return m_query;}
 
+    const std::string& getFragment() const { return m_fragment;}
+
     /**
      * @brief 返回HTTP请求的消息体
      */
