@@ -45,6 +45,11 @@ public:
          */
         ~Node();
 
+        /**
+         * 释放内存
+         */
+        void free();
+
         /// 内存块地址指针
         char* ptr;
         /// 下一个内存块地址
@@ -58,6 +63,14 @@ public:
      * @param[in] base_size 内存块大小
      */
     ByteArray(size_t base_size = 4096);
+
+    /**
+     * @brief 操作外部已有内存,如果owner为false,不支持写操作
+     * @param[in] data 内存指针
+     * @param[in] size 数据大小
+     * @param[in] owner 是否管理该内存
+     */
+    ByteArray(void* data, size_t size, bool owner = false);
 
     /**
      * @brief 析构函数
@@ -385,7 +398,7 @@ public:
      * @brief 把ByteArray的数据写入到文件中
      * @param[in] name 文件名
      */
-    bool writeToFile(const std::string& name) const;
+    bool writeToFile(const std::string& name, bool with_md5 = false) const;
 
     /**
      * @brief 从文件中读取数据
@@ -464,6 +477,8 @@ private:
      * @brief 获取当前的可写入容量
      */
     size_t getCapacity() const { return m_capacity - m_position;}
+
+    std::string getMd5() const;
 private:
     /// 内存块的大小
     size_t m_baseSize;
@@ -475,6 +490,8 @@ private:
     size_t m_size;
     /// 字节序,默认大端
     int8_t m_endian;
+    /// 是否拥有数据的管理权限
+    bool m_owner;
     /// 第一个内存块指针
     Node* m_root;
     /// 当前操作的内存块指针

@@ -74,6 +74,7 @@ set(LIB_SRC
     sylar/env.cc
     sylar/daemon.cc
     sylar/fd_manager.cc
+    sylar/file_manager.cc
     sylar/fiber.cc
     sylar/fcontext/fcontext.S
     sylar/libco/coctx.cc

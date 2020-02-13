@@ -18,6 +18,7 @@
 #include "env.h"
 #include "fd_manager.h"
 #include "fiber.h"
+#include "file_manager.h"
 #include "hook.h"
 #include "iomanager.h"
 #include "library.h"

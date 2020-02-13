@@ -38,6 +38,8 @@ private:
     RockSDLoadBalance::ptr m_rockSDLoadBalance;
 };
 
+std::string GetServerWorkPath();
+
 }
 
 #endif

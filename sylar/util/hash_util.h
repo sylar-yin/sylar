@@ -1,6 +1,9 @@
 #ifndef __SYLAR_UTIL_HASH_UTIL_H__
 #define __SYLAR_UTIL_HASH_UTIL_H__
 
+#include <sys/types.h>
+#include <sys/socket.h>
+
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -24,6 +27,7 @@ std::string sha1(const std::string &data);
 // Returns result in blob
 std::string md5sum(const std::string &data);
 std::string md5sum(const void *data, size_t len);
+std::string md5sum(const std::vector<iovec>& data);
 std::string sha0sum(const std::string &data);
 std::string sha0sum(const void *data, size_t len);
 std::string sha1sum(const std::string &data);

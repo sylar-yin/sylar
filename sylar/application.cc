@@ -46,6 +46,10 @@ static sylar::ConfigVar<std::string>::ptr g_service_discovery_redis =
 static sylar::ConfigVar<std::vector<TcpServerConf> >::ptr g_servers_conf
     = sylar::Config::Lookup("servers", std::vector<TcpServerConf>(), "http server config");
 
+std::string GetServerWorkPath() {
+    return g_server_work_path->getValue();
+}
+
 Application* Application::s_instance = nullptr;
 
 Application::Application() {
