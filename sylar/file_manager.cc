@@ -36,22 +36,22 @@ FileInfo::ptr FileInfoManager::load(const std::string& path, uint64_t limit) {
         struct stat st;
         if(stat(path.c_str(), &st) != 0) {
             SYLAR_LOG_ERROR(g_logger) << "stat(" << path << ") error:" << strerror(errno);
-            break;
+            return nullptr;
         }
         FileInfo::ptr info = get(path);
         if(info && info->m_mtime == (uint64_t)st.st_mtime) {
-            break;
+            return nullptr;
         }
         std::ifstream ifs_md5(path + ".md5");
         std::string md5_value;
         std::getline(ifs_md5, md5_value);
         if(md5_value.empty()) {
             SYLAR_LOG_ERROR(g_logger) << path << ".md5 empty";
-            break;
+            return nullptr;
         }
 
         if(info && info->m_md5 == md5_value) {
-            break;
+            return nullptr;
         }
 
         std::ifstream ifs(path, std::ios::binary);

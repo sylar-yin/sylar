@@ -265,7 +265,7 @@ std::string md5sum(const std::vector<iovec>& data) {
     std::string result;
     result.resize(MD5_DIGEST_LENGTH);
     MD5_Final((unsigned char*)&result[0], &ctx);
-    return result;
+    return hexstring_from_data(result.c_str(), MD5_DIGEST_LENGTH);
 }
 
 std::string md5sum(const std::string &data) {

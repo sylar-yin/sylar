@@ -158,6 +158,15 @@ int Application::main(int argc, char** argv) {
 }
 
 int Application::run_fiber() {
+
+    sylar::WorkerMgr::GetInstance()->init();
+    FoxThreadMgr::GetInstance()->init();
+    FoxThreadMgr::GetInstance()->start();
+    RedisMgr::GetInstance();
+    TairMgr::GetInstance();
+    DnsMgr::GetInstance()->init();
+    DnsMgr::GetInstance()->start();
+
     std::vector<Module::ptr> modules;
     ModuleMgr::GetInstance()->listAll(modules);
     bool has_error = false;
@@ -172,14 +181,6 @@ int Application::run_fiber() {
     if(has_error) {
         _exit(0);
     }
-
-    sylar::WorkerMgr::GetInstance()->init();
-    FoxThreadMgr::GetInstance()->init();
-    FoxThreadMgr::GetInstance()->start();
-    RedisMgr::GetInstance();
-    TairMgr::GetInstance();
-    DnsMgr::GetInstance()->init();
-    DnsMgr::GetInstance()->start();
 
     auto http_confs = g_servers_conf->getValue();
     std::vector<TcpServer::ptr> svrs;
@@ -324,6 +325,8 @@ int Application::run_fiber() {
     if(m_rockSDLoadBalance) {
         m_rockSDLoadBalance->doRegister();
     }
+
+    modules.clear();
 
     //ZKServiceDiscovery::ptr m_serviceDiscovery;
     //RockSDLoadBalance::ptr m_rockSDLoadBalance;

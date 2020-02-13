@@ -48,7 +48,7 @@ ByteArray::ByteArray(void* data, size_t size, bool owner)
     :m_baseSize(size)
     ,m_position(0)
     ,m_capacity(size)
-    ,m_size(0)
+    ,m_size(size)
     ,m_endian(SYLAR_BIG_ENDIAN)
     ,m_owner(owner) {
     m_root = new Node();

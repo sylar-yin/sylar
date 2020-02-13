@@ -41,7 +41,10 @@ void HttpServer::handleClient(Socket::ptr client) {
         HttpResponse::ptr rsp = std::make_shared<HttpResponse>(req->getVersion()
                             ,req->isClose() || !m_isKeepalive);
         rsp->setHeader("Server", getName());
-        m_dispatch->handle(req, rsp, session);
+        {
+            sylar::SchedulerSwitcher sw(m_worker);
+            m_dispatch->handle(req, rsp, session);
+        }
         session->sendResponse(rsp);
 
         if(!m_isKeepalive || req->isClose()) {
