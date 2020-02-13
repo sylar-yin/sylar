@@ -30,7 +30,7 @@ public:
                        ,const std::string& name
                        ,uint64_t default_value = 0);
     static bool FromString(Json::Value& json, const std::string& v);
-    static std::string ToString(const Json::Value& json);
+    static std::string ToString(const Json::Value& json, bool emit_utf8 = true);
 };
 
 }

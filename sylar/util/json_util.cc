@@ -176,32 +176,36 @@ bool JsonUtil::FromString(Json::Value& json, const std::string& v) {
     return reader.parse(v, json);
 }
 
-static Json::StreamWriter* GetJsonStreamWriter() {
-    static Json::StreamWriterBuilder builder;
-    builder["commentStyle"] = "None";
-    builder["indentation"] = "";
-    return builder.newStreamWriter();
-}
+//static Json::StreamWriter* GetJsonStreamWriter() {
+//    static Json::StreamWriterBuilder builder;
+//    builder["commentStyle"] = "None";
+//    builder["indentation"] = "";
+//    return builder.newStreamWriter();
+//}
+//
+//static Json::StreamWriterBuilder GetJsonStreamBuilder() {
+//    Json::StreamWriterBuilder builder;
+//    builder["commentStyle"] = "None";
+//    builder["indentation"] = "";
+//    return builder;
+//}
 
-static Json::StreamWriterBuilder GetJsonStreamBuilder() {
+std::string JsonUtil::ToString(const Json::Value& json, bool emit_utf8) {
+    ////static Json::StreamWriter* s_writer = GetJsonStreamWriter();
+
+    ////static Json::StreamWriterBuilder builder = GetJsonStreamBuilder();
     Json::StreamWriterBuilder builder;
     builder["commentStyle"] = "None";
     builder["indentation"] = "";
-    return builder;
-}
+    builder["emitUTF8"] = emit_utf8;
+    return Json::writeString(builder, json);
 
-std::string JsonUtil::ToString(const Json::Value& json) {
-    //static Json::StreamWriter* s_writer = GetJsonStreamWriter();
+    //std::unique_ptr<Json::StreamWriter> const writer(
+    //  builder.newStreamWriter());
+    //std::stringstream ss;
+    //writer->write(json, &ss);
+    //return ss.str();
 
-    //static Json::StreamWriterBuilder builder = GetJsonStreamBuilder();
-    Json::StreamWriterBuilder builder;
-    builder["commentStyle"] = "None";
-    builder["indentation"] = "";
-    std::unique_ptr<Json::StreamWriter> const writer(
-      builder.newStreamWriter());
-    std::stringstream ss;
-    writer->write(json, &ss);
-    return ss.str();
     //Json::FastWriter w;
     //return w.write(json);
 }
