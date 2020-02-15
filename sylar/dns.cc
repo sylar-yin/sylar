@@ -2,6 +2,7 @@
 #include "sylar/log.h"
 #include "sylar/config.h"
 #include "sylar/iomanager.h"
+#include "sylar/http/http_connection.h"
 
 namespace sylar {
 
@@ -11,12 +12,14 @@ struct DnsDefine {
     std::string domain;
     int type;
     int pool_size = 0;
+    std::string check_path;
     std::set<std::string> addrs;
 
     bool operator==(const DnsDefine& b) const {
         return domain == b.domain
             && type == b.type
-            && addrs == b.addrs;
+            && addrs == b.addrs
+            && check_path == b.check_path;
     }
 
     bool operator<(const DnsDefine& b) const {
@@ -44,6 +47,10 @@ public:
         }
         dd.type = n["type"].as<int>();
 
+        if(n["check_path"].IsDefined()) {
+            dd.check_path = n["check_path"].as<std::string>();
+        }
+
         if(n["addrs"].IsDefined()) {
             for(size_t x = 0; x < n["addrs"].size(); ++x) {
                 dd.addrs.insert(n["addrs"][x].as<std::string>());
@@ -65,6 +72,9 @@ public:
         n["domain"] = i.domain;
         n["type"] = i.type;
         n["pool"] = i.pool_size;
+        if(!i.check_path.empty()) {
+            n["check_path"] = i.check_path;
+        }
         for(auto& x : i.addrs) {
             n["addrs"].push_back(x);
         }
@@ -84,11 +94,14 @@ struct DnsIniter {
             for(auto& n : new_value) {
                 if(n.type == Dns::TYPE_DOMAIN) {
                     Dns::ptr dns = std::make_shared<Dns>(n.domain, n.type, n.pool_size);
+                    dns->setCheckPath(n.check_path);
                     dns->refresh();
                     DnsMgr::GetInstance()->add(dns);
                 } else if(n.type == Dns::TYPE_ADDRESS) {
                     Dns::ptr dns = std::make_shared<Dns>(n.domain, n.type, n.pool_size);
+                    dns->setCheckPath(n.check_path);
                     dns->set(n.addrs);
+                    dns->refresh();
                     DnsMgr::GetInstance()->add(dns);
                 } else {
                     SYLAR_LOG_ERROR(g_logger) << "invalid type=" << n.type
@@ -169,6 +182,9 @@ std::string Dns::toString() {
     ss << "[Dns domain=" << m_domain
        << " type=" << m_type
        << " idx=" << m_idx;
+    if(!m_checkPath.empty()) {
+        ss << " check_path=" << m_checkPath;
+    }
     RWMutexType::ReadLock lock(m_mutex);
     ss << " addrs.size=" << m_address.size() << " addrs=[";
     for(size_t i = 0; i < m_address.size(); ++i) {
@@ -219,7 +235,21 @@ bool Dns::AddressItem::checkValid(uint32_t timeout_ms) {
     valid = sock->connect(addr, timeout_ms);
 
     if(valid) {
-        if(pool_size > 0) {
+        if(!check_path.empty()) {
+            sylar::http::HttpRequest::ptr req = std::make_shared<sylar::http::HttpRequest>();
+            req->setPath(check_path);
+            req->setHeader("host", addr->toString());
+            sylar::Socket::ptr sock_ptr(sock, sylar::nop<sylar::Socket>);
+            auto rt = sylar::http::HttpConnection::DoRequest(req, sock_ptr, timeout_ms);
+            if(!rt->response || (int)rt->response->getStatus() != 200) {
+                valid = false;
+                SYLAR_LOG_ERROR(g_logger) << "health_check fail result=" << rt->result
+                    << " rsp.status=" << (rt->response ? (int)rt->response->getStatus() : -1)
+                    << " check_path=" << check_path
+                    << " addr=" << addr->toString();
+            }
+        }
+        if(valid && pool_size > 0) {
             sylar::Spinlock::Lock lock(m_mutex);
             socks.push_back(sock);
         } else {
@@ -317,6 +347,7 @@ void Dns::initAddress(const std::vector<Address::ptr>& result) {
         auto info = std::make_shared<AddressItem>();
         info->addr = result[i];
         info->pool_size = m_poolSize;
+        info->check_path = m_checkPath;
         info->checkValid(50);
         address[i] = info;
     }
