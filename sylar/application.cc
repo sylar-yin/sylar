@@ -131,8 +131,21 @@ bool Application::run() {
                 std::placeholders::_2), is_daemon);
 }
 
-int Application::main(int argc, char** argv) {
+void sigproc(int sig) {
+    SYLAR_LOG_INFO(g_logger) << "sigproc sig=" << sig;
+    if(sig == SIGUSR1) {
+        sylar::LoggerMgr::GetInstance()->reopen();
+    }
+}
+
+void initSignal() {
     signal(SIGPIPE, SIG_IGN);
+    signal(SIGUSR1, sigproc);
+}
+
+int Application::main(int argc, char** argv) {
+    initSignal();
+
     SYLAR_LOG_INFO(g_logger) << "main";
     std::string conf_path = sylar::EnvMgr::GetInstance()->getConfigPath();
     sylar::Config::LoadFromConfDir(conf_path, true);

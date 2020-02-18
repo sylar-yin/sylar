@@ -14,6 +14,7 @@
 #include "bytearray.h"
 #include "config.h"
 #include "daemon.h"
+#include "dns.h"
 #include "endian.h"
 #include "env.h"
 #include "fd_manager.h"

@@ -17,9 +17,9 @@ uint64_t murmur3_hash64(const void* str, const uint32_t& size,  const uint32_t &
 uint32_t quick_hash(const char * str);
 uint32_t quick_hash(const void* str, uint32_t size);
 
-std::string base64decode(const std::string &src);
-std::string base64encode(const std::string &data);
-std::string base64encode(const void *data, size_t len);
+std::string base64decode(const std::string &src, bool url = false);
+std::string base64encode(const std::string &data, bool url = false);
+std::string base64encode(const void *data, size_t len, bool url = false);
 
 // Returns result in hex
 std::string md5(const std::string &data);

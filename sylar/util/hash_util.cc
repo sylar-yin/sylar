@@ -130,13 +130,16 @@ uint64_t murmur3_hash64(const char * str, const uint32_t & seed, const uint32_t&
     return (((uint64_t)murmur3_hash(str, seed)) << 32 | murmur3_hash(str, seed2));
 }
 
-std::string base64decode(const std::string &src) {
+std::string base64decode(const std::string &src, bool url) {
     std::string result;
     result.resize(src.size() * 3 / 4);
     char *writeBuf = &result[0];
 
     const char* ptr = src.c_str();
     const char* end = ptr + src.size();
+
+    const char c62 = url ? '-' : '+';
+    const char c63 = url ? '_' : '/';
 
     while(ptr < end) {
         int i = 0;
@@ -161,9 +164,9 @@ std::string base64decode(const std::string &src) {
                 val = *ptr - 'a' + 26;
             } else if(*ptr >= '0' && *ptr <= '9') {
                 val = *ptr - '0' + 52;
-            } else if(*ptr == '+') {
+            } else if(*ptr == c62) {
                 val = 62;
-            } else if(*ptr == '/') {
+            } else if(*ptr == c63) {
                 val = 63;
             } else {
                 return ""; // invalid character
@@ -194,13 +197,14 @@ std::string base64decode(const std::string &src) {
     return result;
 }
 
-std::string base64encode(const std::string& data) {
-    return base64encode(data.c_str(), data.size());
+std::string base64encode(const std::string& data, bool url) {
+    return base64encode(data.c_str(), data.size(), url);
 }
 
-std::string base64encode(const void* data, size_t len) {
-    const char* base64 =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+std::string base64encode(const void* data, size_t len, bool url) {
+    const char* base64 = url ?
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+        : "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
     std::string ret;
     ret.reserve(len * 4 / 3 + 2);

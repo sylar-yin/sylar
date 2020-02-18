@@ -411,6 +411,8 @@ public:
      * @brief 设置日志级别
      */
     void setLevel(LogLevel::Level val) { m_level = val;}
+
+    virtual bool reopen() { return true;}
 protected:
     /// 日志级别
     LogLevel::Level m_level = LogLevel::DEBUG;
@@ -429,7 +431,7 @@ class Logger : public std::enable_shared_from_this<Logger> {
 friend class LoggerManager;
 public:
     typedef std::shared_ptr<Logger> ptr;
-    typedef Spinlock MutexType;
+    typedef RWSpinlock RWMutexType;
 
     /**
      * @brief 构造函数
@@ -525,13 +527,15 @@ public:
      * @brief 将日志器的配置转成YAML String
      */
     std::string toYamlString();
+
+    bool reopen();
 private:
     /// 日志名称
     std::string m_name;
     /// 日志级别
     LogLevel::Level m_level;
     /// Mutex
-    MutexType m_mutex;
+    RWMutexType m_mutex;
     /// 日志目标集合
     std::list<LogAppender::ptr> m_appenders;
     /// 日志格式器
@@ -564,7 +568,7 @@ public:
      * @brief 重新打开日志文件
      * @return 成功返回true
      */
-    bool reopen();
+    bool reopen() override;
 private:
     /// 文件路径
     std::string m_filename;
@@ -579,7 +583,7 @@ private:
  */
 class LoggerManager {
 public:
-    typedef Spinlock MutexType;
+    typedef RWSpinlock RWMutexType;
     /**
      * @brief 构造函数
      */
@@ -605,9 +609,11 @@ public:
      * @brief 将所有的日志器配置转成YAML String
      */
     std::string toYamlString();
+
+    bool reopen();
 private:
     /// Mutex
-    MutexType m_mutex;
+    RWMutexType m_mutex;
     /// 日志器容器
     std::map<std::string, Logger::ptr> m_loggers;
     /// 主日志器
