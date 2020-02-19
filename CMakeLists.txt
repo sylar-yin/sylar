@@ -174,13 +174,15 @@ set(LIBS
         tbsys
         snappy
         )
+sylar_add_executable(echo_server "examples/echo_server.cc" sylar "${LIBS}")
+
+if(BUILD_TEST)
 sylar_add_executable(test_util "tests/test_util.cc" sylar "${LIBS}")
 sylar_add_executable(test_hashmultimap "tests/test_hashmultimap.cc" sylar "${LIBS}")
 sylar_add_executable(test_hashmap "tests/test_hashmap.cc" sylar "${LIBS}")
 sylar_add_executable(test_dict "tests/test_dict.cc" sylar "${LIBS}")
 sylar_add_executable(test_array "tests/test_array.cc" sylar "${LIBS}")
 sylar_add_executable(test_tair "tests/test_tair.cc" sylar "${LIBS}")
-if(BUILD_TEST)
 sylar_add_executable(test1 "tests/test.cc" sylar "${LIBS}")
 sylar_add_executable(test_config "tests/test_config.cc" sylar "${LIBS}")
 sylar_add_executable(test_thread "tests/test_thread.cc" sylar "${LIBS}")
@@ -194,7 +196,6 @@ sylar_add_executable(test_bytearray "tests/test_bytearray.cc" sylar "${LIBS}")
 sylar_add_executable(test_http "tests/test_http.cc" sylar "${LIBS}")
 sylar_add_executable(test_http_parser "tests/test_http_parser.cc" sylar "${LIBS}")
 sylar_add_executable(test_tcp_server "tests/test_tcp_server.cc" sylar "${LIBS}")
-sylar_add_executable(echo_server "examples/echo_server.cc" sylar "${LIBS}")
 sylar_add_executable(test_http_server "tests/test_http_server.cc" sylar "${LIBS}")
 sylar_add_executable(test_uri "tests/test_uri.cc" sylar "${LIBS}")
 sylar_add_executable(my_http_server "samples/my_http_server.cc" sylar "${LIBS}")
@@ -214,7 +215,6 @@ sylar_add_executable(test_timed_cache "tests/test_timed_cache.cc" sylar "${LIBS}
 sylar_add_executable(test_timed_lru_cache "tests/test_timed_lru_cache.cc" sylar "${LIBS}")
 sylar_add_executable(test_zlib_stream "tests/test_zlib_stream.cc" sylar "${LIBS}")
 
-endif()
 sylar_add_executable(test_crypto "tests/test_crypto.cc" sylar "${LIBS}")
 sylar_add_executable(test_sqlite3 "tests/test_sqlite3.cc" sylar "${LIBS}")
 sylar_add_executable(test_rock "tests/test_rock.cc" sylar "${LIBS}")
@@ -224,6 +224,7 @@ sylar_add_executable(test_nameserver "tests/test_nameserver.cc" sylar "${LIBS}")
 sylar_add_executable(test_bitmap "tests/test_bitmap.cc" sylar "${LIBS}")
 sylar_add_executable(test_zkclient "tests/test_zookeeper.cc" sylar "${LIBS}")
 sylar_add_executable(test_service_discovery "tests/test_service_discovery.cc" sylar "${LIBS}")
+endif()
 
 set(ORM_SRCS
     sylar/orm/table.cc

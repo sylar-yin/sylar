@@ -44,6 +44,8 @@ void EchoServer::handleClient(sylar::Socket::ptr client) {
         } else {
             std::cout << ba->toHexString();// << std::endl;
         }
+        //std::string tmp = "HTTP/1.1 100 Continue\r\n\r\n";
+        //client->send(tmp.c_str(), tmp.size());
         std::cout.flush();
     }
 }

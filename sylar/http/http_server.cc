@@ -28,9 +28,11 @@ void HttpServer::setName(const std::string& v) {
 
 void HttpServer::handleClient(Socket::ptr client) {
     SYLAR_LOG_DEBUG(g_logger) << "handleClient " << *client;
+    //sylar::TimeCalc tc;
     HttpSession::ptr session = std::make_shared<HttpSession>(client);
     do {
         auto req = session->recvRequest();
+        //tc.tick("recv");
         if(!req) {
             SYLAR_LOG_DEBUG(g_logger) << "recv http request fail, errno="
                 << errno << " errstr=" << strerror(errno)
@@ -46,7 +48,10 @@ void HttpServer::handleClient(Socket::ptr client) {
             sylar::SchedulerSwitcher sw(m_worker);
             m_dispatch->handle(req, rsp, session);
         }
+        //tc.tick("handler");
         session->sendResponse(rsp);
+        //tc.tick("response");
+        //SYLAR_LOG_ERROR(g_logger) << "elapse=" << tc.elapse() << " - " << tc.toString();
 
         if(!m_isKeepalive || req->isClose()) {
             break;
