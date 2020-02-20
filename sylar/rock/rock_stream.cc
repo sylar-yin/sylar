@@ -22,6 +22,7 @@ std::string RockResult::toString() const {
        << " used=" << used
        << " response=" << (response ? response->toString() : "null")
        << " request=" << (request ? request->toString() : "null")
+       << " server=" << server
        << "]";
     return ss.str();
 }
@@ -65,9 +66,13 @@ RockResult::ptr RockStream::request(RockRequest::ptr req, uint32_t timeout_ms) {
                 std::bind(&RockStream::onTimeOut, shared_from_this(), ctx));
         enqueue(ctx);
         sylar::Fiber::YieldToHold();
-        return std::make_shared<RockResult>(ctx->result, sylar::GetCurrentMS() - ts, ctx->response, req);
+        auto rt = std::make_shared<RockResult>(ctx->result, sylar::GetCurrentMS() - ts, ctx->response, req);
+        rt->server = getRemoteAddressString();
+        return rt;
     } else {
-        return std::make_shared<RockResult>(AsyncSocketStream::NOT_CONNECT, 0, nullptr, req);
+        auto rt = std::make_shared<RockResult>(AsyncSocketStream::NOT_CONNECT, 0, nullptr, req);
+        rt->server = getRemoteAddressString();
+        return rt;
     }
 }
 
