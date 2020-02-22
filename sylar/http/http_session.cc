@@ -46,6 +46,7 @@ HttpRequest::ptr HttpSession::recvRequest() {
     if(strcasecmp(v.c_str(), "100-continue") == 0) {
         static const std::string s_data = "HTTP/1.1 100 Continue\r\n\r\n";
         writeFixSize(s_data.c_str(), s_data.size());
+        parser->getData()->delHeader("Expect");
     }
 
     if(length > 0) {
