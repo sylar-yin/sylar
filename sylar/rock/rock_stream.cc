@@ -19,6 +19,7 @@ static sylar::ConfigVar<std::unordered_map<std::string
 std::string RockResult::toString() const {
     std::stringstream ss;
     ss << "[RockResult result=" << result
+       << " result_str=" << resultStr
        << " used=" << used
        << " response=" << (response ? response->toString() : "null")
        << " request=" << (request ? request->toString() : "null")

@@ -139,7 +139,7 @@ public:
     /// 智能指针类型定义
     typedef std::shared_ptr<ServletDispatch> ptr;
     /// 读写锁类型定义
-    typedef RWMutex RWMutexType;
+    typedef RWSpinlock RWMutexType;
 
     /**
      * @brief 构造函数
