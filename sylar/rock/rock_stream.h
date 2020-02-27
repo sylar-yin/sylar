@@ -11,14 +11,16 @@ namespace sylar {
 
 struct RockResult {
     typedef std::shared_ptr<RockResult> ptr;
-    RockResult(int32_t _result, int32_t _used, RockResponse::ptr rsp, RockRequest::ptr req)
+    RockResult(int32_t _result, const std::string& _resultStr, int32_t _used, RockResponse::ptr rsp, RockRequest::ptr req)
      :result(_result)
      ,used(_used)
+     ,resultStr(_resultStr)
      ,response(rsp)
      ,request(req) {
     }
     int32_t result;
     int32_t used;
+    std::string resultStr;
     RockResponse::ptr response;
     RockRequest::ptr request;
 
@@ -86,6 +88,7 @@ private:
     request_handler m_requestHandler;
     notify_handler m_notifyHandler;
     boost::any m_data;
+    uint32_t m_sn = 0;
 };
 
 class RockSession : public RockStream {
