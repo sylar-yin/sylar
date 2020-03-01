@@ -331,6 +331,18 @@ std::string Join(Iter begin, Iter end, const std::string& tag) {
     return ss.str();
 }
 
+template<class Iter>
+std::string MapJoin(Iter begin, Iter end, const std::string& tag1 = "=", const std::string& tag2 = "&") {
+    std::stringstream ss;
+    for(Iter it = begin; it != end; ++it) {
+        if(it != begin) {
+            ss << tag2;
+        }
+        ss << it->first << "=" << it->second;
+    }
+    return ss.str();
+}
+
 //[begin, end)
 //if rt > 0, 存在,返回对应index
 //   rt < 0, 不存在,返回对于应该存在的-(index + 1)

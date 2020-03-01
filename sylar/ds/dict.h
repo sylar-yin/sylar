@@ -396,19 +396,19 @@ public:
         if(str.empty()) {
             return 0;
         }
-        return sylar::murmur3_hash64(str.c_str(), str.size(), 1060627423, 1050126127);
+        return sylar::murmur3_hash64(str.c_str(), str.size(), 1060627423);
     }
     static uint64_t GetID(const char* str, const uint32_t& size) {
         if(size == 0) {
             return 0;
         }
-        return sylar::murmur3_hash64(str, size, 1060627423, 1050126127);
+        return sylar::murmur3_hash64(str, size, 1060627423);
     }
     static uint64_t GetID(const char* str) {
         if(str == nullptr) {
             return 0;
         }
-        return sylar::murmur3_hash64(str, 1060627423, 1050126127);
+        return sylar::murmur3_hash64(str, 1060627423);
     }
     uint64_t update(const std::string& str) {
         return update(str.c_str(), str.size());

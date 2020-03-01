@@ -115,27 +115,27 @@ public:
 };
 
 
-template<class T, uint32_t seed = 1060627423, uint32_t seed2 = 1050126127>
+template<class T, uint32_t seed = 1060627423>
 class Murmur3Hash64 {
 public:
     uint64_t operator()(const T& data) {
-        return sylar::murmur3_hash64(&data, sizeof(T), seed, seed2);
+        return sylar::murmur3_hash64(&data, sizeof(T), seed);
     }
 };
 
-template<uint32_t seed, uint32_t seed2>
-class Murmur3Hash64<std::string, seed, seed2> {
+template<uint32_t seed>
+class Murmur3Hash64<std::string, seed> {
 public:
     uint64_t operator()(const std::string& data) {
-        return sylar::murmur3_hash64(data.data(), data.size(), seed, seed2);
+        return sylar::murmur3_hash64(data.data(), data.size(), seed);
     }
 };
 
-template<class T, uint32_t seed, uint32_t seed2>
-class Murmur3Hash64<std::vector<T>, seed, seed2> {
+template<class T, uint32_t seed>
+class Murmur3Hash64<std::vector<T>, seed> {
 public:
     uint32_t operator()(const std::vector<T>& data) {
-        return sylar::murmur3_hash64(&data[0], data.size() * sizeof(T), seed, seed2);
+        return sylar::murmur3_hash64(&data[0], data.size() * sizeof(T), seed);
     }
 };
 

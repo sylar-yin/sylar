@@ -11,9 +11,11 @@
 namespace sylar {
 
 uint32_t murmur3_hash(const char * str, const uint32_t & seed = 1060627423);
-uint64_t murmur3_hash64(const char * str, const uint32_t & seed = 1060627423, const uint32_t& seed2 = 1050126127);
+uint64_t murmur3_hash64(const char * str, const uint32_t & seed = 1060627423);
+//uint64_t murmur3_hash64(const char * str, const uint32_t & seed = 1060627423, const uint32_t& seed2 = 1050126127);
 uint32_t murmur3_hash(const void* str, const uint32_t& size, const uint32_t & seed = 1060627423);
-uint64_t murmur3_hash64(const void* str, const uint32_t& size,  const uint32_t & seed = 1060627423, const uint32_t& seed2 = 1050126127);
+uint64_t murmur3_hash64(const void* str, const uint32_t& size,  const uint32_t & seed = 1060627423);
+//uint64_t murmur3_hash64(const void* str, const uint32_t& size,  const uint32_t & seed = 1060627423, const uint32_t& seed2 = 1050126127);
 uint32_t quick_hash(const char * str);
 uint32_t quick_hash(const void* str, uint32_t size);
 
