@@ -504,7 +504,6 @@ bool RedisServiceDiscovery::queryInfo() {
 
     time_t now = time(0);
     for(auto& i : infos) {
-        std::unordered_map<uint64_t, ServiceItemInfo::ptr> sinfos;
         auto services = i.second;
         if(i.second.count("all")) {
             auto rpy = sylar::RedisUtil::TryCmd(m_name, 5, "hkeys sylar:%s", i.first.c_str());
@@ -519,6 +518,7 @@ bool RedisServiceDiscovery::queryInfo() {
             services.erase("all");
         }
         for(auto& n : services) {
+            std::unordered_map<uint64_t, ServiceItemInfo::ptr> sinfos;
             auto rpy = sylar::RedisUtil::TryCmd(m_name, 5, "hgetall sylar:%s:%s", i.first.c_str()
                     , n.c_str());
             if(!rpy) {
