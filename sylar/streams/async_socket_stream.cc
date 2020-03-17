@@ -270,7 +270,7 @@ void AsyncSocketStreamManager::setConnection(const std::vector<AsyncSocketStream
             if(m_connectCb) {
                 i->setConnectCb(m_connectCb);
             }
-            if(m_connectCb) {
+            if(m_disconnectCb) {
                 i->setDisconnectCb(m_disconnectCb);
             }
         }
