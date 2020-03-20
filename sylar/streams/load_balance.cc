@@ -386,6 +386,10 @@ ILoadBalance::Type SDLoadBalance::getType(const std::string& domain, const std::
     }
     auto iit = it->second.find(service);
     if(iit == it->second.end()) {
+        iit = it->second.find("all");
+        if(iit != it->second.end()) {
+            return iit->second;
+        }
         return m_defaultType;
     }
     return iit->second;
