@@ -94,6 +94,7 @@ set(LIB_SRC
     sylar/http/ws_servlet.cc
     sylar/hook.cc
     sylar/iomanager.cc
+    sylar/kafka_client.cc
     sylar/library.cc
     sylar/log.cc
     sylar/module.cc
@@ -173,6 +174,8 @@ set(LIBS
         tairclientapi
         tbsys
         snappy
+        rdkafka
+        rdkafka++
         )
 sylar_add_executable(echo_server "examples/echo_server.cc" sylar "${LIBS}")
 

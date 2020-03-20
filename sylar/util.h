@@ -90,9 +90,9 @@ public:
     static std::string Dirname(const std::string& filename);
     static std::string Basename(const std::string& filename);
     static bool OpenForRead(std::ifstream& ifs, const std::string& filename
-                    ,std::ios_base::openmode mode);
+                    ,std::ios_base::openmode mode = std::ios_base::in);
     static bool OpenForWrite(std::ofstream& ofs, const std::string& filename
-                    ,std::ios_base::openmode mode);
+                    ,std::ios_base::openmode mode = std::ios_base::out);
 };
 
 template<class V, class Map, class K>
