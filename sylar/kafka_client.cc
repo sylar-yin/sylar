@@ -211,6 +211,17 @@ void KafkaProducer::listTopics(std::map<std::string, uint64_t>& topics) {
     }
 }
 
+void KafkaProducer::dump(std::ostream& os) {
+    os << "KafkaProducer broker_list=" << m_brokerList << std::endl;
+    os << "    total: " << m_totalMsg << std::endl;
+    os << "    success: " << m_sucessMsg << std::endl;
+
+    sylar::RWMutex::ReadLock lock(m_mutex);
+    for(auto& i : m_topics) {
+        os << "    topic." << i.first << ": " << i.second->getCount() << std::endl;
+    }
+}
+
 KafkaConsumer::KafkaConsumer()
     :m_connected(false)
     ,m_running(false)
@@ -309,7 +320,7 @@ void KafkaConsumer::start(const std::string& topic_name,
                 cb.consume_cb(*msg, this);
             }
             delete msg;
-            poll(0);
+            //poll(0);
         }
     }
 
@@ -480,6 +491,76 @@ std::ostream& KafkaConsumerGroup::dump(std::ostream& os) {
        << m_brokerList << "]]";
     sylar::RWMutex::ReadLock lock(m_mutex);
     for(auto& i : m_datas) {
+        if(i) {
+            os << "***********************************************************" << std::endl;
+            i->dump(os);
+        }
+    }
+    return os;
+}
+
+KafkaProducerGroup::KafkaProducerGroup()
+    :m_size(1)
+    ,m_index(0) {
+}
+
+KafkaProducerGroup::~KafkaProducerGroup() {
+    for(auto& i : m_mutexs) {
+        if(i) {
+            delete i;
+        }
+    }
+}
+
+void KafkaProducerGroup::start() {
+    for(int32_t i = 0; i < m_size; ++i) {
+        KafkaProducer::ptr producer = std::make_shared<KafkaProducer>();
+        producer->setBrokerList(m_brokerList);
+        m_producers.push_back(producer);
+        m_mutexs.push_back(new sylar::Spinlock);
+    }
+    m_datas.resize(m_size);
+    for(int32_t i = 0; i < m_size; ++i) {
+        sylar::FoxThreadMgr::GetInstance()->dispatch(m_threadName, [this, i](){
+            auto producer = m_producers[i];
+            auto& data = m_datas[i];
+            auto& mutex = *m_mutexs[i];
+
+            while(true) {
+                std::list<Msg::ptr> tmp;
+                sylar::Spinlock::Lock lock(mutex);
+                std::swap(tmp, data);
+                lock.unlock();
+
+                for(auto& i : tmp) {
+                    if(i->key.empty()) {
+                        producer->produce(i->topic, i->msg);
+                    } else {
+                        producer->produce(i->topic, i->msg, i->key);
+                    }
+                }
+            }
+        });
+    }
+}
+
+
+bool KafkaProducerGroup::produce(const std::string& topic, const std::string& msg, const std::string& key) {
+    auto idx = sylar::Atomic::addFetch(m_index) % m_size;
+    Msg::ptr m = std::make_shared<Msg>(topic, msg, key);
+
+    sylar::Spinlock::Lock lock(*m_mutexs[idx]);
+    m_datas[idx].push_back(m);
+
+    return true;
+}
+
+std::ostream& KafkaProducerGroup::dump(std::ostream& os) {
+    os << "[KafkaProducerGroup size=" << m_size
+       << " thread_name=" << m_threadName
+       << " broker_list=["
+       << m_brokerList << "]]";
+    for(auto& i : m_producers) {
         if(i) {
             os << "***********************************************************" << std::endl;
             i->dump(os);

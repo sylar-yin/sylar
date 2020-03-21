@@ -53,6 +53,7 @@ public:
     uint64_t getSuccessMsg() const { return m_sucessMsg;}
 
     void poll(uint64_t t = 0);
+    void dump(std::ostream& os);
 private:
     KafkaTopic::ptr getTopic(const std::string& topic);
 private:
@@ -70,6 +71,50 @@ private:
     
     uint64_t m_totalMsg;
     uint64_t m_sucessMsg;
+};
+
+class KafkaProducerGroup {
+public:
+    typedef std::shared_ptr<KafkaProducerGroup> ptr;
+    KafkaProducerGroup();
+    ~KafkaProducerGroup();
+
+    void setBrokerList(const std::string& bl) { m_brokerList = bl;}
+    const std::string getBrokerList() const { return m_brokerList;}
+
+    const std::string& getThreadName() const { return m_threadName;}
+    void setThreadName(const std::string& val) { m_threadName = val;};
+
+    int32_t getSize() const { return m_size;}
+    void setSize(int32_t v) { m_size = v;}
+
+    void start();
+
+    bool produce(const std::string& topic, const std::string& msg, const std::string& key = "");
+    std::ostream& dump(std::ostream& os);
+private:
+    struct Msg {
+        typedef std::shared_ptr<Msg> ptr;
+        Msg(const std::string& _topic
+            ,const std::string& _msg
+            ,const std::string& _key)
+            :topic(_topic)
+            ,msg(_msg)
+            ,key(_key) {
+        }
+
+        std::string topic;
+        std::string msg;
+        std::string key;
+    };
+private:
+    std::string m_threadName;
+    std::string m_brokerList;
+    int32_t m_size;
+    uint32_t m_index;
+    std::vector<KafkaProducer::ptr> m_producers;
+    std::vector<std::list<Msg::ptr> > m_datas;
+    std::vector<sylar::Spinlock*> m_mutexs;
 };
 
 class KafkaConsumer{
