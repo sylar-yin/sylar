@@ -22,6 +22,7 @@
 #include "file_manager.h"
 #include "hook.h"
 #include "iomanager.h"
+#include "kafka_client.h"
 #include "library.h"
 #include "log.h"
 #include "macro.h"

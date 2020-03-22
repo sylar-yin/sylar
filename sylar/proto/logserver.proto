@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package logserver;
+
+//cmd 100
+message LoginRequest {
+    bytes ipport = 1;   //IP:PORT
+    bytes host = 2;     //服务地址
+    bytes domain = 3;   //服务域
+    bytes server = 4;   //服务名
+    bytes extra = 5;    //附加信息
+    uint32 pid = 6;     //进程id
+}
+
+//notify 100
+message LogNotify {
+    bytes topic = 1;    //kafka topic
+    bytes body = 2;     //日志内容
+    bytes key = 3;      //key,kafka分区依据
+}

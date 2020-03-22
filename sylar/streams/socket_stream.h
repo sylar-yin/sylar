@@ -100,11 +100,14 @@ public:
     Address::ptr getLocalAddress();
     std::string getRemoteAddressString();
     std::string getLocalAddressString();
+
+    uint64_t getId() const { return m_id;}
 protected:
     /// Socket类
     Socket::ptr m_socket;
+    uint64_t m_id:63;
     /// 是否主控
-    bool m_owner;
+    bool m_owner:1;
 };
 
 }

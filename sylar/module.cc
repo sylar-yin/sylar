@@ -89,6 +89,34 @@ void Module::queryService(const std::string& domain, const std::string& service)
     sd->queryServer(domain, service);
 }
 
+std::string Module::GetServiceIPPort(const std::string& server_type) {
+    std::vector<TcpServer::ptr> svrs;
+    if(!Application::GetInstance()->getServer(server_type, svrs)) {
+        return "";
+    }
+    for(auto& i : svrs) {
+        auto socks = i->getSocks();
+        for(auto& s : socks) {
+            auto addr = std::dynamic_pointer_cast<IPv4Address>(s->getLocalAddress());
+            if(!addr) {
+                continue;
+            }
+            auto str = addr->toString();
+            if(str.find("127.0.0.1") == 0) {
+                continue;
+            }
+            std::string ip_and_port;
+            if(str.find("0.0.0.0") == 0) {
+                ip_and_port = sylar::GetIPv4() + ":" + std::to_string(addr->getPort());
+            } else {
+                ip_and_port = addr->toString();
+            }
+            return ip_and_port;
+        }
+    }
+    return "";
+}
+
 std::string Module::getServiceIPPort(const std::string& server_type) {
     std::vector<TcpServer::ptr> svrs;
     if(!Application::GetInstance()->getServer(server_type, svrs)) {

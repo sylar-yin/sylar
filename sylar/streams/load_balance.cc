@@ -442,7 +442,7 @@ void SDLoadBalance::onServiceChange(const std::string& domain, const std::string
 
     std::unordered_map<uint64_t, LoadBalanceItem::ptr> add_infos;
     for(auto& i : add_values) {
-        auto stream = m_cb(i.second);
+        auto stream = m_cb(domain, service, i.second);
         if(!stream) {
             SYLAR_LOG_ERROR(g_logger) << "create stream fail, " << i.second->toString();
             continue;

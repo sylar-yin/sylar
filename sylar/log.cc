@@ -8,8 +8,12 @@
 #include "util.h"
 #include "macro.h"
 #include "env.h"
+#include "application.h"
+#include "sylar/proto/logserver.pb.h"
 
 namespace sylar {
+
+static sylar::Logger::ptr g_logger = SYLAR_LOG_NAME("system");
 
 const char* LogLevel::ToString(LogLevel::Level level) {
     switch(level) {
@@ -424,6 +428,70 @@ std::string StdoutLogAppender::toYamlString() {
     return ss.str();
 }
 
+LogserverAppender::LogserverAppender(const std::string& topic)
+    :m_topic(topic) {
+    //auto app = sylar::Application::GetInstance()->getRockSDLoadBalance();
+    //m_lb = app->get("logserver", "logserver", true);
+}
+
+void LogserverAppender::log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) {
+    if(level >= m_level) {
+        std::stringstream ss;
+        MutexType::Lock lock(m_mutex);
+        m_formatter->format(ss, logger, level, event);
+        lock.unlock();
+        logserver::LogNotify nty;
+        nty.set_body(ss.str());
+        nty.set_topic(m_topic);
+        nty.set_key(m_key);
+
+        sylar::RockNotify::ptr rock_nty = std::make_shared<sylar::RockNotify>();
+        rock_nty->setNotify(100);
+        rock_nty->setAsPB(nty);
+
+        for(size_t i = 0; i < 3; ++i) {
+            if(!m_lb) {
+                auto app = sylar::Application::GetInstance()->getRockSDLoadBalance();
+                if(app) {
+                    m_lb = app->get("logserver", "logserver", true);
+                }
+            }
+            if(!m_lb) {
+                continue;
+            }
+            auto item = m_lb->get();
+            if(!item) {
+                continue;
+            }
+            auto conn = item->getStreamAs<sylar::RockStream>();
+            if(!conn) {
+                continue;
+            }
+            if(conn->sendMessage(rock_nty) <= 0) {
+                continue;
+            }
+            return;
+        }
+
+        SYLAR_LOG_ERROR(g_logger) << "send to logserver fail, " << ss.str();
+    }
+}
+
+std::string LogserverAppender::toYamlString() {
+    MutexType::Lock lock(m_mutex);
+    YAML::Node node;
+    node["type"] = "LogserverAppender";
+    if(m_level != LogLevel::UNKNOW) {
+        node["level"] = LogLevel::ToString(m_level);
+    }
+    if(m_hasFormatter && m_formatter) {
+        node["formatter"] = m_formatter->getPattern();
+    }
+    std::stringstream ss;
+    ss << node;
+    return ss.str();
+}
+
 LogFormatter::LogFormatter(const std::string& pattern)
     :m_pattern(pattern) {
     init();
@@ -585,7 +653,7 @@ Logger::ptr LoggerManager::getLogger(const std::string& name) {
 }
 
 struct LogAppenderDefine {
-    int type = 0; //1 File, 2 Stdout
+    int type = 0; //1 File, 2 Stdout, 3 Logserver
     LogLevel::Level level = LogLevel::UNKNOW;
     std::string formatter;
     std::string file;
@@ -664,6 +732,18 @@ public:
                     if(a["formatter"].IsDefined()) {
                         lad.formatter = a["formatter"].as<std::string>();
                     }
+                } else if(type == "LogserverAppender") {
+                    lad.type = 3;
+                    if(!a["topic"].IsDefined()) {
+                        std::cout << "log config error: logserverappender topic is null, " << a
+                              << std::endl;
+                        continue;
+                    }
+                    lad.file = a["topic"].as<std::string>();
+
+                    if(a["formatter"].IsDefined()) {
+                        lad.formatter = a["formatter"].as<std::string>();
+                    }
                 } else {
                     std::cout << "log config error: appender type is invalid, " << a
                               << std::endl;
@@ -697,6 +777,8 @@ public:
                 na["file"] = a.file;
             } else if(a.type == 2) {
                 na["type"] = "StdoutLogAppender";
+            } else if(a.type == 3) {
+                na["type"] = "LogserverAppender";
             }
             if(a.level != LogLevel::UNKNOW) {
                 na["level"] = LogLevel::ToString(a.level);
@@ -754,6 +836,8 @@ struct LogIniter {
                         } else {
                             continue;
                         }
+                    } else if(a.type == 3) {
+                        ap = std::make_shared<LogserverAppender>(a.file);
                     }
                     ap->setLevel(a.level);
                     if(!a.formatter.empty()) {

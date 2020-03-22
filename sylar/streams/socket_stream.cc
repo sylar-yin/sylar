@@ -3,9 +3,12 @@
 
 namespace sylar {
 
+static uint64_t s_id = 0;
+
 SocketStream::SocketStream(Socket::ptr sock, bool owner)
     :m_socket(sock)
     ,m_owner(owner) {
+    m_id = sylar::Atomic::addFetch(s_id, 1);
 }
 
 SocketStream::~SocketStream() {

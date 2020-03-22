@@ -50,8 +50,8 @@ void RockServer::handleClient(Socket::ptr client) {
     session->setNotifyHandler(
         [](sylar::RockNotify::ptr nty
            ,sylar::RockStream::ptr conn)->bool {
-            SYLAR_LOG_INFO(g_logger) << "handleNty " << nty->toString()
-                                     << " body=" << nty->getBody();
+            //SYLAR_LOG_INFO(g_logger) << "handleNty " << nty->toString()
+            //                         << " body=" << nty->getBody();
             bool rt = false;
             ModuleMgr::GetInstance()->foreach(Module::ROCK,
                     [&rt, nty, conn](Module::ptr m) {
