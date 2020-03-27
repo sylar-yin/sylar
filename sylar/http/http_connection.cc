@@ -29,6 +29,7 @@ HttpConnection::~HttpConnection() {
 HttpResponse::ptr HttpConnection::recvResponse() {
     HttpResponseParser::ptr parser = std::make_shared<HttpResponseParser>();
     uint64_t buff_size = HttpRequestParser::GetHttpRequestBufferSize();
+    //std::string all_data;
     //uint64_t buff_size = 100;
     std::shared_ptr<char> buffer(
             new char[buff_size + 1], [](char* ptr){
@@ -41,18 +42,25 @@ HttpResponse::ptr HttpConnection::recvResponse() {
         //SYLAR_LOG_INFO(g_logger) << "read len=" << len;
         if(len <= 0) {
             close();
+            //SYLAR_LOG_ERROR(g_logger) << "recv_response len <= 0 errno=" << errno << " errstr=" << strerror(errno)
+            //    << " [" << all_data << "]";
             return nullptr;
         }
+        //all_data.append(data + offset, len);
         len += offset;
         data[len] = '\0';
         size_t nparse = parser->execute(data, len, false);
         if(parser->hasError()) {
             close();
+            //SYLAR_LOG_ERROR(g_logger) << "recv_response parser has error errno=" << errno << " errstr=" << strerror(errno)
+            //    << " [" << all_data << "]";
             return nullptr;
         }
         offset = len - nparse;
         if(offset == (int)buff_size) {
             close();
+            //SYLAR_LOG_ERROR(g_logger) << "recv_response offset == buff_size errno=" << errno << " errstr=" << strerror(errno)
+            //    << " [" << all_data << "]";
             return nullptr;
         }
         if(parser->isFinished()) {
@@ -63,6 +71,7 @@ HttpResponse::ptr HttpConnection::recvResponse() {
     auto& client_parser = parser->getParser();
     std::string body;
     if(client_parser.chunked) {
+        //SYLAR_LOG_INFO(g_logger) << "chunked --- " << *parser->getData();
         int len = offset;
         do {
             bool begin = true;
@@ -71,19 +80,28 @@ HttpResponse::ptr HttpConnection::recvResponse() {
                     int rt = read(data + len, buff_size - len);
                     if(rt <= 0) {
                         close();
+                        //SYLAR_LOG_ERROR(g_logger) << "recv_response rt <= 0 " << rt << " errno=" << errno << " errstr=" << strerror(errno)
+                        //        << " [" << all_data << "]";
                         return nullptr;
                     }
+                    //all_data.append(data + len, rt);
                     len += rt;
                 }
                 data[len] = '\0';
                 size_t nparse = parser->execute(data, len, true);
                 if(parser->hasError()) {
+                    goto out;
+                    //SYLAR_LOG_ERROR(g_logger) << "recv_response parser has error errno=" << errno << " errstr=" << strerror(errno)
+                    //    << " offset=" << offset << " len=" << len << " begin=" << begin << " - finished=" << parser->isFinished() << " - nparse=" << nparse
+                    //    << " [" << all_data << "]";
                     close();
                     return nullptr;
                 }
                 len -= nparse;
                 if(len == (int)buff_size) {
                     close();
+                    //SYLAR_LOG_ERROR(g_logger) << "recv_response len == buff_size errno=" << errno << " errstr=" << strerror(errno)
+                    //    << " [" << all_data << "]";
                     return nullptr;
                 }
                 begin = false;
@@ -103,15 +121,18 @@ HttpResponse::ptr HttpConnection::recvResponse() {
                     int rt = read(data, left > (int)buff_size ? (int)buff_size : left);
                     if(rt <= 0) {
                         close();
+                        //SYLAR_LOG_ERROR(g_logger) << "recv_response rt <= 0 " << rt << " errno=" << errno << " errstr=" << strerror(errno)
+                        //    << " [" << all_data << "]";
                         return nullptr;
                     }
+                    //all_data.append(data, rt);
                     body.append(data, rt);
                     left -= rt;
                 }
                 body.resize(body.size() - 2);
                 len = 0;
             }
-        } while(!client_parser.chunks_done);
+        } while(!client_parser.chunks_done );
     } else {
         int64_t length = parser->getContentLength();
         if(length > 0) {
@@ -129,11 +150,14 @@ HttpResponse::ptr HttpConnection::recvResponse() {
             if(length > 0) {
                 if(readFixSize(&body[len], length) <= 0) {
                     close();
+                    //SYLAR_LOG_ERROR(g_logger) << "recv_response readFixSize error errno=" << errno << " errstr=" << strerror(errno)
+                    //        << " [" << all_data << "]";
                     return nullptr;
                 }
             }
         }
     }
+out:
     if(!body.empty()) {
         auto content_encoding = parser->getData()->getHeader("content-encoding");
         SYLAR_LOG_DEBUG(g_logger) << "content_encoding: " << content_encoding

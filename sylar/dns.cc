@@ -154,10 +154,11 @@ sylar::Address::ptr Dns::get(uint32_t seed) {
     }
     RWMutexType::ReadLock lock(m_mutex);
     for(size_t i = 0; i < m_address.size(); ++i) {
-        auto info = m_address[(seed + i) % m_address.size()];
+        auto info = m_address[seed % m_address.size()];
         if(info->valid) {
             return info->addr;
         }
+        seed = sylar::Atomic::addFetch(m_idx);
     }
     return nullptr;
 }
