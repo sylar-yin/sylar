@@ -84,18 +84,19 @@ public:
         prune();
     }
 
-    bool get(const K& k, V& v) {
+    int64_t get(const K& k, V& v) {
         m_status->incGet();
         typename MutexType::Lock lock(m_mutex);
         auto it = m_cache.find(k);
         if(it == m_cache.end()) {
-            return false;
+            return 0;
         }
         m_keys.splice(m_keys.begin(), m_keys, it->second);
         v = it->second->val;
+        auto ts = it->second->ts;
         lock.unlock();
         m_status->incHit();
-        return true;
+        return ts;
     }
 
     V get(const K& k) {
@@ -349,7 +350,10 @@ public:
 
     std::string toStatusString() {
         std::stringstream ss;
-        ss << m_status.toString() << " total=" << size();
+        ss << m_status.toString() << " total=" << size()
+           << " bucket=" << m_bucket
+           << " elasticity=" << m_elasticity
+           << " " << m_status.toString();
         return ss.str();
     }
 
