@@ -55,7 +55,7 @@ private:
 
 class TrackerManager {
 public:
-    typedef sylar::RWMutex RWMutexType;
+    typedef sylar::RWSpinlock RWMutexType;
     TrackerManager();
     void addDim(uint32_t key, const std::string& name);
 

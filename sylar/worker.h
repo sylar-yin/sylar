@@ -29,6 +29,30 @@ private:
     FiberSemaphore m_sem;
 };
 
+class TimedWorkerGroup : Noncopyable, public std::enable_shared_from_this<TimedWorkerGroup> {
+public:
+    typedef std::shared_ptr<TimedWorkerGroup> ptr;
+    static TimedWorkerGroup::ptr Create(uint32_t batch_size, uint32_t wait_ms, sylar::IOManager* s = sylar::IOManager::GetThis());
+
+    TimedWorkerGroup(uint32_t batch_size, uint32_t wait_ms, sylar::IOManager* s = sylar::IOManager::GetThis());
+    ~TimedWorkerGroup();
+
+    void schedule(std::function<void()> cb, int thread = -1);
+    void waitAll();
+private:
+    void doWork(std::function<void()> cb);
+    void start();
+    void onTimer();
+private:
+    uint32_t m_batchSize;
+    bool m_finish;
+    bool m_timedout;
+    uint32_t m_waitTime;
+    sylar::Timer::ptr m_timer;
+    IOManager* m_iomanager;
+    FiberSemaphore m_sem;
+};
+
 class WorkerManager {
 public:
     WorkerManager();

@@ -3,6 +3,7 @@
 #include "sylar/iomanager.h"
 #include "sylar/bytearray.h"
 #include "sylar/address.h"
+#include "sylar/worker.h"
 
 static sylar::Logger::ptr g_logger = SYLAR_LOG_ROOT();
 
@@ -52,6 +53,20 @@ void EchoServer::handleClient(sylar::Socket::ptr client) {
 
 int type = 1;
 
+void test() {
+    SYLAR_LOG_INFO(g_logger) << "=========== test begin";
+    sylar::TimeCalc tc;
+    sylar::TimedWorkerGroup::ptr wg = sylar::TimedWorkerGroup::Create(5, 1000);
+    for(size_t i = 0; i < 10; ++i) {
+        wg->schedule([i](){
+            sleep(i);
+            SYLAR_LOG_INFO(g_logger) << "=========== " << i;
+        });
+    }
+    wg->waitAll();
+    SYLAR_LOG_INFO(g_logger) << "=========== " << tc.elapse() << " over";
+}
+
 void run() {
     SYLAR_LOG_INFO(g_logger) << "server type=" << type;
     EchoServer::ptr es(new EchoServer(type));
@@ -60,6 +75,8 @@ void run() {
         sleep(2);
     }
     es->start();
+
+    sylar::IOManager::GetThis()->schedule(test);
 }
 
 int main(int argc, char** argv) {

@@ -38,6 +38,62 @@ void WorkerGroup::waitAll() {
     }
 }
 
+TimedWorkerGroup::ptr TimedWorkerGroup::Create(uint32_t batch_size, uint32_t wait_ms, sylar::IOManager* s) {
+    auto rt = std::make_shared<TimedWorkerGroup>(batch_size, wait_ms, s);
+    rt->start();
+    return rt;
+}
+
+void TimedWorkerGroup::start() {
+    m_timer = m_iomanager->addTimer(m_waitTime, std::bind(&TimedWorkerGroup::onTimer, shared_from_this()));
+}
+
+void TimedWorkerGroup::onTimer() {
+    m_timedout = true;
+    m_sem.notifyAll();
+    m_timer = nullptr;
+}
+
+TimedWorkerGroup::TimedWorkerGroup(uint32_t batch_size, uint32_t wait_ms, sylar::IOManager* s)
+    :m_batchSize(batch_size)
+    ,m_finish(false)
+    ,m_timedout(false)
+    ,m_waitTime(wait_ms)
+    ,m_iomanager(s)
+    ,m_sem(batch_size) {
+}
+
+TimedWorkerGroup::~TimedWorkerGroup() {
+    std::cout << "====TimedWorkerGroup::~TimedWorkerGroup====" << std::endl;
+}
+
+void TimedWorkerGroup::schedule(std::function<void()> cb, int thread) {
+    if(!m_timedout) {
+        m_sem.wait();
+    }
+    m_iomanager->schedule(std::bind(&TimedWorkerGroup::doWork
+                          ,shared_from_this(), cb), thread);
+}
+
+void TimedWorkerGroup::doWork(std::function<void()> cb) {
+    cb();
+    m_sem.notify();
+}
+
+void TimedWorkerGroup::waitAll() {
+    if(!m_finish) {
+        m_finish = true;
+        for(uint32_t i = 0; i < m_batchSize && !m_timedout; ++i) {
+            m_sem.wait();
+        }
+
+        if(!m_timedout && m_timer) {
+            m_timer->cancel();
+            m_timer = nullptr;
+        }
+    }
+}
+
 WorkerManager::WorkerManager()
     :m_stop(false) {
 }

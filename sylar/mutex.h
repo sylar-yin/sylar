@@ -487,6 +487,7 @@ public:
     bool tryWait();
     void wait();
     void notify();
+    void notifyAll();
 
     size_t getConcurrency() const { return m_concurrency;}
     void reset() { m_concurrency = 0;}
