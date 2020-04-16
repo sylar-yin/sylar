@@ -45,13 +45,15 @@ TimedWorkerGroup::ptr TimedWorkerGroup::Create(uint32_t batch_size, uint32_t wai
 }
 
 void TimedWorkerGroup::start() {
-    m_timer = m_iomanager->addTimer(m_waitTime, std::bind(&TimedWorkerGroup::onTimer, shared_from_this()));
+    m_timer = sylar::IOManager::GetThis()->addTimer(m_waitTime, std::bind(&TimedWorkerGroup::onTimer, shared_from_this()));
+    //m_timer = m_iomanager->addTimer(m_waitTime, std::bind(&TimedWorkerGroup::onTimer, shared_from_this()));
 }
 
 void TimedWorkerGroup::onTimer() {
+    //std::cout << "=====onTimer======" << std::endl;
     m_timedout = true;
-    m_sem.notifyAll();
     m_timer = nullptr;
+    m_sem.notifyAll();
 }
 
 TimedWorkerGroup::TimedWorkerGroup(uint32_t batch_size, uint32_t wait_ms, sylar::IOManager* s)
@@ -64,7 +66,8 @@ TimedWorkerGroup::TimedWorkerGroup(uint32_t batch_size, uint32_t wait_ms, sylar:
 }
 
 TimedWorkerGroup::~TimedWorkerGroup() {
-    std::cout << "====TimedWorkerGroup::~TimedWorkerGroup====" << std::endl;
+    waitAll();
+    //std::cout << "====TimedWorkerGroup::~TimedWorkerGroup====" << std::endl;
 }
 
 void TimedWorkerGroup::schedule(std::function<void()> cb, int thread) {
@@ -87,6 +90,7 @@ void TimedWorkerGroup::waitAll() {
             m_sem.wait();
         }
 
+        //std::cout << "===timeout=" << m_timedout << "====" << std::endl;
         if(!m_timedout && m_timer) {
             m_timer->cancel();
             m_timer = nullptr;
