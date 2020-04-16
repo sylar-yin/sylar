@@ -38,6 +38,7 @@ void test_sock() {
     SYLAR_LOG_INFO(g_logger) << "connect rt=" << rt << " errno=" << errno;
 
     if(rt) {
+        close(sock);
         return;
     }
 
@@ -46,6 +47,7 @@ void test_sock() {
     SYLAR_LOG_INFO(g_logger) << "send rt=" << rt << " errno=" << errno;
 
     if(rt <= 0) {
+        close(sock);
         return;
     }
 
@@ -56,11 +58,13 @@ void test_sock() {
     SYLAR_LOG_INFO(g_logger) << "recv rt=" << rt << " errno=" << errno;
 
     if(rt <= 0) {
+        close(sock);
         return;
     }
 
     buff.resize(rt);
     SYLAR_LOG_INFO(g_logger) << buff;
+    close(sock);
 }
 
 int main(int argc, char** argv) {
