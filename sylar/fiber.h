@@ -15,7 +15,11 @@
 #define FIBER_UCONTEXT      1
 #define FIBER_FCONTEXT      2
 #define FIBER_LIBCO         3 
+#define FIBER_LIBACO        4
+
+#ifndef FIBER_CONTEXT_TYPE
 #define FIBER_CONTEXT_TYPE  FIBER_LIBCO
+#endif
 
 #if FIBER_CONTEXT_TYPE == FIBER_UCONTEXT
 #include <ucontext.h>
@@ -23,6 +27,8 @@
 #include "sylar/fcontext/fcontext.h"
 #elif FIBER_CONTEXT_TYPE == FIBER_LIBCO
 #include "sylar/libco/coctx.h"
+#elif FIBER_CONTEXT_TYPE == FIBER_LIBACO
+#include "sylar/libaco/aco.h"
 #endif
 
 namespace sylar {
@@ -158,7 +164,7 @@ public:
      * @brief 协程执行函数
      * @post 执行完成返回到线程主协程
      */
-#if FIBER_CONTEXT_TYPE == FIBER_UCONTEXT
+#if FIBER_CONTEXT_TYPE == FIBER_UCONTEXT || FIBER_CONTEXT_TYPE == FIBER_LIBACO
     static void MainFunc();
 #elif FIBER_CONTEXT_TYPE == FIBER_FCONTEXT
     static void MainFunc(intptr_t vp);
@@ -170,7 +176,7 @@ public:
      * @brief 协程执行函数
      * @post 执行完成返回到线程调度协程
      */
-#if FIBER_CONTEXT_TYPE == FIBER_UCONTEXT
+#if FIBER_CONTEXT_TYPE == FIBER_UCONTEXT || FIBER_CONTEXT_TYPE == FIBER_LIBACO
     static void CallerMainFunc();
 #elif FIBER_CONTEXT_TYPE == FIBER_FCONTEXT
     static void CallerMainFunc(intptr_t vp);
@@ -198,6 +204,9 @@ private:
     fcontext_t m_ctx = nullptr;
 #elif FIBER_CONTEXT_TYPE == FIBER_LIBCO
     coctx_t m_ctx;
+#elif FIBER_CONTEXT_TYPE == FIBER_LIBACO
+    aco_t* m_ctx = nullptr;
+    aco_share_stack_t m_astack;
 #endif
     /// 协程运行栈指针
     char m_stack[];

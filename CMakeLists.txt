@@ -77,6 +77,8 @@ set(LIB_SRC
     sylar/file_manager.cc
     sylar/fiber.cc
     sylar/fcontext/fcontext.S
+    sylar/libaco/aco.c
+    sylar/libaco/acosw.S
     sylar/libco/coctx.cc
     sylar/libco/coctx_swap.S
     sylar/http/http.cc

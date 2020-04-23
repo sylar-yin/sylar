@@ -11,6 +11,8 @@ static const char* GetFiberTypeStr() {
         return "FIBER_FCONTEXT";
     } else if(FIBER_CONTEXT_TYPE == FIBER_LIBCO) {
         return "FIBER_LIBCO";
+    } else if(FIBER_CONTEXT_TYPE == FIBER_LIBACO) {
+        return "FIBER_LIBACO";
     }
     return "UNKNOW";
 }
