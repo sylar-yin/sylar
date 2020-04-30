@@ -526,12 +526,21 @@ void KafkaProducerGroup::start() {
             auto& data = m_datas[i];
             auto& mutex = *m_mutexs[i];
 
+            uint64_t sleep_us = 0;
             while(true) {
                 std::list<Msg::ptr> tmp;
                 sylar::Spinlock::Lock lock(mutex);
                 std::swap(tmp, data);
                 lock.unlock();
 
+                if(tmp.empty()) {
+                    if(sleep_us < 1000 * 15) {
+                        sleep_us += 500;
+                    }
+                    usleep(sleep_us);
+                    continue;
+                }
+                sleep_us = 0;
                 for(auto& i : tmp) {
                     if(i->key.empty()) {
                         producer->produce(i->topic, i->msg);
