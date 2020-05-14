@@ -29,16 +29,16 @@ public:
         }
     }
 
-    void set(const K& k, const V& v) {
+    void set(const K& k, const V& v, int64_t diff_time_s = 0) {
         m_status->incSet();
         typename RWMutexType::WriteLock lock(m_mutex);
         auto it = m_cache.find(k);
         if(it != m_cache.end()) {
             it->second.first = v;
-            it->second.second = time(0);
+            it->second.second = time(0) + diff_time_s;
             return;
         }
-        m_cache[k] = std::make_pair(v, time(0));
+        m_cache[k] = std::make_pair(v, time(0) + diff_time_s);
         m_keys.push_back(k);
         prune();
     }
