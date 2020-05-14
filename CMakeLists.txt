@@ -216,7 +216,6 @@ sylar_add_executable(test_ws_client "tests/test_ws_client.cc" sylar "${LIBS}")
 sylar_add_executable(test_application "tests/test_application.cc" sylar "${LIBS}")
 
 sylar_add_executable(test_http_connection "tests/test_http_connection.cc" sylar "${LIBS}")
-sylar_add_executable(test_lru "tests/test_lru.cc" sylar "${LIBS}")
 sylar_add_executable(test_timed_cache "tests/test_timed_cache.cc" sylar "${LIBS}")
 sylar_add_executable(test_timed_lru_cache "tests/test_timed_lru_cache.cc" sylar "${LIBS}")
 sylar_add_executable(test_zlib_stream "tests/test_zlib_stream.cc" sylar "${LIBS}")
@@ -231,6 +230,8 @@ sylar_add_executable(test_bitmap "tests/test_bitmap.cc" sylar "${LIBS}")
 sylar_add_executable(test_zkclient "tests/test_zookeeper.cc" sylar "${LIBS}")
 sylar_add_executable(test_service_discovery "tests/test_service_discovery.cc" sylar "${LIBS}")
 endif()
+
+sylar_add_executable(test_lru "tests/test_lru.cc" sylar "${LIBS}")
 
 set(ORM_SRCS
     sylar/orm/table.cc

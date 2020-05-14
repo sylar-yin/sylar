@@ -52,6 +52,7 @@
 #include "ds/blocking_queue.h"
 #include "ds/cache_status.h"
 #include "ds/lru_cache.h"
+#include "ds/fifo_cache.h"
 #include "ds/timed_cache.h"
 #include "ds/timed_lru_cache.h"
 #include "ds/hash_map.h"
