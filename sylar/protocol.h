@@ -57,9 +57,13 @@ public:
 
     virtual bool serializeToByteArray(ByteArray::ptr bytearray) override;
     virtual bool parseFromByteArray(ByteArray::ptr bytearray) override;
+
+    uint64_t getTime() { return m_time; }
+    void setTime(uint64_t v) { m_time = v;}
 protected:
     uint32_t m_sn;
     uint32_t m_cmd;
+    uint64_t m_time = 0; //us
 };
 
 class Response : public Message {
