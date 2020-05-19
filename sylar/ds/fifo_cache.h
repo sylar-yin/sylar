@@ -51,6 +51,7 @@ public:
             return 0;
         }
         v = it->second.first;
+        m_status->incHit();
         return it->second.second;
     }
 
@@ -59,6 +60,7 @@ public:
         typename RWMutexType::ReadLock lock(m_mutex);
         auto it = m_cache.find(k);
         if(it != m_cache.end()) {
+            m_status->incHit();
             return it->second.first;
         }
         return nullptr;
