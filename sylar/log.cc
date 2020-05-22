@@ -473,7 +473,7 @@ void LogserverAppender::log(Logger::ptr logger, LogLevel::Level level, LogEvent:
             return;
         }
 
-        SYLAR_LOG_ERROR(g_logger) << "send to logserver fail, " << ss.str();
+        //SYLAR_LOG_ERROR(g_logger) << "send to logserver fail, " << ss.str();
     }
 }
 
