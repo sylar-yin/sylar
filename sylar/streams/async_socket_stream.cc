@@ -69,6 +69,9 @@ bool AsyncSocketStream::start() {
             }
         }
 
+        startRead();
+        startWrite();
+
         if(m_connectCb) {
             if(!m_connectCb(shared_from_this())) {
                 innerClose();
@@ -77,9 +80,6 @@ bool AsyncSocketStream::start() {
                 break;
             }
         }
-
-        startRead();
-        startWrite();
         return true;
     } while(false);
 

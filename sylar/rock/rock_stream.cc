@@ -205,7 +205,6 @@ static SocketStream::ptr create_rock_stream(const std::string& domain, const std
     RockConnection::ptr conn = std::make_shared<RockConnection>();
 
     sylar::WorkerMgr::GetInstance()->schedule("service_io", [conn, addr, domain, service](){
-        conn->connect(addr);
         if(domain == "logserver") {
             conn->setConnectCb([conn](sylar::AsyncSocketStream::ptr){
                 sylar::RockRequest::ptr req = std::make_shared<sylar::RockRequest>();
@@ -223,6 +222,7 @@ static SocketStream::ptr create_rock_stream(const std::string& domain, const std
                 return true;
             });
         }
+        conn->connect(addr);
         conn->start();
     });
     return conn;
