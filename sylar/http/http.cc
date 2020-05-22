@@ -179,6 +179,9 @@ std::ostream& HttpRequest::dump(std::ostream& os) const {
         if(!m_websocket && strcasecmp(i.first.c_str(), "connection") == 0) {
             continue;
         }
+        if(!strcasecmp(i.first.c_str(), "content-length")) {
+            continue;
+        }
         os << i.first << ": " << i.second << "\r\n";
     }
 
@@ -261,6 +264,9 @@ void HttpRequest::initCookies() {
     m_parserParamFlag |= 0x4;
 }
 
+void HttpRequest::paramToQuery() {
+    m_query = sylar::MapJoin(m_params.begin(), m_params.end());
+}
 
 HttpResponse::HttpResponse(uint8_t version, bool close)
     :m_status(HttpStatus::OK)

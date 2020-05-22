@@ -271,6 +271,8 @@ public:
 
     const std::string& getFragment() const { return m_fragment;}
 
+    void paramToQuery();
+
     /**
      * @brief 返回HTTP请求的消息体
      */
