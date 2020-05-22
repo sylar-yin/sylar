@@ -206,20 +206,24 @@ static SocketStream::ptr create_rock_stream(const std::string& domain, const std
 
     sylar::WorkerMgr::GetInstance()->schedule("service_io", [conn, addr, domain, service](){
         conn->connect(addr);
-        conn->start();
         if(domain == "logserver") {
-            sylar::RockRequest::ptr req = std::make_shared<sylar::RockRequest>();
-            req->setCmd(100);
-            logserver::LoginRequest login_req;
-            login_req.set_ipport(sylar::Module::GetServiceIPPort("rock"));
-            login_req.set_host(sylar::GetHostName());
-            login_req.set_pid(getpid());
-            req->setAsPB(login_req);
-            auto r = conn->request(req, 200);
-            if(r->result) {
-                SYLAR_LOG_ERROR(g_logger) << "logserver login error: " << r->toString();
-            }
+            conn->setConnectCb([conn](sylar::AsyncSocketStream::ptr){
+                sylar::RockRequest::ptr req = std::make_shared<sylar::RockRequest>();
+                req->setCmd(100);
+                logserver::LoginRequest login_req;
+                login_req.set_ipport(sylar::Module::GetServiceIPPort("rock"));
+                login_req.set_host(sylar::GetHostName());
+                login_req.set_pid(getpid());
+                req->setAsPB(login_req);
+                auto r = conn->request(req, 200);
+                if(r->result) {
+                    SYLAR_LOG_ERROR(g_logger) << "logserver login error: " << r->toString();
+                    return false;
+                }
+                return true;
+            });
         }
+        conn->start();
     });
     return conn;
 }
