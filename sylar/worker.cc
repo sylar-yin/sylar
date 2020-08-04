@@ -24,6 +24,16 @@ void WorkerGroup::schedule(std::function<void()> cb, int thread) {
                           ,shared_from_this(), cb), thread);
 }
 
+void WorkerGroup::schedule(const std::vector<std::function<void()> >& cbs) {
+    std::vector<std::function<void()> > cs;
+    for(auto& i : cbs) {
+        cs.push_back(std::bind(&WorkerGroup::doWork
+                          ,shared_from_this(), i));
+        m_sem.wait();
+    }
+    m_scheduler->schedule(cs.begin(), cs.end());
+}
+
 void WorkerGroup::doWork(std::function<void()> cb) {
     cb();
     m_sem.notify();
