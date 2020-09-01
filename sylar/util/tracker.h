@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include "sylar/iomanager.h"
 #include "sylar/singleton.h"
 
@@ -75,7 +76,7 @@ private:
     RWMutexType m_mutex;
     uint32_t m_interval;
     std::vector<std::string> m_dims;
-    std::map<std::string, Tracker::ptr> m_datas;
+    std::unordered_map<std::string, Tracker::ptr> m_datas;
     Tracker::ptr m_totalTracker;
     sylar::Timer::ptr m_timer;
 };

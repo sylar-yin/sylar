@@ -81,10 +81,15 @@ void IOManager::FdContext::triggerEvent(IOManager::Event event) {
     //SYLAR_LOG_INFO(g_logger) << "fd=" << fd
     //    << " triggerEvent event=" << event
     //    << " events=" << events;
-    SYLAR_ASSERT(events & event);
-    //if(SYLAR_UNLIKELY(!(event & event))) {
-    //    return;
-    //}
+    //SYLAR_ASSERT(events & event);
+    if(SYLAR_UNLIKELY(!(events & event))) {
+        SYLAR_LOG_ERROR(g_logger) << "fd=" << fd
+            << " triggerEvent event=" << event
+            << " events=" << events
+            << "\nbacktrace:\n"
+            << sylar::BacktraceToString(100, 2, "    ");
+        return;
+    }
     events = (Event)(events & ~event);
     EventContext& ctx = getContext(event);
     if(ctx.cb) {
