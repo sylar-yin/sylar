@@ -200,7 +200,8 @@ Message::ptr RockMessageDecoder::parseFrom(Stream::ptr stream) {
         sylar::ByteArray::ptr ba = std::make_shared<sylar::ByteArray>();
         rt = stream->readFixSize(ba, header.length);
         if(rt <= 0) {
-            SYLAR_LOG_ERROR(g_logger) << "RockMessageDecoder read body fail length=" << header.length << " rt=" << rt;
+            SYLAR_LOG_ERROR(g_logger) << "RockMessageDecoder read body fail length=" << header.length << " rt=" << rt
+                << " errno=" << errno << " - " << strerror(errno);
             return nullptr;
         }
 
@@ -271,12 +272,14 @@ int32_t RockMessageDecoder::serializeTo(Stream::ptr stream, Message::ptr msg) {
     header.length = sylar::byteswapOnLittleEndian(header.length);
     int rt = stream->writeFixSize(&header, sizeof(header));
     if(rt <= 0) {
-        SYLAR_LOG_ERROR(g_logger) << "RockMessageDecoder serializeTo write header fail rt=" << rt;
+        SYLAR_LOG_ERROR(g_logger) << "RockMessageDecoder serializeTo write header fail rt=" << rt
+                << " errno=" << errno << " - " << strerror(errno);
         return -3;
     }
     rt = stream->writeFixSize(ba, ba->getReadSize());
     if(rt <= 0) {
-        SYLAR_LOG_ERROR(g_logger) << "RockMessageDecoder serializeTo write body fail rt=" << rt;
+        SYLAR_LOG_ERROR(g_logger) << "RockMessageDecoder serializeTo write body fail rt=" << rt
+            << " errno=" << errno << " - " << strerror(errno);
         return -4;
     }
     return sizeof(header) + ba->getSize();

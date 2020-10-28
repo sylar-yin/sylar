@@ -1,9 +1,11 @@
 #include "socket_stream.h"
 #include "sylar/util.h"
+#include "sylar/log.h"
 
 namespace sylar {
 
 static uint64_t s_id = 0;
+static sylar::Logger::ptr g_logger = SYLAR_LOG_NAME("system");
 
 SocketStream::SocketStream(Socket::ptr sock, bool owner)
     :m_socket(sock)
@@ -56,13 +58,32 @@ int SocketStream::write(ByteArray::ptr ba, size_t length) {
     if(!isConnected()) {
         return -1;
     }
+    //std::vector<iovec> iovs;
+    //ba->getReadBuffers(iovs, length);
+    //int rt = m_socket->send(&iovs[0], iovs.size());
+    //if(rt > 0) {
+    //    ba->setPosition(ba->getPosition() + rt);
+    //} else {
+    //    SYLAR_LOG_ERROR(g_logger) << "write fail length=" << length
+    //        << " errno=" << errno << ", " << strerror(errno);
+    //}
+
+    int rrt = 0;
     std::vector<iovec> iovs;
     ba->getReadBuffers(iovs, length);
-    int rt = m_socket->send(&iovs[0], iovs.size());
-    if(rt > 0) {
-        ba->setPosition(ba->getPosition() + rt);
+    for(size_t i = 0; i < iovs.size(); ++i) {
+        int rt = m_socket->send(&iovs[i], 1);
+        if(rt > 0) {
+            ba->setPosition(ba->getPosition() + rt);
+            rrt += rt;
+        } else {
+            SYLAR_LOG_ERROR(g_logger) << "write fail length=" << length
+                << " errno=" << errno << ", " << strerror(errno);
+            rrt = rt;
+            break;
+        }
     }
-    return rt;
+    return rrt;
 }
 
 void SocketStream::close() {
