@@ -177,8 +177,7 @@ struct HeadersFrame : public IFrame {
     typedef std::shared_ptr<HeadersFrame> ptr;
     uint8_t pad = 0;        //flag & FrameFlagHeaders::PADDED
     PriorityFrame priority; //flag & FrameFlagHeaders::PRIORITY
-    //std::string data;
-    std::vector<HeaderField> fields;
+    std::string data;
     std::string padding;
 
     std::string toString() const;

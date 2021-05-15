@@ -133,8 +133,7 @@ std::string HeadersFrame::toString() const {
     if(pad) {
         ss << " pad=" << (uint32_t)pad;
     }
-    //ss << " data.size=" << data.size();
-    ss << " fields.size=" << fields.size();
+    ss << " data.size=" << data.size();
     ss << "]";
     return ss.str();
 }
@@ -147,10 +146,7 @@ bool HeadersFrame::writeTo(ByteArray::ptr ba, const FrameHeader& header) {
         if(header.flags & (uint8_t)FrameFlagHeaders::PRIORITY) {
             priority.writeTo(ba, header);
         }
-        for(auto& i : fields) {
-            HPack::Pack(&i, ba);
-        }
-        //ba->write(data.c_str(), data.size());
+        ba->write(data.c_str(), data.size());
         if(header.flags & (uint8_t)FrameFlagHeaders::PADDED) {
             ba->write(padding.c_str(), padding.size());
         }
@@ -172,8 +168,6 @@ bool HeadersFrame::readFrom(ByteArray::ptr ba, const FrameHeader& header) {
             priority.readFrom(ba, header);
             len -= 5;
         }
-        //TODO ...
-        std::string data;
         //check len
         data.resize(len);
         ba->read(&data[0], data.size());

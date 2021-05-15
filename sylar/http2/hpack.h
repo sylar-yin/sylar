@@ -64,11 +64,15 @@ public:
     HPack(DynamicTable& table);
 
     int parse(ByteArray::ptr ba, int length);
+    int parse(std::string& data);
     int pack(HeaderField* header, ByteArray::ptr ba);
     int pack(const std::vector<std::pair<std::string, std::string> >& headers, ByteArray::ptr ba);
+    int pack(const std::vector<std::pair<std::string, std::string> >& headers, std::string& out);
 
     std::vector<HeaderField>& getHeaders() { return m_headers;}
     static int Pack(HeaderField* header, ByteArray::ptr ba);
+
+    std::string toString() const;
 public:
     static int WriteVarInt(ByteArray::ptr ba, int32_t prefix, uint64_t value, uint8_t flags);
     static uint64_t ReadVarInt(ByteArray::ptr ba, int32_t prefix);

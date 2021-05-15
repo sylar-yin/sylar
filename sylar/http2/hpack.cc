@@ -39,6 +39,10 @@ std::string HeaderField::toString() const {
     return ss.str();
 }
 
+HPack::HPack(DynamicTable& table)
+    :m_table(table) {
+}
+
 int HPack::WriteVarInt(ByteArray::ptr ba, int32_t prefix, uint64_t value, uint8_t flags) {
     size_t pos = ba->getPosition();
     uint64_t v = (1 << prefix) - 1;
@@ -119,6 +123,11 @@ int HPack::WriteString(ByteArray::ptr ba, const std::string& str, bool h) {
         ba->write(str.c_str(), str.length());
     }
     return ba->getPosition() - pos;
+}
+
+int HPack::parse(std::string& data) {
+    ByteArray::ptr ba(new ByteArray(&data[0], data.size(), false));
+    return parse(ba, data.size());
 }
 
 int HPack::parse(ByteArray::ptr ba, int length) {
@@ -218,6 +227,14 @@ int HPack::pack(HeaderField* header, ByteArray::ptr ba) {
     return Pack(header, ba);
 }
 
+int HPack::pack(const std::vector<std::pair<std::string, std::string> >& headers, std::string& out) {
+    ByteArray::ptr ba(new ByteArray);
+    int rt = pack(headers, ba);
+    ba->setPosition(0);
+    ba->toString().swap(out);
+    return rt;
+}
+
 int HPack::pack(const std::vector<std::pair<std::string, std::string> >& headers, ByteArray::ptr ba) {
     int rt = 0;
     for(auto& i : headers) {
@@ -246,6 +263,16 @@ int HPack::pack(const std::vector<std::pair<std::string, std::string> >& headers
         rt += pack(&h, ba);
     }
     return rt;
+}
+
+std::string HPack::toString() const {
+    std::stringstream ss;
+    ss << "[HPack size=" << m_headers.size() << "]" << std::endl;
+    for(size_t i = 0; i < m_headers.size(); ++i) {
+        ss << "\t" << i << "\t:\t" << m_headers[i].toString() << std::endl;
+    }
+    ss << m_table.toString();
+    return ss.str();
 }
 
 }

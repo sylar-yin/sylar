@@ -2,7 +2,7 @@
 #include "sylar/http2/http2_stream.h"
 
 void test() {
-    sylar::Address::ptr addr = sylar::Address::LookupAnyIPAddress("127.0.0.1:8099");
+    sylar::Address::ptr addr = sylar::Address::LookupAnyIPAddress("192.168.1.6:8099");
     auto sock = sylar::Socket::CreateTCP(addr);
     if(!sock->connect(addr)) {
         std::cout << "connect fail, " << *addr << std::endl;
