@@ -94,6 +94,10 @@ set(LIB_SRC
     sylar/http/ws_session.cc
     sylar/http/ws_server.cc
     sylar/http/ws_servlet.cc
+    sylar/http2/dynamic_table.cc
+    sylar/http2/frame.cc
+    sylar/http2/hpack.cc
+    sylar/http2/huffman.cc
     sylar/hook.cc
     sylar/iomanager.cc
     sylar/kafka_client.cc
@@ -233,16 +237,16 @@ endif()
 
 sylar_add_executable(test_lru "tests/test_lru.cc" sylar "${LIBS}")
 
-set(ORM_SRCS
-    sylar/orm/table.cc
-    sylar/orm/column.cc
-    sylar/orm/index.cc
-    sylar/orm/orm.cc
-    sylar/orm/util.cc
-    )
-sylar_add_executable(orm "${ORM_SRCS}" sylar "${LIBS}")
-
-add_library(test_module SHARED tests/test_module.cc)
+#set(ORM_SRCS
+#    sylar/orm/table.cc
+#    sylar/orm/column.cc
+#    sylar/orm/index.cc
+#    sylar/orm/orm.cc
+#    sylar/orm/util.cc
+#    )
+#sylar_add_executable(orm "${ORM_SRCS}" sylar "${LIBS}")
+#
+#add_library(test_module SHARED tests/test_module.cc)
 
 sylar_add_executable(bin_sylar "sylar/main.cc" sylar "${LIBS}")
 set_target_properties(bin_sylar PROPERTIES OUTPUT_NAME "sylar")
