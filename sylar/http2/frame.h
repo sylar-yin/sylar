@@ -70,6 +70,7 @@ enum class FrameR {
 };
 
 struct FrameHeader {
+    typedef std::shared_ptr<FrameHeader> ptr;
     union {
         struct {
             uint8_t type;
@@ -91,6 +92,15 @@ struct FrameHeader {
     bool readFrom(ByteArray::ptr ba);
 };
 
+class IFrame {
+public:
+    typedef std::shared_ptr<IFrame> ptr;
+
+    virtual std::string toString() const = 0;
+    virtual bool writeTo(ByteArray::ptr ba, const FrameHeader& header) = 0;
+    virtual bool readFrom(ByteArray::ptr ba, const FrameHeader& header) = 0;
+};
+
 /*
  +---------------+
  |Pad Length? (8)|
@@ -101,7 +111,8 @@ struct FrameHeader {
  +---------------------------------------------------------------+ 
 */
 
-struct DataFrame {
+struct DataFrame : public IFrame {
+    typedef std::shared_ptr<DataFrame> ptr;
     uint8_t pad = 0;        //Flag & FrameFlagData::PADDED
     std::string data;
     std::string padding;
@@ -119,7 +130,9 @@ struct DataFrame {
  +-+-------------+
 */
 
-struct PriorityFrame {
+struct PriorityFrame : public IFrame {
+    typedef std::shared_ptr<PriorityFrame> ptr;
+    static const uint32_t SIZE = 5;
     union {
         struct {
             uint32_t stream_dep : 31;
@@ -128,6 +141,10 @@ struct PriorityFrame {
         uint32_t e_stream_dep = 0;
     };
     uint8_t weight = 0;
+
+    std::string toString() const;
+    bool writeTo(ByteArray::ptr ba, const FrameHeader& header);
+    bool readFrom(ByteArray::ptr ba, const FrameHeader& header);
 };
 
 /*
@@ -144,11 +161,16 @@ struct PriorityFrame {
  +---------------------------------------------------------------+
  */
 
-struct HeadersFrame {
+struct HeadersFrame : public IFrame {
+    typedef std::shared_ptr<HeadersFrame> ptr;
     uint8_t pad = 0;        //flag & FrameFlagHeaders::PADDED
     PriorityFrame priority; //flag & FrameFlagHeaders::PRIORITY
     std::string data;
     std::string padding;
+
+    std::string toString() const;
+    bool writeTo(ByteArray::ptr ba, const FrameHeader& header);
+    bool readFrom(ByteArray::ptr ba, const FrameHeader& header);
 };
 
 /*
@@ -157,8 +179,14 @@ struct HeadersFrame {
  +---------------------------------------------------------------+
 */
 
-struct RstFrame {
+struct RstFrame : public IFrame {
+    typedef std::shared_ptr<RstFrame> ptr;
+    static const uint32_t SIZE = 4;
     uint32_t error_code = 0;
+
+    std::string toString() const;
+    bool writeTo(ByteArray::ptr ba, const FrameHeader& header);
+    bool readFrom(ByteArray::ptr ba, const FrameHeader& header);
 };
 
 /*
@@ -178,7 +206,8 @@ struct SettingsItem {
     bool readFrom(ByteArray::ptr ba);
 };
 
-struct SettingsFrame {
+struct SettingsFrame : public IFrame {
+    typedef std::shared_ptr<SettingsFrame> ptr;
     enum class Settings {
         HEADER_TABLE_SIZE           = 0x1,
         ENABLE_PUSH                 = 0x2,
@@ -209,7 +238,8 @@ struct SettingsFrame {
  +---------------------------------------------------------------+
 */
 
-struct PushPromisedFrame {
+struct PushPromisedFrame : public IFrame {
+    typedef std::shared_ptr<PushPromisedFrame> ptr;
     uint8_t pad = 0;
     union {
         struct {
@@ -234,7 +264,9 @@ struct PushPromisedFrame {
  +---------------------------------------------------------------+
  */
 
-struct PingFrame {
+struct PingFrame : public IFrame {
+    typedef std::shared_ptr<PingFrame> ptr;
+    static const uint32_t SIZE = 8;
     union {
         uint8_t data[8];
         uint64_t uint64 = 0;
@@ -255,7 +287,8 @@ struct PingFrame {
  +---------------------------------------------------------------+
  */
 
-struct GoAwayFrame {
+struct GoAwayFrame : public IFrame {
+    typedef std::shared_ptr<GoAwayFrame> ptr;
     union {
         struct {
             uint32_t last_stream_id : 31;
@@ -277,7 +310,9 @@ struct GoAwayFrame {
  +-+-------------------------------------------------------------+
  */
 
-struct WindowUpdateFrame {
+struct WindowUpdateFrame : public IFrame {
+    typedef std::shared_ptr<WindowUpdateFrame> ptr;
+    static const uint32_t SIZE = 4;
     union {
         struct {
             uint32_t increment : 31;

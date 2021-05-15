@@ -89,6 +89,118 @@ bool DataFrame::readFrom(ByteArray::ptr ba, const FrameHeader& header) {
     return false;
 }
 
+std::string PriorityFrame::toString() const {
+    std::stringstream ss;
+    ss << "[PriorityFrame exclusive=" << exclusive
+       << " stream_dep=" << stream_dep
+       << " weight=" << weight << "]";
+    return ss.str();
+}
+
+bool PriorityFrame::writeTo(ByteArray::ptr ba, const FrameHeader& header) {
+    try {
+        ba->writeFuint32(e_stream_dep);
+        ba->writeFuint8(weight);
+        return true;
+    } catch(...) {
+        SYLAR_LOG_WARN(g_logger) << "write PriorityFrame fail, " << toString();
+    }
+    return false;
+}
+
+bool PriorityFrame::readFrom(ByteArray::ptr ba, const FrameHeader& header) {
+    try {
+        e_stream_dep = ba->readFuint32();
+        weight = ba->readFuint8();
+        return true;
+    } catch(...) {
+        SYLAR_LOG_WARN(g_logger) << "read PriorityFrame fail, " << toString();
+    }
+    return false;
+}
+
+std::string HeadersFrame::toString() const {
+    std::stringstream ss;
+    ss << "[HeadersFrame";
+    if(pad) {
+        ss << " pad=" << (uint32_t)pad;
+    }
+    ss << " data.size=" << data.size();
+    ss << "]";
+    return ss.str();
+}
+
+bool HeadersFrame::writeTo(ByteArray::ptr ba, const FrameHeader& header) {
+    try {
+        if(header.flags & (uint8_t)FrameFlagHeaders::PADDED) {
+            ba->writeFuint8(pad);
+        }
+        if(header.flags & (uint8_t)FrameFlagHeaders::PRIORITY) {
+            priority.writeTo(ba, header);
+        }
+        ba->write(data.c_str(), data.size());
+        if(header.flags & (uint8_t)FrameFlagHeaders::PADDED) {
+            ba->write(padding.c_str(), padding.size());
+        }
+        return true;
+    } catch(...) {
+        SYLAR_LOG_WARN(g_logger) << "write HeadersFrame fail, " << toString();
+    }
+    return false;
+}
+
+bool HeadersFrame::readFrom(ByteArray::ptr ba, const FrameHeader& header) {
+    try {
+        int len = header.length;
+        if(header.flags & (uint8_t)FrameFlagHeaders::PADDED) {
+            pad = ba->readFuint8();
+            len -= 1 + pad;
+        }
+        if(header.flags & (uint8_t)FrameFlagHeaders::PRIORITY) {
+            priority.readFrom(ba, header);
+            len -= 5;
+        }
+        //check len
+        data.resize(len);
+        ba->read(&data[0], data.size());
+        if(header.flags & (uint8_t)FrameFlagHeaders::PADDED) {
+            padding.resize(pad);
+            ba->read(&padding[0], padding.size());
+        }
+
+        return true;
+    } catch(...) {
+        SYLAR_LOG_WARN(g_logger) << "read HeadersFrame fail, " << toString();
+    }
+    return false;
+}
+
+std::string RstFrame::toString() const {
+    std::stringstream ss;
+    ss << "[RstFrame error_code=" << error_code << "]";
+    return ss.str();
+}
+
+bool RstFrame::writeTo(ByteArray::ptr ba, const FrameHeader& header) {
+    try {
+        ba->writeFuint32(error_code);
+        return true;
+    } catch(...) {
+        SYLAR_LOG_WARN(g_logger) << "write RstFrame fail, " << toString();
+    }
+    return false;
+}
+
+bool RstFrame::readFrom(ByteArray::ptr ba, const FrameHeader& header) {
+    try {
+        error_code = ba->readFuint32();
+        return true;
+    } catch(...) {
+        SYLAR_LOG_WARN(g_logger) << "read RstFrame fail, " << toString();
+    }
+    return false;
+}
+
 static std::vector<std::string> s_settings_string = {
         "",
         "HEADER_TABLE_SIZE",
