@@ -182,8 +182,7 @@ int HPack::parse(ByteArray::ptr ba, int length) {
 
 }
 
-int HPack::pack(HeaderField* header, ByteArray::ptr ba) {
-    m_headers.push_back(*header);
+int HPack::Pack(HeaderField* header, ByteArray::ptr ba) {
     int pos = ba->getPosition();
 
     if(header->type == IndexType::INDEXED) {
@@ -211,6 +210,12 @@ int HPack::pack(HeaderField* header, ByteArray::ptr ba) {
         WriteString(ba, header->value, header->h_value);
     }
     return ba->getPosition() - pos;
+
+}
+
+int HPack::pack(HeaderField* header, ByteArray::ptr ba) {
+    m_headers.push_back(*header);
+    return Pack(header, ba);
 }
 
 int HPack::pack(const std::vector<std::pair<std::string, std::string> >& headers, ByteArray::ptr ba) {

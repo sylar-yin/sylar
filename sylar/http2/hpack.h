@@ -68,6 +68,7 @@ public:
     int pack(const std::vector<std::pair<std::string, std::string> >& headers, ByteArray::ptr ba);
 
     std::vector<HeaderField>& getHeaders() { return m_headers;}
+    static int Pack(HeaderField* header, ByteArray::ptr ba);
 public:
     static int WriteVarInt(ByteArray::ptr ba, int32_t prefix, uint64_t value, uint8_t flags);
     static uint64_t ReadVarInt(ByteArray::ptr ba, int32_t prefix);

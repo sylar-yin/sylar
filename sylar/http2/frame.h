@@ -2,6 +2,8 @@
 #define __SYLAR_HTTP2_FRAME_H__
 
 #include "sylar/bytearray.h"
+#include "sylar/stream.h"
+#include "hpack.h"
 
 namespace sylar {
 namespace http2 {
@@ -70,6 +72,7 @@ enum class FrameR {
 };
 
 struct FrameHeader {
+    static const uint32_t SIZE = 9;
     typedef std::shared_ptr<FrameHeader> ptr;
     union {
         struct {
@@ -96,9 +99,18 @@ class IFrame {
 public:
     typedef std::shared_ptr<IFrame> ptr;
 
+    virtual ~IFrame() {}
     virtual std::string toString() const = 0;
     virtual bool writeTo(ByteArray::ptr ba, const FrameHeader& header) = 0;
     virtual bool readFrom(ByteArray::ptr ba, const FrameHeader& header) = 0;
+};
+
+struct Frame {
+    typedef std::shared_ptr<Frame> ptr;
+    FrameHeader header;
+    IFrame::ptr data;
+
+    std::string toString() const;
 };
 
 /*
@@ -165,7 +177,8 @@ struct HeadersFrame : public IFrame {
     typedef std::shared_ptr<HeadersFrame> ptr;
     uint8_t pad = 0;        //flag & FrameFlagHeaders::PADDED
     PriorityFrame priority; //flag & FrameFlagHeaders::PRIORITY
-    std::string data;
+    //std::string data;
+    std::vector<HeaderField> fields;
     std::string padding;
 
     std::string toString() const;
@@ -324,6 +337,14 @@ struct WindowUpdateFrame : public IFrame {
     std::string toString() const;
     bool writeTo(ByteArray::ptr ba, const FrameHeader& header);
     bool readFrom(ByteArray::ptr ba, const FrameHeader& header);
+};
+
+class FrameCodec {
+public:
+    typedef std::shared_ptr<FrameCodec> ptr;
+
+    Frame::ptr parseFrom(Stream::ptr stream);
+    int32_t serializeTo(Stream::ptr stream, Frame::ptr frame);
 };
 
 

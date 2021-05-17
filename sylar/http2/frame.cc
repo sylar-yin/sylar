@@ -42,6 +42,14 @@ bool FrameHeader::readFrom(ByteArray::ptr ba) {
     return false;
 }
 
+std::string Frame::toString() const {
+    std::stringstream ss;
+    ss << header.toString();
+    if(data) {
+        ss << data->toString();
+    }
+    return ss.str();
+}
 
 std::string DataFrame::toString() const {
     std::stringstream ss;
@@ -125,7 +133,8 @@ std::string HeadersFrame::toString() const {
     if(pad) {
         ss << " pad=" << (uint32_t)pad;
     }
-    ss << " data.size=" << data.size();
+    //ss << " data.size=" << data.size();
+    ss << " fields.size=" << fields.size();
     ss << "]";
     return ss.str();
 }
@@ -138,7 +147,10 @@ bool HeadersFrame::writeTo(ByteArray::ptr ba, const FrameHeader& header) {
         if(header.flags & (uint8_t)FrameFlagHeaders::PRIORITY) {
             priority.writeTo(ba, header);
         }
-        ba->write(data.c_str(), data.size());
+        for(auto& i : fields) {
+            HPack::Pack(&i, ba);
+        }
+        //ba->write(data.c_str(), data.size());
         if(header.flags & (uint8_t)FrameFlagHeaders::PADDED) {
             ba->write(padding.c_str(), padding.size());
         }
@@ -160,6 +172,8 @@ bool HeadersFrame::readFrom(ByteArray::ptr ba, const FrameHeader& header) {
             priority.readFrom(ba, header);
             len -= 5;
         }
+        //TODO ...
+        std::string data;
         //check len
         data.resize(len);
         ba->read(&data[0], data.size());
@@ -512,7 +526,11 @@ std::string FrameFlagToString(uint8_t type, uint8_t flag) {
         case FrameType::CONTINUATION:
             return FrameFlagContinuationToString((FrameFlagContinuation)flag);
         default:
-            return "UNKONW(" + std::to_string((uint32_t)flag) + ")";
+            if(flag) {
+                return "UNKONW(" + std::to_string((uint32_t)flag) + ")";
+            } else {
+                return "0";
+            }
     }
 }
 
@@ -522,6 +540,159 @@ std::string FrameRToString(FrameR r) {
     } else {
         return "UNSET";
     }
+}
+
+Frame::ptr FrameCodec::parseFrom(Stream::ptr stream) {
+    try {
+        Frame::ptr frame = std::make_shared<Frame>();
+        ByteArray::ptr ba(new ByteArray);
+        int rt = stream->readFixSize(ba, FrameHeader::SIZE);
+        if(rt <= 0) {
+            SYLAR_LOG_INFO(g_logger) << "recv frame header fail, rt=" << rt << " " << strerror(errno);
+            return nullptr;
+        }
+        ba->setPosition(0);
+        if(!frame->header.readFrom(ba)) {
+            SYLAR_LOG_INFO(g_logger) << "parse frame header fail";
+            return nullptr;
+        }
+        if(frame->header.length > 0) {
+            ba->setPosition(0);
+            int rt = stream->readFixSize(ba, frame->header.length);
+            if(rt <= 0) {
+                SYLAR_LOG_INFO(g_logger) << "recv frame body fail, rt=" << rt << " " << strerror(errno);
+                return nullptr;
+            }
+            ba->setPosition(0);
+        }
+        switch((FrameType)frame->header.type) {
+            case FrameType::DATA:
+                {
+                    frame->data = std::make_shared<DataFrame>();
+                    if(!frame->data->readFrom(ba, frame->header)) {
+                        SYLAR_LOG_INFO(g_logger) << "parse DataFrame fail";
+                        return nullptr;
+                    }
+                }
+                break;
+            case FrameType::HEADERS:
+                {
+                    frame->data = std::make_shared<HeadersFrame>();
+                    if(!frame->data->readFrom(ba, frame->header)) {
+                        SYLAR_LOG_INFO(g_logger) << "parse HeadersFrame fail";
+                        return nullptr;
+                    }
+                }
+                break;
+            case FrameType::PRIORITY:
+                {
+                    frame->data = std::make_shared<PriorityFrame>();
+                    if(!frame->data->readFrom(ba, frame->header)) {
+                        SYLAR_LOG_INFO(g_logger) << "parse PriorityFrame fail";
+                        return nullptr;
+                    }
+                }
+                break;
+            case FrameType::RST_STREAM:
+                {
+                    frame->data = std::make_shared<RstFrame>();
+                    if(!frame->data->readFrom(ba, frame->header)) {
+                        SYLAR_LOG_INFO(g_logger) << "parse RstFrame fail";
+                        return nullptr;
+                    }
+                }
+                break;
+            case FrameType::SETTINGS:
+                {
+                    frame->data = std::make_shared<SettingsFrame>();
+                    if(!frame->data->readFrom(ba, frame->header)) {
+                        SYLAR_LOG_INFO(g_logger) << "parse SettingsFrame fail";
+                        return nullptr;
+                    }
+                }
+                break;
+            case FrameType::PUSH_PROMISE:
+                {
+                    frame->data = std::make_shared<PushPromisedFrame>();
+                    if(!frame->data->readFrom(ba, frame->header)) {
+                        SYLAR_LOG_INFO(g_logger) << "parse PushPromisedFrame fail";
+                        return nullptr;
+                    }
+                }
+                break;
+            case FrameType::PING:
+                {
+                    frame->data = std::make_shared<PingFrame>();
+                    if(!frame->data->readFrom(ba, frame->header)) {
+                        SYLAR_LOG_INFO(g_logger) << "parse PingFrame fail";
+                        return nullptr;
+                    }
+                }
+                break;
+            case FrameType::GOAWAY:
+                {
+                    frame->data = std::make_shared<GoAwayFrame>();
+                    if(!frame->data->readFrom(ba, frame->header)) {
+                        SYLAR_LOG_INFO(g_logger) << "parse GoAwayFrame fail";
+                        return nullptr;
+                    }
+                }
+                break;
+            case FrameType::WINDOW_UPDATE:
+                {
+                    frame->data = std::make_shared<WindowUpdateFrame>();
+                    if(!frame->data->readFrom(ba, frame->header)) {
+                        SYLAR_LOG_INFO(g_logger) << "parse WindowUpdateFrame fail";
+                        return nullptr;
+                    }
+                }
+                break;
+            case FrameType::CONTINUATION:
+                {
+                    //frame->data = std::make_shared<Con>();
+                    //if(!frame->data->readFrom(ba, frame->header)) {
+                    //    SYLAR_LOG_INFO(g_logger) << "parse GoAwayFrame fail";
+                    //    return nullptr;
+                    //}
+                }
+                break;
+            default:
+                {
+                    SYLAR_LOG_WARN(g_logger) << "invalid FrameType: " << (uint32_t)frame->header.type;
+                    return nullptr;
+                }
+                break;
+        }
+        return frame;
+    } catch(std::exception& e) {
+        SYLAR_LOG_ERROR(g_logger) << "FrameCodec parseFrom except: " << e.what();
+    } catch(...) {
+        SYLAR_LOG_ERROR(g_logger) << "FrameCodec parseFrom except";
+    }
+    return nullptr;
+}
+
+int32_t FrameCodec::serializeTo(Stream::ptr stream, Frame::ptr frame) {
+    ByteArray::ptr ba(new ByteArray);
+    frame->header.writeTo(ba);
+    if(frame->data) {
+        if(!frame->data->writeTo(ba, frame->header)) {
+            SYLAR_LOG_ERROR(g_logger) << "FrameCodec serializeTo fail, type=" << FrameTypeToString((FrameType)frame->header.type);
+            return -1;
+        }
+        int pos = ba->getPosition();
+        ba->setPosition(0);
+        frame->header.length = pos - FrameHeader::SIZE;
+        frame->header.writeTo(ba);
+    }
+    ba->setPosition(0);
+    int rt = stream->writeFixSize(ba, ba->getReadSize());
+    if(rt <= 0) {
+        SYLAR_LOG_ERROR(g_logger) << "FrameCodec serializeTo fail, rt=" << rt << " errno=" << errno
+            << " - " << strerror(errno);
+        return -2;
+    }
+    return ba->getSize();
 }
 
 }

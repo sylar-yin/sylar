@@ -97,6 +97,7 @@ set(LIB_SRC
     sylar/http2/dynamic_table.cc
     sylar/http2/frame.cc
     sylar/http2/hpack.cc
+    sylar/http2/http2_stream.cc
     sylar/http2/huffman.cc
     sylar/hook.cc
     sylar/iomanager.cc
@@ -236,6 +237,7 @@ sylar_add_executable(test_service_discovery "tests/test_service_discovery.cc" sy
 endif()
 
 sylar_add_executable(test_lru "tests/test_lru.cc" sylar "${LIBS}")
+sylar_add_executable(test_http2client "tests/http2_client.cc" sylar "${LIBS}")
 
 #set(ORM_SRCS
 #    sylar/orm/table.cc
