@@ -249,6 +249,9 @@ public:
 
     std::shared_ptr<HttpResponse> createResponse();
 
+    void setUri(const std::string& uri);
+    std::string getUri();
+
     /**
      * @brief 返回HTTP方法
      */

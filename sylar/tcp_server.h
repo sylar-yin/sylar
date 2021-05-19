@@ -196,6 +196,7 @@ public:
     virtual std::string toString(const std::string& prefix = "");
 
     std::vector<Socket::ptr> getSocks() const { return m_socks;}
+    bool isSSL() const { return m_ssl;}
 protected:
 
     /**

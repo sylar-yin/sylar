@@ -17,6 +17,7 @@ public:
     std::string getName(uint32_t idx) const;
     std::string toString() const;
 
+    void setMaxDataSize(int32_t v) { m_maxDataSize = v;}
 public:
     static std::pair<std::string, std::string> GetStaticHeaders(uint32_t idx);
     static int32_t GetStaticHeadersIndex(const std::string& name);

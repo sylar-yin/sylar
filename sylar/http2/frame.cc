@@ -183,28 +183,28 @@ bool HeadersFrame::readFrom(ByteArray::ptr ba, const FrameHeader& header) {
     return false;
 }
 
-std::string RstFrame::toString() const {
+std::string RstStreamFrame::toString() const {
     std::stringstream ss;
-    ss << "[RstFrame error_code=" << error_code << "]";
+    ss << "[RstStreamFrame error_code=" << error_code << "]";
     return ss.str();
 }
 
-bool RstFrame::writeTo(ByteArray::ptr ba, const FrameHeader& header) {
+bool RstStreamFrame::writeTo(ByteArray::ptr ba, const FrameHeader& header) {
     try {
         ba->writeFuint32(error_code);
         return true;
     } catch(...) {
-        SYLAR_LOG_WARN(g_logger) << "write RstFrame fail, " << toString();
+        SYLAR_LOG_WARN(g_logger) << "write RstStreamFrame fail, " << toString();
     }
     return false;
 }
 
-bool RstFrame::readFrom(ByteArray::ptr ba, const FrameHeader& header) {
+bool RstStreamFrame::readFrom(ByteArray::ptr ba, const FrameHeader& header) {
     try {
         error_code = ba->readFuint32();
         return true;
     } catch(...) {
-        SYLAR_LOG_WARN(g_logger) << "read RstFrame fail, " << toString();
+        SYLAR_LOG_WARN(g_logger) << "read RstStreamFrame fail, " << toString();
     }
     return false;
 }
@@ -589,9 +589,9 @@ Frame::ptr FrameCodec::parseFrom(Stream::ptr stream) {
                 break;
             case FrameType::RST_STREAM:
                 {
-                    frame->data = std::make_shared<RstFrame>();
+                    frame->data = std::make_shared<RstStreamFrame>();
                     if(!frame->data->readFrom(ba, frame->header)) {
-                        SYLAR_LOG_INFO(g_logger) << "parse RstFrame fail";
+                        SYLAR_LOG_INFO(g_logger) << "parse RstStreamFrame fail";
                         return nullptr;
                     }
                 }
@@ -667,6 +667,7 @@ Frame::ptr FrameCodec::parseFrom(Stream::ptr stream) {
 }
 
 int32_t FrameCodec::serializeTo(Stream::ptr stream, Frame::ptr frame) {
+    SYLAR_LOG_DEBUG(g_logger) << "serializeTo " << frame->toString();
     ByteArray::ptr ba(new ByteArray);
     frame->header.writeTo(ba);
     if(frame->data) {

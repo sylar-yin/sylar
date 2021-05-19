@@ -61,6 +61,7 @@ struct HeaderField {
 
 class HPack {
 public:
+    typedef std::shared_ptr<HPack> ptr;
     HPack(DynamicTable& table);
 
     int parse(ByteArray::ptr ba, int length);

@@ -8,19 +8,6 @@
 namespace sylar {
 namespace http2 {
 
-/*
-HTTP2 frame 格式
-+-----------------------------------------------+
-|                 Length (24)                   |
-+---------------+---------------+---------------+
-|   Type (8)    |   Flags (8)   |
-+-+-------------+---------------+-------------------------------+
-|R|                 Stream Identifier (31)                      |
-+=+=============================================================+
-|                   Frame Payload (0...)                      ...
-+---------------------------------------------------------------+
-*/
-
 #pragma pack(push)
 #pragma pack(1)
 
@@ -70,6 +57,19 @@ enum class FrameR {
     UNSET           = 0x0,
     SET             = 0x1,
 };
+
+/*
+HTTP2 frame 格式
++-----------------------------------------------+
+|                 Length (24)                   |
++---------------+---------------+---------------+
+|   Type (8)    |   Flags (8)   |
++-+-------------+---------------+-------------------------------+
+|R|                 Stream Identifier (31)                      |
++=+=============================================================+
+|                   Frame Payload (0...)                      ...
++---------------------------------------------------------------+
+*/
 
 struct FrameHeader {
     static const uint32_t SIZE = 9;
@@ -191,8 +191,8 @@ struct HeadersFrame : public IFrame {
  +---------------------------------------------------------------+
 */
 
-struct RstFrame : public IFrame {
-    typedef std::shared_ptr<RstFrame> ptr;
+struct RstStreamFrame : public IFrame {
+    typedef std::shared_ptr<RstStreamFrame> ptr;
     static const uint32_t SIZE = 4;
     uint32_t error_code = 0;
 

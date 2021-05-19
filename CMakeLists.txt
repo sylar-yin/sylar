@@ -77,6 +77,7 @@ set(LIB_SRC
     sylar/file_manager.cc
     sylar/fiber.cc
     sylar/fcontext/fcontext.S
+    sylar/grpc/grpc_stream.cc
     sylar/libaco/aco.c
     sylar/libaco/acosw.S
     sylar/libco/coctx.cc
@@ -98,7 +99,9 @@ set(LIB_SRC
     sylar/http2/frame.cc
     sylar/http2/hpack.cc
     sylar/http2/http2_stream.cc
+    sylar/http2/http2_server.cc
     sylar/http2/huffman.cc
+    sylar/http2/stream.cc
     sylar/hook.cc
     sylar/iomanager.cc
     sylar/kafka_client.cc
@@ -238,6 +241,13 @@ endif()
 
 sylar_add_executable(test_lru "tests/test_lru.cc" sylar "${LIBS}")
 sylar_add_executable(test_http2client "tests/http2_client.cc" sylar "${LIBS}")
+sylar_add_executable(test_http2server "tests/http2_server.cc" sylar "${LIBS}")
+
+set(GRPC_SRCS
+    tests/grpc_client.cc
+    tests/test.pb.cc
+    )
+sylar_add_executable(test_grpcclient "${GRPC_SRCS}" sylar "${LIBS}")
 
 #set(ORM_SRCS
 #    sylar/orm/table.cc

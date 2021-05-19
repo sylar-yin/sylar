@@ -70,6 +70,33 @@ std::string HttpRequest::getHeader(const std::string& key
     return it == m_headers.end() ? def : it->second;
 }
 
+void HttpRequest::setUri(const std::string& uri) {
+    auto pos = uri.find('?');
+    if(pos == std::string::npos) {
+        auto pos2 = uri.find('#');
+        if(pos2 == std::string::npos) {
+            m_path = uri;
+        } else {
+            m_path = uri.substr(0, pos2);
+            m_fragment = uri.substr(pos2 + 1);
+        }
+    } else {
+        m_path = uri.substr(0, pos);
+
+        auto pos2 = uri.find('#', pos + 1);
+        if(pos2 == std::string::npos) {
+            m_query = uri.substr(pos + 1);
+        } else {
+            m_query = uri.substr(pos + 1, pos2 - pos - 1);
+            m_fragment = uri.substr(pos2 + 1);
+        }
+    }
+}
+
+std::string HttpRequest::getUri() {
+    return m_path + (m_query.empty() ? "" : "?" + m_query) + (m_fragment.empty() ? "" : "#" + m_fragment);
+}
+
 std::shared_ptr<HttpResponse> HttpRequest::createResponse() {
     return std::make_shared<HttpResponse>(getVersion()
                             ,isClose());
