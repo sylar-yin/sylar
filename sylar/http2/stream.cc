@@ -55,6 +55,7 @@ int32_t Stream::handleFrame(Frame::ptr frame, bool is_client) {
             if(!m_response) {
                 m_response = std::make_shared<http::HttpResponse>(0x20);
             }
+            m_response->setBody(m_body);
             if(m_recvHPack) {
                 auto& m = m_recvHPack->getHeaders();
                 for(auto& i : m) {
@@ -66,6 +67,7 @@ int32_t Stream::handleFrame(Frame::ptr frame, bool is_client) {
             if(!m_request) {
                 m_request = std::make_shared<http::HttpRequest>(0x20);
             }
+            m_request->setBody(m_body);
             if(m_recvHPack) {
                 auto& m = m_recvHPack->getHeaders();
                 for(auto& i : m) {
@@ -117,13 +119,15 @@ int32_t Stream::handleDataFrame(Frame::ptr frame, bool is_client) {
             << frame->toString();
         return -1;
     }
-    if(is_client) {
-        m_response = std::make_shared<http::HttpResponse>(0x20);
-        m_response->setBody(data->data);
-    } else {
-        m_request = std::make_shared<http::HttpRequest>(0x20);
-        m_request->setBody(data->data);
-    }
+    m_body += data->data;
+    SYLAR_LOG_DEBUG(g_logger) << "stream_id=" << m_id << " cur_body_size=" << m_body.size();
+    //if(is_client) {
+    //    m_response = std::make_shared<http::HttpResponse>(0x20);
+    //    m_response->setBody(data->data);
+    //} else {
+    //    m_request = std::make_shared<http::HttpRequest>(0x20);
+    //    m_request->setBody(data->data);
+    //}
     return 0;
 }
 

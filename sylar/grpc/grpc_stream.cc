@@ -24,6 +24,7 @@ std::string GrpcResponse::toString() const {
 
 GrpcResponse::ptr GrpcConnection::request(GrpcRequest::ptr req, uint64_t timeout_ms) {
     auto http_req = req->getRequest();
+    http_req->setHeader("content-type", "application/grpc");
     auto grpc_data = req->getData();
     std::string data;
     data.resize(grpc_data->data.size() + 5);
@@ -61,19 +62,24 @@ GrpcResponse::ptr GrpcConnection::request(const std::string& method
     grpc_req->setRequest(http_req);
     http_req->setMethod(http::HttpMethod::POST);
     http_req->setPath(method);
+    grpc_req->setAsPB(message);
 
-    GrpcMessage::ptr msg = std::make_shared<GrpcMessage>();
-    msg->compressed = 0;
-    if(!message.SerializeToString(&msg->data)) {
-        SYLAR_LOG_ERROR(g_logger) << "SerializeToString fail, " << sylar::PBToJsonString(message);
-        GrpcResponse::ptr rsp = std::make_shared<GrpcResponse>();
-        rsp->setResult(-100);
-        rsp->setError("pb SerializeToString fail");
-        return rsp;
-    }
-    msg->compressed = msg->data.size();
-    grpc_req->setData(msg);
+    //GrpcMessage::ptr msg = std::make_shared<GrpcMessage>();
+    //msg->compressed = 0;
+    //if(!message.SerializeToString(&msg->data)) {
+    //    SYLAR_LOG_ERROR(g_logger) << "SerializeToString fail, " << sylar::PBToJsonString(message);
+    //    GrpcResponse::ptr rsp = std::make_shared<GrpcResponse>();
+    //    rsp->setResult(-100);
+    //    rsp->setError("pb SerializeToString fail");
+    //    return rsp;
+    //}
+    //msg->compressed = msg->data.size();
+    //grpc_req->setData(msg);
     return request(grpc_req, timeout_ms);
+}
+
+GrpcConnection::GrpcConnection() {
+    //m_autoConnect = false;
 }
 
 }

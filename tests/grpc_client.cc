@@ -11,12 +11,41 @@ void run() {
     }
     conn->start();
 
-    sleep(1);
-    test::HelloRequest hr;
-    hr.set_id("hello");
-    hr.set_msg("world");
-    auto rsp = conn->request("/test.HelloService/Hello", hr, 100);
-    std::cout << rsp->toString() << std::endl;
+    std::string  prefx;
+    for(int i = 0; i < 1000; ++i) {
+        //prefx += "a";
+    }
+
+    for(int x = 0; x < 2; ++x) {
+        sylar::IOManager::GetThis()->schedule([conn, x, prefx](){
+            int fail = 0;
+            int error = 0;
+            static int sn = 0;
+            for(int i = 0; i < 10; ++i) {
+                test::HelloRequest hr;
+                auto tmp = sylar::Atomic::addFetch(sn);
+                hr.set_id(prefx + "hello_" + std::to_string(tmp));
+                hr.set_msg(prefx + "world_" + std::to_string(tmp));
+                auto rsp = conn->request("/test.HelloService/Hello", hr, 10000);
+                std::cout << rsp->toString() << std::endl;
+                if(rsp->getResponse()) {
+                    //std::cout << *rsp->getResponse() << std::endl;
+
+                    auto hrp = rsp->getAsPB<test::HelloResponse>();
+                    if(hrp) {
+                        //std::cout << sylar::PBToJsonString(*hrp) << std::endl;
+                        std::cout << "========" << rsp->getResult() << std::endl;
+                    } else {
+                        std::cout << "########" << rsp->getResult() << std::endl;
+                        ++error;
+                    }
+                } else {
+                    ++fail;
+                }
+            }
+            std::cout << "=======fail=" << fail << " error=" << error << " =========" << std::endl;
+        });
+    }
 }
 
 int main(int argc, char** argv) {

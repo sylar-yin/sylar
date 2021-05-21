@@ -18,25 +18,30 @@ void test() {
     stream->start();
     sleep(1);
 
-    for(int i = 0; i < 20; ++i) {
-        sylar::http::HttpRequest::ptr req(new sylar::http::HttpRequest);
-        //req->setHeader(":path", "/");
-        //req->setHeader(":method", "GET");
-        //req->setHeader(":scheme", "http");
-        //req->setHeader(":host", "127.0.0.1");
+    for(int x = 0; x < 1; ++x) {
+        sylar::IOManager::GetThis()->schedule([stream, x](){
+            for(int i = 0; i < 100; ++i) {
+                sylar::http::HttpRequest::ptr req(new sylar::http::HttpRequest);
+                //req->setHeader(":path", "/");
+                //req->setHeader(":method", "GET");
+                //req->setHeader(":scheme", "http");
+                //req->setHeader(":host", "127.0.0.1");
 
-        req->setHeader(":method", "GET");
-        req->setHeader(":scheme", "http");
-        req->setHeader(":path", "/_/config?abc=111#cde");
-        req->setHeader(":authority", "127.0.0.1:8090");
-        req->setHeader("content-type", "text/html");
-        req->setHeader("user-agent", "grpc-go/1.37.0");
-        req->setHeader("hello", "world");
-        req->setBody("hello test");
+                req->setHeader(":method", "GET");
+                req->setHeader(":scheme", "http");
+                req->setHeader(":path", "/_/config?abc=111#cde");
+                req->setHeader(":authority", "127.0.0.1:8090");
+                req->setHeader("content-type", "text/html");
+                req->setHeader("user-agent", "grpc-go/1.37.0");
+                req->setHeader("hello", "world");
+                req->setHeader("id", std::to_string(x) + "_" + std::to_string(i));
+                req->setBody("hello test");
 
-        auto rt = stream->request(req, 100);
-        std::cout << "----" << rt->toString() << std::endl;
-        sleep(1);
+                auto rt = stream->request(req, 100000);
+                std::cout << "----" << rt->result << std::endl;
+                //sleep(1);
+            }
+        });
     }
 }
 

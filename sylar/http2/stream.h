@@ -89,6 +89,7 @@ private:
     http::HttpRequest::ptr m_request;
     http::HttpResponse::ptr m_response;
     HPack::ptr m_recvHPack;
+    std::string m_body;
 };
 
 class StreamManager {

@@ -245,8 +245,8 @@ sylar_add_executable(test_http2server "tests/http2_server.cc" sylar "${LIBS}")
 
 set(GRPC_SRCS
     tests/grpc_client.cc
-    tests/test.pb.cc
     )
+protobufmaker(tests/test.proto GRPC_SRCS ${CMAKE_CURRENT_SOURCE_DIR})
 sylar_add_executable(test_grpcclient "${GRPC_SRCS}" sylar "${LIBS}")
 
 #set(ORM_SRCS

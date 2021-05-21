@@ -210,6 +210,8 @@ struct RstStreamFrame : public IFrame {
 */
 
 struct SettingsItem {
+    SettingsItem(uint16_t id = 0, uint32_t v = 0)
+        :identifier(id), value(v) {}
     uint16_t identifier = 0;
     uint32_t value = 0;
 

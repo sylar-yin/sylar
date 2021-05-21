@@ -24,6 +24,34 @@ public:
     void setRequest(http::HttpRequest::ptr v) { m_request = v;}
     void setData(GrpcMessage::ptr v) { m_data = v;}
     std::string toString() const;
+
+    template<class T>
+    std::shared_ptr<T> getAsPB() const {
+        if(!m_data) {
+            return nullptr;
+        }
+        try {
+            std::shared_ptr<T> data = std::make_shared<T>();
+            if(data->ParseFromString(m_data->data)) {
+                return data;
+            }
+        } catch (...) {
+        }
+        return nullptr;
+    }
+
+    template<class T>
+    bool setAsPB(const T& v) {
+        try {
+            if(!m_data) {
+                m_data = std::make_shared<GrpcMessage>();
+            }
+            return v.SerializeToString(&m_data->data);
+        } catch (...) {
+        }
+        return false;
+    }
+
 private:
     http::HttpRequest::ptr m_request;
     GrpcMessage::ptr m_data;
@@ -43,6 +71,33 @@ public:
     void setResult(int v) { m_result = v;}
     void setError(const std::string& v) { m_error = v;}
     std::string toString() const;
+
+    template<class T>
+    std::shared_ptr<T> getAsPB() const {
+        if(!m_data) {
+            return nullptr;
+        }
+        try {
+            std::shared_ptr<T> data = std::make_shared<T>();
+            if(data->ParseFromString(m_data->data)) {
+                return data;
+            }
+        } catch (...) {
+        }
+        return nullptr;
+    }
+
+    template<class T>
+    bool setAsPB(const T& v) {
+        try {
+            if(!m_data) {
+                m_data = std::make_shared<GrpcMessage>();
+            }
+            return v.SerializeToString(m_data->data);
+        } catch (...) {
+        }
+        return false;
+    }
 private:
     int m_result = 0;
     std::string m_error;
@@ -53,6 +108,7 @@ private:
 class GrpcConnection : public http2::Http2Connection {
 public:
     typedef std::shared_ptr<GrpcConnection> ptr;
+    GrpcConnection();
     GrpcResponse::ptr request(GrpcRequest::ptr req, uint64_t timeout_ms);
     GrpcResponse::ptr request(const std::string& method, const google::protobuf::Message& message, uint64_t timeout_ms);
 };

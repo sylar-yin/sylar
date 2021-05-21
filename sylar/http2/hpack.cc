@@ -101,12 +101,14 @@ std::string HPack::ReadString(ByteArray::ptr ba) {
     uint8_t type = ba->readFuint8();
     int len = ReadVarInt(ba, type, 7);
     std::string data;
-    data.resize(len);
-    ba->read(&data[0], len);
-    if(type & 0x80) {
-        std::string out;
-        Huffman::DecodeString(data, out);
-        return out;
+    if(len) {
+        data.resize(len);
+        ba->read(&data[0], len);
+        if(type & 0x80) {
+            std::string out;
+            Huffman::DecodeString(data, out);
+            return out;
+        }
     }
     return data;
 }
