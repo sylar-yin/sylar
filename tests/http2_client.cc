@@ -1,7 +1,13 @@
 #include "sylar/sylar.h"
 #include "sylar/http2/http2_stream.h"
 
+std::string bigstr;
+
 void test() {
+    bigstr = "aaaaaaaaaa";
+    for(int i = 0; i < 20; ++i) {
+        bigstr = bigstr + bigstr;
+    }
     //sylar::Address::ptr addr = sylar::Address::LookupAnyIPAddress("192.168.1.6:8099");
     sylar::Address::ptr addr = sylar::Address::LookupAnyIPAddress("127.0.0.1:8099");
     sylar::http2::Http2Connection::ptr stream(new sylar::http2::Http2Connection());
@@ -20,7 +26,7 @@ void test() {
 
     for(int x = 0; x < 1; ++x) {
         sylar::IOManager::GetThis()->schedule([stream, x](){
-            for(int i = 0; i < 100; ++i) {
+            for(int i = 0; i < 1; ++i) {
                 sylar::http::HttpRequest::ptr req(new sylar::http::HttpRequest);
                 //req->setHeader(":path", "/");
                 //req->setHeader(":method", "GET");
@@ -35,10 +41,12 @@ void test() {
                 req->setHeader("user-agent", "grpc-go/1.37.0");
                 req->setHeader("hello", "world");
                 req->setHeader("id", std::to_string(x) + "_" + std::to_string(i));
-                req->setBody("hello test");
+                req->setBody(bigstr + "_hello");
 
                 auto rt = stream->request(req, 100000);
                 std::cout << "----" << rt->result << std::endl;
+                std::cout << "bigstr.length=" << bigstr.length() << std::endl;
+                //std::cout << "----" << rt->toString() << std::endl;
                 //sleep(1);
             }
         });

@@ -80,13 +80,15 @@ bool Http2Stream::handleShakeClient() {
     sf->items.emplace_back((uint8_t)SettingsFrame::Settings::MAX_HEADER_LIST_SIZE, 10485760);
     frame->data = sf;
 
-    rt = m_codec->serializeTo(shared_from_this(), frame);
+    handleSendSetting(frame);
+    rt = sendFrame(frame, false);
     if(rt <= 0) {
         SYLAR_LOG_ERROR(g_logger) << "handleShakeClient Settings fail, rt=" << rt
             << " errno=" << errno << " - " << strerror(errno);
         return false;
     }
-    sendWindowUpdate(0, 1 << 30);
+    //sendWindowUpdate(0, 1 << 30);
+    sendWindowUpdate(0, MAX_INITIAL_WINDOW_SIZE - recv_window);
     return true;
 }
 
@@ -122,12 +124,16 @@ bool Http2Stream::handleShakeServer() {
     return true;
 }
 
-int32_t Http2Stream::sendFrame(Frame::ptr frame) {
+int32_t Http2Stream::sendFrame(Frame::ptr frame, bool async) {
     if(isConnected()) {
-        FrameSendCtx::ptr ctx = std::make_shared<FrameSendCtx>();
-        ctx->frame = frame;
-        enqueue(ctx);
-        return 1;
+        if(async) {
+            FrameSendCtx::ptr ctx = std::make_shared<FrameSendCtx>();
+            ctx->frame = frame;
+            enqueue(ctx);
+            return 1;
+        } else {
+            return m_codec->serializeTo(shared_from_this(), frame);
+        }
     } else {
         return -1;
     }
@@ -140,7 +146,44 @@ AsyncSocketStream::Ctx::ptr Http2Stream::doRecv() {
         return nullptr;
     }
     SYLAR_LOG_DEBUG(g_logger) << "recv: " << frame->toString();
-    if(frame->header.identifier) {
+    //TODO handle RST_STREAM
+
+    if(frame->header.type == (uint8_t)FrameType::WINDOW_UPDATE) {
+        auto wuf = std::dynamic_pointer_cast<WindowUpdateFrame>(frame->data);
+        if(wuf) {
+            if(frame->header.identifier) {
+                auto stream = getStream(frame->header.identifier);
+                if(!stream) {
+                    SYLAR_LOG_ERROR(g_logger) << "WINDOW_UPDATE stream_id=" << frame->header.identifier
+                        << " not exists, " << getRemoteAddressString();
+                    sendGoAway(m_sn, (uint32_t)Http2Error::PROTOCOL_ERROR, "");
+                    return nullptr;
+                }
+                if(((int64_t)stream->send_window + wuf->increment) > MAX_INITIAL_WINDOW_SIZE) {
+                    SYLAR_LOG_ERROR(g_logger) << "WINDOW_UPDATE stream_id=" << stream->getId()
+                        << " increment=" << wuf->increment << " send_window=" << stream->send_window
+                        << " biger than " << MAX_INITIAL_WINDOW_SIZE << " " << getRemoteAddressString();
+                    sendGoAway(m_sn, (uint32_t)Http2Error::PROTOCOL_ERROR, "");
+                    return nullptr;
+                }
+                stream->updateSendWindowByDiff(wuf->increment);
+            } else {
+                if(((int64_t)send_window + wuf->increment) > MAX_INITIAL_WINDOW_SIZE) {
+                    SYLAR_LOG_ERROR(g_logger) << "WINDOW_UPDATE stream_id=0"
+                        << " increment=" << wuf->increment << " send_window=" << send_window
+                        << " biger than " << MAX_INITIAL_WINDOW_SIZE << " " << getRemoteAddressString();
+                    sendGoAway(m_sn, (uint32_t)Http2Error::PROTOCOL_ERROR, "");
+                    return nullptr;
+                }
+                send_window += wuf->increment;
+            }
+        } else {
+            SYLAR_LOG_ERROR(g_logger) << "WINDOW_UPDATE stream_id=" << frame->header.identifier
+                << " invalid body " << getRemoteAddressString();
+            innerClose();
+            return nullptr;
+        }
+    } else if(frame->header.identifier) {
         auto stream = getStream(frame->header.identifier);
         if(!stream) {
             if(m_isClient) {
@@ -160,17 +203,25 @@ AsyncSocketStream::Ctx::ptr Http2Stream::doRecv() {
         stream->handleFrame(frame, m_isClient);
         if(frame->header.type == (uint8_t)FrameType::DATA) {
             if(frame->header.length) {
-                static uint32_t cc_up = 0;
-                cc_up += frame->header.length;
-                sendWindowUpdate(frame->header.identifier, frame->header.length);
-                SYLAR_LOG_DEBUG(g_logger) << "update size=" << cc_up;
-                //std::vector<SettingsItem> items;
-                //items.emplace_back((uint8_t)SettingsFrame::Settings::ENABLE_PUSH, 0);
-                //items.emplace_back((uint8_t)SettingsFrame::Settings::INITIAL_WINDOW_SIZE, 4194304);
-                //items.emplace_back((uint8_t)SettingsFrame::Settings::MAX_HEADER_LIST_SIZE, 10485760);
-                //sendSettings(items);
+
+                recv_window -= frame->header.length;
+                if(recv_window < (int32_t)MAX_INITIAL_WINDOW_SIZE / 4) {
+                    SYLAR_LOG_INFO(g_logger) << "recv_window=" << recv_window
+                        << " length=" << frame->header.length
+                        << " " << (MAX_INITIAL_WINDOW_SIZE / 4);
+                    sendWindowUpdate(0, MAX_INITIAL_WINDOW_SIZE - recv_window);
+                }
+
+                stream->recv_window -= frame->header.length;
+                if(stream->recv_window < (int32_t)MAX_INITIAL_WINDOW_SIZE / 4) {
+                    SYLAR_LOG_INFO(g_logger) << "recv_window=" << stream->recv_window
+                        << " length=" << frame->header.length
+                        << " " << (MAX_INITIAL_WINDOW_SIZE / 4)
+                        << " diff=" << (MAX_INITIAL_WINDOW_SIZE - stream->recv_window);
+                    sendWindowUpdate(stream->getId(), MAX_INITIAL_WINDOW_SIZE - stream->recv_window);
+                }
             }
-        }
+        } 
         if(stream->getState() == http2::Stream::State::CLOSED) {
             if(m_isClient) {
                 delStream(stream->getId());
@@ -190,7 +241,7 @@ AsyncSocketStream::Ctx::ptr Http2Stream::doRecv() {
                     delStream(stream->getId());
                     return nullptr;
                 }
-                m_worker->schedule(std::bind(&Http2Stream::handleRequest, this, req, stream));
+                m_worker->schedule(std::bind(&Http2Stream::handleRequest, std::dynamic_pointer_cast<Http2Stream>(shared_from_this()), req, stream));
             }
         }
     } else {
@@ -220,17 +271,57 @@ void Http2Stream::handleRequest(http::HttpRequest::ptr req, http2::Stream::ptr s
 
 bool Http2Stream::FrameSendCtx::doSend(AsyncSocketStream::ptr stream) {
     return std::dynamic_pointer_cast<Http2Stream>(stream)
-                ->m_codec->serializeTo(stream, frame) > 0;
+                ->sendFrame(frame, false) > 0;
+}
+
+int32_t Http2Stream::sendData(http2::Stream::ptr stream, const std::string& data, bool async) {
+    int pos = 0;
+    int length = data.size();
+
+    //m_peer.max_frame_size = 1024;
+    auto max_frame_size = m_peer.max_frame_size - 9;
+
+    while(length > 0) {
+        int len = length;
+        if(len > (int)max_frame_size) {
+            len = max_frame_size;
+        }
+
+        usleep(2 * 1000);
+
+        //while(stream->getSendWindow() <= 0) {
+        //    SYLAR_LOG_DEBUG(g_logger) << "begin recv_window=" << stream->getSendWindow()
+        //        << " recv_window_conn=" << send_window;
+        //    usleep(100 * 1000);
+        //    SYLAR_LOG_DEBUG(g_logger) << "after recv_window=" << stream->getSendWindow()
+        //        << " recv_window_conn=" << send_window;
+        //}
+
+        Frame::ptr body = std::make_shared<Frame>();
+        body->header.type = (uint8_t)FrameType::DATA;
+        body->header.flags = (length == len ? (uint8_t)FrameFlagData::END_STREAM : 0);
+        body->header.identifier = stream->getId();
+        auto df = std::make_shared<DataFrame>();
+        df->data = data.substr(pos, len);
+        body->data = df;
+
+        int rt = sendFrame(body, async);
+        if(rt <= 0) {
+            SYLAR_LOG_DEBUG(g_logger) << "sendData error rt=" << rt << " errno=" << errno;
+            return rt;
+        }
+        length -= len;
+        pos += len;
+
+        stream->updateSendWindowByDiff(-len);
+        sylar::Atomic::addFetch(send_window, -len);
+        //send_window -= len;
+    }
+    return 1;
 }
 
 bool Http2Stream::RequestCtx::doSend(AsyncSocketStream::ptr stream) {
     auto h2stream = std::dynamic_pointer_cast<Http2Stream>(stream);
-    //auto stm = h2stream.getStream(sn);
-    //if(!stm) {
-    //    SYLAR_LOG_ERROR(g_logger) << "RequestCtx doSend Fail, sn=" << sn
-    //        << " not exists";
-    //    return false;
-    //}
     Frame::ptr headers = std::make_shared<Frame>();
     headers->header.type = (uint8_t)FrameType::HEADERS;
     headers->header.flags = (uint8_t)FrameFlagHeaders::END_HEADERS;
@@ -250,24 +341,46 @@ bool Http2Stream::RequestCtx::doSend(AsyncSocketStream::ptr stream) {
     hs.push_back(std::make_pair("stream_id", std::to_string(sn)));
     hp.pack(hs, data->data);
     headers->data = data;
-    bool ok = std::dynamic_pointer_cast<Http2Stream>(stream)
-                ->m_codec->serializeTo(stream, headers) > 0;
+    bool ok = std::dynamic_pointer_cast<Http2Stream>(stream)->sendFrame(headers, false) > 0;
     if(!ok) {
         SYLAR_LOG_INFO(g_logger) << "sendHeaders fail";
         return ok;
     }
     if(!request->getBody().empty()) {
-        Frame::ptr body = std::make_shared<Frame>();
-        body->header.type = (uint8_t)FrameType::DATA;
-        body->header.flags = (uint8_t)FrameFlagData::END_STREAM;
-        body->header.identifier = sn;
-        auto data = std::make_shared<DataFrame>();
-        data->data = request->getBody();
-        body->data = data;
-        ok = std::dynamic_pointer_cast<Http2Stream>(stream)
-                    ->m_codec->serializeTo(stream, body) > 0;
+        auto stm = h2stream->getStream(sn);
+        if(!stm) {
+            SYLAR_LOG_ERROR(g_logger) << "RequestCtx doSend Fail, sn=" << sn
+                << " not exists";
+            return false;
+        }
+
+        ok = h2stream->sendData(stm, request->getBody(), false);
+        if(ok <= 0) {
+            SYLAR_LOG_ERROR(g_logger) << "Stream id=" << sn
+                << " sendData fail, rt=" << ok << " size=" << request->getBody().size();
+        }
+        //Frame::ptr body = std::make_shared<Frame>();
+        //body->header.type = (uint8_t)FrameType::DATA;
+        //body->header.flags = (uint8_t)FrameFlagData::END_STREAM;
+        //body->header.identifier = sn;
+        //auto data = std::make_shared<DataFrame>();
+        //data->data = request->getBody();
+        //body->data = data;
+        //ok = std::dynamic_pointer_cast<Http2Stream>(stream)->sendFrame(body, false) > 0;
+        //h2stream->send_window -= body->header.length;
+        //auto stm = h2stream->getStream(sn);
+        //if(!stm) {
+        //    SYLAR_LOG_ERROR(g_logger) << "RequestCtx stream=" << sn << " not exists";
+        //} else {
+        //    stm->send_window -= body->header.length;
+        //}
     }
     return ok;
+}
+
+void Http2Stream::onTimeOut(AsyncSocketStream::Ctx::ptr ctx) {
+    AsyncSocketStream::onTimeOut(ctx);
+    delStream(ctx->sn);
 }
 
 http::HttpResult::ptr Http2Stream::request(http::HttpRequest::ptr req, uint64_t timeout_ms) {
@@ -282,7 +395,7 @@ http::HttpResult::ptr Http2Stream::request(http::HttpRequest::ptr req, uint64_t 
         ctx->fiber = sylar::Fiber::GetThis();
         addCtx(ctx);
         ctx->timer = sylar::IOManager::GetThis()->addTimer(timeout_ms,
-                std::bind(&Http2Stream::onTimeOut, shared_from_this(), ctx));
+                std::bind(&Http2Stream::onTimeOut, std::dynamic_pointer_cast<Http2Stream>(shared_from_this()), ctx));
         enqueue(ctx);
         sylar::Fiber::YieldToHold();
         auto rt = std::make_shared<http::HttpResult>(ctx->result, ctx->response, ctx->resultStr);
@@ -331,7 +444,11 @@ int32_t Http2Stream::sendSettings(const std::vector<SettingsItem>& items) {
     SettingsFrame::ptr data = std::make_shared<SettingsFrame>();
     frame->data = data;
     data->items = items;
-    return sendFrame(frame);
+    int rt = sendFrame(frame);
+    if(rt > 0) {
+        handleSendSetting(frame);
+    }
+    return rt;
 }
 
 int32_t Http2Stream::sendRstStream(uint32_t stream_id, uint32_t error_code) {
@@ -364,7 +481,16 @@ int32_t Http2Stream::sendWindowUpdate(uint32_t stream_id, uint32_t n) {
     WindowUpdateFrame::ptr data = std::make_shared<WindowUpdateFrame>();
     frame->data = data;
     data->increment= n;
-    //TODO update_setting
+    if(stream_id == 0) {
+        recv_window += n;
+    } else {
+        auto stm = getStream(stream_id);
+        if(stm) {
+            stm->updateRecvWindowByDiff(n);
+        } else {
+            SYLAR_LOG_ERROR(g_logger) << "sendWindowUpdate stream=" << stream_id << " not exists";
+        }
+    }
     return sendFrame(frame);
 }
 
@@ -389,7 +515,18 @@ void Http2Stream::updateSettings(Http2Settings& sts, SettingsFrame::ptr frame) {
                 sts.max_concurrent_streams = i.value;
                 break;
             case SettingsFrame::Settings::INITIAL_WINDOW_SIZE:
-                sts.initial_window_size = i.value;
+                if(i.value > MAX_INITIAL_WINDOW_SIZE) {
+                    SYLAR_LOG_ERROR(g_logger) << "INITIAL_WINDOW_SIZE invalid value=" << i.value;
+                    sendGoAway(m_sn, (uint32_t)Http2Error::PROTOCOL_ERROR, "");
+                } else {
+                    int32_t diff = i.value - sts.initial_window_size;
+                    sts.initial_window_size = i.value;
+                    if(&sts == &m_peer) {
+                        updateRecvWindowByDiff(diff);
+                    } else {
+                        updateSendWindowByDiff(diff);
+                    }
+                }
                 break;
             case SettingsFrame::Settings::MAX_FRAME_SIZE:
                 sts.max_frame_size = i.value;
@@ -440,6 +577,22 @@ void Http2Stream::delStream(uint32_t id) {
     return m_streamMgr.del(id);
 }
 
+void Http2Stream::updateSendWindowByDiff(int32_t diff) {
+    m_streamMgr.foreach([diff, this](http2::Stream::ptr stream){
+        if(stream->updateSendWindowByDiff(diff)) {
+            sendRstStream(stream->getId(), (uint32_t)Http2Error::FLOW_CONTROL_ERROR);
+        }
+    });
+}
+
+void Http2Stream::updateRecvWindowByDiff(int32_t diff) {
+    m_streamMgr.foreach([this, diff](http2::Stream::ptr stream){
+        if(stream->updateRecvWindowByDiff(diff)) {
+            sendRstStream(stream->getId(), (uint32_t)Http2Error::FLOW_CONTROL_ERROR);
+        }
+    });
+}
+
 Http2Session::Http2Session(Socket::ptr sock, Http2Server* server)
     :Http2Stream(sock, false) {
     m_server = server;
@@ -465,6 +618,10 @@ void Http2Connection::reset() {
     m_recvTable = DynamicTable();
     m_owner = Http2Settings();
     m_peer = Http2Settings();
+    send_window = DEFAULT_INITIAL_WINDOW_SIZE;
+    recv_window = DEFAULT_INITIAL_WINDOW_SIZE;
+    m_sn = (m_isClient ? -1 : 0);
+    m_streamMgr.clear();
 }
 
 bool Http2Connection::connect(sylar::Address::ptr addr, bool ssl) {

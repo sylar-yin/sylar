@@ -402,7 +402,8 @@ void ByteArray::write(const void* buf, size_t size) {
 
 void ByteArray::read(void* buf, size_t size) {
     if(size > getReadSize()) {
-        throw std::out_of_range("not enough len");
+        throw std::out_of_range("** not enough len size=" + std::to_string(size)
+                + " read_size=" + std::to_string(getReadSize()));
     }
 
     size_t npos = m_position % m_baseSize;
@@ -431,7 +432,7 @@ void ByteArray::read(void* buf, size_t size) {
 
 void ByteArray::read(void* buf, size_t size, size_t position) const {
     if(size > (m_size - position)) {
-        throw std::out_of_range("not enough len");
+        throw std::out_of_range("== not enough len\n" + sylar::BacktraceToString());
     }
 
     size_t npos = position % m_baseSize;

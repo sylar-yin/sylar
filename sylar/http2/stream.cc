@@ -25,10 +25,13 @@ std::string Stream::StateToString(State state) {
     return "UNKNOW(" + std::to_string((uint32_t)v) + ")";
 }
 
-Stream::Stream(std::weak_ptr<Http2Stream> stm, uint32_t id)
+Stream::Stream(std::shared_ptr<Http2Stream> stm, uint32_t id)
     :m_stream(stm)
     ,m_state(State::IDLE)
     ,m_id(id){
+
+    send_window = stm->getPeerSettings().initial_window_size;
+    recv_window = stm->getOwnerSettings().initial_window_size;
 }
 
 std::shared_ptr<Http2Stream> Stream::getStream() const {
@@ -120,7 +123,7 @@ int32_t Stream::handleDataFrame(Frame::ptr frame, bool is_client) {
         return -1;
     }
     m_body += data->data;
-    SYLAR_LOG_DEBUG(g_logger) << "stream_id=" << m_id << " cur_body_size=" << m_body.size();
+    //SYLAR_LOG_DEBUG(g_logger) << "stream_id=" << m_id << " cur_body_size=" << m_body.size();
     //if(is_client) {
     //    m_response = std::make_shared<http::HttpResponse>(0x20);
     //    m_response->setBody(data->data);
@@ -167,19 +170,37 @@ int32_t Stream::sendResponse(http::HttpResponse::ptr rsp) {
         return ok;
     }
     if(!rsp->getBody().empty()) {
-        Frame::ptr body = std::make_shared<Frame>();
-        body->header.type = (uint8_t)FrameType::DATA;
-        body->header.flags = (uint8_t)FrameFlagData::END_STREAM;
-        body->header.identifier = m_id;
-        auto data = std::make_shared<DataFrame>();
-        data->data = rsp->getBody();
-        body->data = data;
-        ok = stream->sendFrame(body);
+        ok = stream->sendData(shared_from_this(), rsp->getBody(), true);
+        if(ok < 0) {
+            SYLAR_LOG_ERROR(g_logger) << "Stream id=" << m_id
+                << " sendData fail, rt=" << ok << " size=" << rsp->getBody().size();
+        }
     }
     return ok;
 }
 
 int32_t Stream::sendFrame(Frame::ptr frame) {
+    return 0;
+}
+
+int32_t Stream::updateSendWindowByDiff(int32_t diff) {
+    return updateWindowSizeByDiff(&send_window, diff);
+}
+
+int32_t Stream::updateRecvWindowByDiff(int32_t diff) {
+    return updateWindowSizeByDiff(&recv_window, diff);
+}
+
+int32_t Stream::updateWindowSizeByDiff(int32_t* window_size, int32_t diff) {
+    int64_t new_value = *window_size + diff;
+    if(new_value < 0 || new_value > MAX_INITIAL_WINDOW_SIZE) {
+        SYLAR_LOG_DEBUG(g_logger) << (window_size == &recv_window? "recv_window" : "send_window")
+            << " update to " << new_value << ", from=" << *window_size << " diff=" << diff << ", invalid"
+            << " stream_id=" << m_id << " " << this;
+        //return -1;
+    }
+    sylar::Atomic::addFetch(*window_size, diff);
+    //*window_size += diff;
     return 0;
 }
 
@@ -197,6 +218,20 @@ void StreamManager::add(Stream::ptr stream) {
 void StreamManager::del(uint32_t id) {
     RWMutexType::WriteLock lock(m_mutex);
     m_streams.erase(id);
+}
+
+void StreamManager::clear() {
+    RWMutexType::WriteLock lock(m_mutex);
+    m_streams.clear();
+}
+
+void StreamManager::foreach(std::function<void(Stream::ptr)> cb) {
+    RWMutexType::ReadLock lock(m_mutex);
+    auto m = m_streams;
+    lock.unlock();
+    for(auto& i : m) {
+        cb(i.second);
+    }
 }
 
 }

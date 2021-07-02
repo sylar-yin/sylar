@@ -11,22 +11,22 @@ void run() {
     }
     conn->start();
 
-    std::string  prefx;
-    for(int i = 0; i < 1000; ++i) {
-        //prefx += "a";
+    std::string  prefx = "aaaa";
+    for(int i = 0; i < 23; ++i) {
+        prefx = prefx + prefx;
     }
 
-    for(int x = 0; x < 2; ++x) {
+    for(int x = 0; x < 1; ++x) {
         sylar::IOManager::GetThis()->schedule([conn, x, prefx](){
             int fail = 0;
             int error = 0;
             static int sn = 0;
-            for(int i = 0; i < 10; ++i) {
+            for(int i = 0; i < 1; ++i) {
                 test::HelloRequest hr;
                 auto tmp = sylar::Atomic::addFetch(sn);
                 hr.set_id(prefx + "hello_" + std::to_string(tmp));
                 hr.set_msg(prefx + "world_" + std::to_string(tmp));
-                auto rsp = conn->request("/test.HelloService/Hello", hr, 10000);
+                auto rsp = conn->request("/test.HelloService/Hello", hr, 100000);
                 std::cout << rsp->toString() << std::endl;
                 if(rsp->getResponse()) {
                     //std::cout << *rsp->getResponse() << std::endl;

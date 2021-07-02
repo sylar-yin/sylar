@@ -36,6 +36,7 @@ GrpcResponse::ptr GrpcConnection::request(GrpcRequest::ptr req, uint64_t timeout
 
     GrpcResponse::ptr rsp = std::make_shared<GrpcResponse>();
     auto result = Http2Connection::request(http_req, timeout_ms);
+    SYLAR_LOG_DEBUG(g_logger) << "send data.size=" << data.size();
     rsp->setResult(result->result);
     rsp->setError(result->error);
     rsp->setResponse(result->response);
@@ -44,13 +45,21 @@ GrpcResponse::ptr GrpcConnection::request(GrpcRequest::ptr req, uint64_t timeout
         rsp->setError(result->response->getHeader("grpc-message"));
 
         auto& body = result->response->getBody();
-        sylar::ByteArray::ptr ba(new sylar::ByteArray((void*)&body[0], body.size()));
-        GrpcMessage::ptr msg = std::make_shared<GrpcMessage>();
-        rsp->setData(msg);
+        if(!body.empty()) {
+            sylar::ByteArray::ptr ba(new sylar::ByteArray((void*)&body[0], body.size()));
+            GrpcMessage::ptr msg = std::make_shared<GrpcMessage>();
+            rsp->setData(msg);
 
-        msg->compressed = ba->readFuint8();
-        msg->length = ba->readFuint32();
-        msg->data = ba->toString();
+            try {
+                msg->compressed = ba->readFuint8();
+                msg->length = ba->readFuint32();
+                msg->data = ba->toString();
+            } catch (...) {
+                SYLAR_LOG_ERROR(g_logger) << "invalid grpc body";
+                result->result = -501;
+                result->error = "invalid grpc body";
+            }
+        }
     }
     return rsp;
 }
