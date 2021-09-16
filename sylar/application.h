@@ -4,6 +4,7 @@
 #include "sylar/http/http_server.h"
 #include "sylar/streams/service_discovery.h"
 #include "sylar/rock/rock_stream.h"
+#include "sylar/grpc/grpc_stream.h"
 
 namespace sylar {
 
@@ -20,6 +21,7 @@ public:
 
     IServiceDiscovery::ptr getServiceDiscovery() const { return m_serviceDiscovery;}
     RockSDLoadBalance::ptr getRockSDLoadBalance() const { return m_rockSDLoadBalance;}
+    grpc::GrpcSDLoadBalance::ptr getGrpcSDLoadBalance() const { return m_grpcSDLoadBalance;}
 
     void initEnv();
 private:
@@ -36,6 +38,7 @@ private:
 
     IServiceDiscovery::ptr m_serviceDiscovery;
     RockSDLoadBalance::ptr m_rockSDLoadBalance;
+    grpc::GrpcSDLoadBalance::ptr m_grpcSDLoadBalance;
 };
 
 std::string GetServerWorkPath();

@@ -1,8 +1,9 @@
 redis:
     config:
         local:
-            host: 127.0.0.1:6379
-            type: fox_redis
+            host: 10.106.85.247:6379
+            type: fox_redis_cluster
+            passwd: yieJbH9WYQ
             pool: 2
-            timeout: 100
+            timeout: 5000
     desc: "type: redis,redis_cluster,fox_redis,fox_redis_cluster"

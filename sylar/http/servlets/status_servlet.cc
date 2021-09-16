@@ -144,6 +144,11 @@ int32_t StatusServlet::handle(sylar::http::HttpRequest::ptr request
     if(rlb) {
         ss << rlb->statusString() << std::endl;
     }
+    auto glb = Application::GetInstance()->getGrpcSDLoadBalance();
+    if(glb) {
+        ss << glb->statusString() << std::endl;
+    }
+
     ss << "===================================================" << std::endl;
     for(size_t i = 0; i < ms.size(); ++i) {
         if(i) {

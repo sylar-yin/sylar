@@ -4,4 +4,7 @@ service_discovery:
         name: local
 rock_services:
     sylar.top:
-        "all" : fair
+        all: fair
+grpc_services:
+    grpc:
+        all: fair

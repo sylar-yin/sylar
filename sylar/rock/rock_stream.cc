@@ -191,6 +191,7 @@ bool RockConnection::connect(sylar::Address::ptr addr) {
 
 RockSDLoadBalance::RockSDLoadBalance(IServiceDiscovery::ptr sd)
     :SDLoadBalance(sd) {
+    m_type = "rock";
 }
 
 static SocketStream::ptr create_rock_stream(const std::string& domain, const std::string& service, ServiceItemInfo::ptr info) {

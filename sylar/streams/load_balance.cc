@@ -343,7 +343,7 @@ HolderStats& LoadBalanceItem::get(const uint32_t& now) {
 
 SDLoadBalance::SDLoadBalance(IServiceDiscovery::ptr sd)
     :m_sd(sd) {
-    m_sd->setServiceCallback(std::bind(&SDLoadBalance::onServiceChange, this
+    m_sd->addServiceCallback(std::bind(&SDLoadBalance::onServiceChange, this
                 ,std::placeholders::_1
                 ,std::placeholders::_2
                 ,std::placeholders::_3
@@ -423,25 +423,34 @@ void SDLoadBalance::onServiceChange(const std::string& domain, const std::string
                             ,const std::unordered_map<uint64_t, ServiceItemInfo::ptr>& new_value) {
     //SYLAR_LOG_INFO(g_logger) << "onServiceChange domain=" << domain
     //                         << " service=" << service;
-    auto type = getType(domain, service);
-    auto lb = get(domain, service, true);
     std::unordered_map<uint64_t, ServiceItemInfo::ptr> add_values;
     std::unordered_map<uint64_t, LoadBalanceItem::ptr> del_infos;
 
     for(auto& i : old_value) {
+        if(i.second->getType() != m_type) {
+            continue;
+        }
         if(new_value.find(i.first) == new_value.end()) {
             del_infos[i.first];
         }
     }
     for(auto& i : new_value) {
+        if(i.second->getType() != m_type) {
+            continue;
+        }
         if(old_value.find(i.first) == old_value.end()) {
             add_values.insert(i);
         }
     }
     //TODO update
 
+    auto type = getType(domain, service);
     std::unordered_map<uint64_t, LoadBalanceItem::ptr> add_infos;
     for(auto& i : add_values) {
+        //SYLAR_LOG_INFO(g_logger) << "*** " << i.second->getType();
+        if(i.second->getType() != m_type) {
+            continue;
+        }
         auto stream = m_cb(domain, service, i.second);
         if(!stream) {
             SYLAR_LOG_ERROR(g_logger) << "create stream fail, " << i.second->toString();
@@ -456,10 +465,13 @@ void SDLoadBalance::onServiceChange(const std::string& domain, const std::string
         add_infos[i.first] = lditem;
     }
 
-    lb->update(add_infos, del_infos);
-    for(auto& i : del_infos) {
-        if(i.second) {
-            i.second->close();
+    if(!add_infos.empty() || !del_infos.empty()) {
+        auto lb = get(domain, service, true);
+        lb->update(add_infos, del_infos);
+        for(auto& i : del_infos) {
+            if(i.second) {
+                i.second->close();
+            }
         }
     }
 }

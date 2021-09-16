@@ -2,6 +2,7 @@
 #define __SYLAR_GRPC_GRPC_STREAM_H__
 
 #include "sylar/http2/http2.h"
+#include "sylar/streams/load_balance.h"
 #include <google/protobuf/message.h>
 
 namespace sylar {
@@ -57,9 +58,15 @@ private:
     GrpcMessage::ptr m_data;
 };
 
-class GrpcResponse {
+class GrpcResult {
 public:
-    typedef std::shared_ptr<GrpcResponse> ptr;
+    typedef std::shared_ptr<GrpcResult> ptr;
+    GrpcResult() {
+    }
+    GrpcResult(int32_t result, const std::string& err, int32_t used)
+        :m_result(result), m_used(used), m_error(err) {
+    }
+
     http::HttpResponse::ptr getResponse() const { return m_response;}
     GrpcMessage::ptr getData() const { return m_data;}
     void setResponse(http::HttpResponse::ptr v) { m_response = v;}
@@ -98,8 +105,12 @@ public:
         }
         return false;
     }
+
+    void setUsed(int32_t v) { m_used = v;}
+    int32_t getUsed() const { return m_used;}
 private:
     int m_result = 0;
+    int m_used = 0;
     std::string m_error;
     http::HttpResponse::ptr m_response;
     GrpcMessage::ptr m_data;
@@ -109,9 +120,33 @@ class GrpcConnection : public http2::Http2Connection {
 public:
     typedef std::shared_ptr<GrpcConnection> ptr;
     GrpcConnection();
-    GrpcResponse::ptr request(GrpcRequest::ptr req, uint64_t timeout_ms);
-    GrpcResponse::ptr request(const std::string& method, const google::protobuf::Message& message, uint64_t timeout_ms);
+    GrpcResult::ptr request(GrpcRequest::ptr req, uint64_t timeout_ms);
+    GrpcResult::ptr request(const std::string& method,
+                              const google::protobuf::Message& message,
+                              uint64_t timeout_ms,
+                              const std::map<std::string, std::string>& headers = {});
 };
+
+class GrpcSDLoadBalance : public SDLoadBalance {
+public:
+    typedef std::shared_ptr<GrpcSDLoadBalance> ptr;
+    GrpcSDLoadBalance(IServiceDiscovery::ptr sd);
+
+    virtual void start();
+    virtual void stop();
+    void start(const std::unordered_map<std::string
+               ,std::unordered_map<std::string,std::string> >& confs);
+
+    GrpcResult::ptr request(const std::string& domain, const std::string& service,
+                             GrpcRequest::ptr req, uint32_t timeout_ms, uint64_t idx = -1);
+
+    GrpcResult::ptr request(const std::string& domain, const std::string& service,
+                             const std::string& method, const google::protobuf::Message& message,
+                             uint32_t timeout_ms,
+                             const std::map<std::string, std::string>& headers = {},
+                             uint64_t idx = -1);
+};
+
 
 }
 }

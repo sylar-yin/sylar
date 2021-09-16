@@ -54,6 +54,7 @@ ServiceItemInfo::ptr ServiceItemInfo::Create(const std::string& ip_and_port, con
         rt->m_datas[i.substr(0, pos)] = i.substr(pos + 1);
     }
     rt->m_updateTime = rt->getDataAs<uint64_t>("update_time");
+    rt->m_type = rt->getData("type");
     return rt;
 }
 
@@ -83,9 +84,21 @@ std::string IServiceDiscovery::getParam(const std::string& key, const std::strin
     return it == m_params.end() ? def : it->second;
 }
 
+void IServiceDiscovery::addServiceCallback(service_callback v) {
+    sylar::RWMutex::WriteLock lock(m_mutex);
+    m_cbs.push_back(v);
+}
+
 void IServiceDiscovery::setQueryServer(const std::unordered_map<std::string, std::unordered_set<std::string> >& v) {
     sylar::RWMutex::WriteLock lock(m_mutex);
-    m_queryInfos = v;
+    //TODO
+    //m_queryInfos = v;
+    for(auto& i : v) {
+        auto& m = m_queryInfos[i.first];
+        for(auto& x : i.second) {
+            m.insert(x);
+        }
+    }
 }
 
 void IServiceDiscovery::registerServer(const std::string& domain, const std::string& service,
@@ -398,9 +411,12 @@ bool ZKServiceDiscovery::getChildren(const std::string& path) {
     auto new_vals = infos;
     sylar::RWMutex::WriteLock lock(m_mutex);
     m_datas[domain][service].swap(infos);
+    auto cbs = m_cbs;
     lock.unlock();
 
-    m_cb(domain, service, infos, new_vals);
+    for(auto& cb : cbs) {
+        cb(domain, service, infos, new_vals);
+    }
     return true;
 }
 
@@ -470,15 +486,18 @@ bool RedisServiceDiscovery::registerSelf() {
     auto params = m_params;
     lock.unlock();
 
+    std::stringstream hss;
+    hss << "hmset sylar";
     for(auto& i : rinfo) {
         std::stringstream ss;
         ss << "hmset sylar:" << i.first;
+        hss << " " << i.first << " " << time(0);
         for(auto& n : i.second) {
             ss << " " << n.first << " " << time(0);
             for(auto& v : n.second) {
                 std::map<std::string, std::string> m = params;
                 if(!v.second.empty()) {
-                    m["data"] = v.second;
+                    m["type"] = v.second;
                 }
                 m["update_time"] = std::to_string(time(0));
                 if(!sylar::RedisUtil::TryCmd(m_name, 5, "hset sylar:%s:%s %s %s",
@@ -494,6 +513,11 @@ bool RedisServiceDiscovery::registerSelf() {
             }
         }
     }
+    if(!rinfo.empty()) {
+        if(!sylar::RedisUtil::TryCmd(m_name, 5, hss.str().c_str())) {
+            SYLAR_LOG_ERROR(g_logger) << "register server fail:" << hss.str();
+        }
+    }
     return true;
 }
 
@@ -505,6 +529,7 @@ bool RedisServiceDiscovery::queryInfo() {
     time_t now = time(0);
     for(auto& i : infos) {
         auto services = i.second;
+        //SYLAR_LOG_INFO(g_logger) << "==" << i.first << " - " << sylar::Join(i.second.begin(), i.second.end(), ",");
         if(i.second.count("all")) {
             auto rpy = sylar::RedisUtil::TryCmd(m_name, 5, "hkeys sylar:%s", i.first.c_str());
             if(!rpy) {
@@ -536,7 +561,9 @@ bool RedisServiceDiscovery::queryInfo() {
                         << ":" << n << " " << std::string(rpy->element[x]->str, rpy->element[x]->len);
                     continue;
                 }
+                //SYLAR_LOG_INFO(g_logger) << "=" << info->toString();
                 if(!info || (now - info->getUpdateTime()) > g_service_discover_redis_ttl->getValue()) {
+                    //SYLAR_LOG_INFO(g_logger) << "*" << info->toString();
                     continue;
                 }
                 sinfos[info->getId()] = info;
@@ -545,9 +572,12 @@ bool RedisServiceDiscovery::queryInfo() {
             auto new_vals = sinfos;
             sylar::RWMutex::WriteLock lock(m_mutex);
             m_datas[i.first][n].swap(sinfos);
+            auto cbs = m_cbs;
             lock.unlock();
 
-            m_cb(i.first, n, sinfos, new_vals);
+            for(auto& cb : cbs) {
+                cb(i.first, n, sinfos, new_vals);
+            }
         }
     }
     return true;

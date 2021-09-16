@@ -41,6 +41,7 @@ AsyncSocketStream::AsyncSocketStream(Socket::ptr sock, bool owner)
     ,m_waitSem(2)
     ,m_sn(0)
     ,m_autoConnect(false)
+    ,m_tryConnectCount(0)
     ,m_iomanager(nullptr)
     ,m_worker(nullptr) {
 }
@@ -70,9 +71,6 @@ bool AsyncSocketStream::start() {
             }
         }
 
-        startRead();
-        startWrite();
-
         if(m_connectCb) {
             if(!m_connectCb(shared_from_this())) {
                 innerClose();
@@ -81,16 +79,25 @@ bool AsyncSocketStream::start() {
                 break;
             }
         }
+
+        startRead();
+        startWrite();
+
+        m_tryConnectCount = 0;
         return true;
     } while(false);
-
+    ++m_tryConnectCount;
     if(m_autoConnect) {
         if(m_timer) {
             m_timer->cancel();
             m_timer = nullptr;
         }
 
-        m_timer = m_iomanager->addTimer(2 * 1000,
+        uint64_t wait_ts = m_tryConnectCount * 2 * 50;
+        if(wait_ts > 2000) {
+            wait_ts = 2000;
+        }
+        m_timer = m_iomanager->addTimer(wait_ts,
                 std::bind(&AsyncSocketStream::start, shared_from_this()));
     }
     return false;

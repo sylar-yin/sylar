@@ -1,6 +1,7 @@
 #include "stream.h"
 #include "http2_stream.h"
 #include "sylar/log.h"
+#include "sylar/macro.h"
 
 namespace sylar {
 namespace http2 {
@@ -47,6 +48,7 @@ int32_t Stream::handleFrame(Frame::ptr frame, bool is_client) {
     int rt = 0;
     if(frame->header.type == (uint8_t)FrameType::HEADERS) {
         rt = handleHeadersFrame(frame, is_client);
+        SYLAR_ASSERT(rt != -1);
     } else if(frame->header.type == (uint8_t)FrameType::DATA) {
         rt = handleDataFrame(frame, is_client);
     } else if(frame->header.type == (uint8_t)FrameType::RST_STREAM) {

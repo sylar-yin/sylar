@@ -819,17 +819,12 @@ void FoxRedisCluster::OnAuthCb(redisClusterAsyncContext* c, void* rp, void* priv
 }
 
 void FoxRedisCluster::ConnectCb(const redisAsyncContext* c, int status) {
-    FoxRedisCluster* ar = static_cast<FoxRedisCluster*>(c->data);
+    //SYLAR_LOG_INFO(g_logger) << "ConnectCb " << status;
+    //FoxRedisCluster* ar = static_cast<FoxRedisCluster*>(c->data);
     if(!status) {
         SYLAR_LOG_INFO(g_logger) << "FoxRedisCluster::ConnectCb "
                    << c->c.tcp.host << ":" << c->c.tcp.port
                    << " success";
-        if(!ar->m_passwd.empty()) {
-            int rt = redisClusterAsyncCommand(ar->m_context.get(), FoxRedisCluster::OnAuthCb, ar, "auth %s", ar->m_passwd.c_str());
-            if(rt) {
-                SYLAR_LOG_ERROR(g_logger) << "FoxRedisCluster Auth fail: " << rt;
-            }
-        }
     } else {
         SYLAR_LOG_ERROR(g_logger) << "FoxRedisCluster::ConnectCb "
                     << c->c.tcp.host << ":" << c->c.tcp.port
@@ -935,23 +930,24 @@ bool FoxRedisCluster::pinit() {
         return true;
     }
     SYLAR_LOG_INFO(g_logger) << "FoxRedisCluster pinit:" << m_host;
-    auto ctx = redisClusterAsyncConnect(m_host.c_str(), 0);
-    ctx->data = this;
-    redisClusterLibeventAttach(ctx, m_thread->getBase());
+    redisClusterAsyncContext *ctx = redisClusterAsyncContextInit();
     redisClusterAsyncSetConnectCallback(ctx, ConnectCb);
     redisClusterAsyncSetDisconnectCallback(ctx, DisconnectCb);
-    if(!ctx) {
-        SYLAR_LOG_ERROR(g_logger) << "redisClusterAsyncConnect (" << m_host
-                    << ") null";
-        return false;
+    redisClusterSetOptionAddNodes(ctx->cc, m_host.c_str());
+    if(!m_passwd.empty()) {
+        redisClusterSetOptionPassword(ctx->cc, m_passwd.c_str());
     }
-    if(ctx->err) {
-        SYLAR_LOG_ERROR(g_logger) << "Error:(" << ctx->err << ")" << ctx->errstr
+    redisClusterLibeventAttach(ctx, m_thread->getBase());
+    redisClusterConnect2(ctx->cc);
+    if(ctx->cc->err) {
+        SYLAR_LOG_ERROR(g_logger) << "Error:(" << ctx->cc->err << ")" << ctx->cc->errstr
             << " passwd=" << m_passwd;
         return false;
     }
+    //ctx->data = this;
+
     m_status = CONNECTED;
-    //m_context.reset(ctx, redisAsyncFree);
+    //m_context.reset(ctx, redisClusterAsyncFree);
     m_context.reset(ctx, sylar::nop<redisClusterAsyncContext>);
     //m_context.reset(ctx, std::bind(&FoxRedisCluster::delayDelete, this, std::placeholders::_1));
     if(m_event == nullptr) {

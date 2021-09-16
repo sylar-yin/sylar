@@ -10,8 +10,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include (cmake/utils.cmake)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
-set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O0 -fPIC -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations -Wno-class-memaccess")
-set(CMAKE_C_FLAGS "$ENV{CXXFLAGS} -rdynamic -O0 -fPIC -ggdb -std=c11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
+set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations -Wno-class-memaccess")
+set(CMAKE_C_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
 #set(CMAKE_CXX_FLAGS "-static ${CMAKE_CXX_FLAGS}")
 
 ENABLE_LANGUAGE(ASM)
@@ -176,7 +176,8 @@ set(LIBS
         ${OPENSSL_LIBRARIES}
         ${PROTOBUF_LIBRARIES}
         event
-        hiredis_vip
+        hiredis
+        hiredis_cluster
         mysqlclient_r
         zookeeper_mt
         sqlite3
@@ -189,7 +190,6 @@ set(LIBS
         rdkafka++
         )
 sylar_add_executable(echo_server "examples/echo_server.cc" sylar "${LIBS}")
-
 if(BUILD_TEST)
 sylar_add_executable(test_util "tests/test_util.cc" sylar "${LIBS}")
 sylar_add_executable(test_hashmultimap "tests/test_hashmultimap.cc" sylar "${LIBS}")
@@ -258,7 +258,12 @@ sylar_add_executable(test_grpcclient "${GRPC_SRCS}" sylar "${LIBS}")
 #    )
 #sylar_add_executable(orm "${ORM_SRCS}" sylar "${LIBS}")
 #
-#add_library(test_module SHARED tests/test_module.cc)
+
+set(TEST_MODULE
+    tests/test_module.cc
+    )
+protobufmaker(tests/test.proto TEST_MODULE ${CMAKE_CURRENT_SOURCE_DIR})
+add_library(test_module SHARED "${TEST_MODULE}")
 
 sylar_add_executable(bin_sylar "sylar/main.cc" sylar "${LIBS}")
 set_target_properties(bin_sylar PROPERTIES OUTPUT_NAME "sylar")

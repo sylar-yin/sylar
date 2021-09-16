@@ -84,8 +84,8 @@ void TcpServer::startAccept(Socket::ptr sock) {
             m_ioWorker->schedule(std::bind(&TcpServer::handleClient,
                         shared_from_this(), client));
         } else {
-            SYLAR_LOG_ERROR(g_logger) << "accept errno=" << errno
-                << " errstr=" << strerror(errno);
+            SYLAR_LOG_ERROR(g_logger) << "accept errno=" << sock->getError()
+                << " errstr=" << strerror(sock->getError());
         }
     }
 }

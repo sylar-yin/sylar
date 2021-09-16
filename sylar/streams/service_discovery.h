@@ -23,6 +23,7 @@ public:
     uint32_t getUpdateTime() const { return m_updateTime;}
     const std::string& getIp() const { return m_ip;}
     const std::string& getData() const { return m_data;}
+    const std::string& getType() const { return m_type;}
 
     std::string toString() const;
 
@@ -37,6 +38,7 @@ private:
     uint32_t m_updateTime = 0;
     std::string m_ip;
     std::string m_data;
+    std::string m_type;
     std::map<std::string, std::string> m_datas;
 };
 
@@ -63,8 +65,9 @@ public:
     virtual void start() = 0;
     virtual void stop() = 0;
 
-    service_callback getServiceCallback() const { return m_cb;}
-    void setServiceCallback(service_callback v) { m_cb = v;}
+    //service_callback getServiceCallback() const { return m_cb;}
+    //void setServiceCallback(service_callback v) { m_cb = v;}
+    void addServiceCallback(service_callback v);
 
     void setQueryServer(const std::unordered_map<std::string, std::unordered_set<std::string> >& v);
 
@@ -88,7 +91,7 @@ protected:
     //domain -> [service]
     std::unordered_map<std::string, std::unordered_set<std::string> > m_queryInfos;
 
-    service_callback m_cb;
+    std::vector<service_callback> m_cbs;
 
     std::string m_selfInfo;
     std::string m_selfData;

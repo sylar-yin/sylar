@@ -229,6 +229,7 @@ protected:
     stream_callback m_cb;
 
     sylar::Timer::ptr m_timer;
+    std::string m_type;
     bool m_isRefresh = false;
 };
 

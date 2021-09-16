@@ -126,6 +126,7 @@ protected:
 
     uint32_t m_sn;
     bool m_autoConnect;
+    uint16_t m_tryConnectCount;
     sylar::Timer::ptr m_timer;
     sylar::IOManager* m_iomanager;
     sylar::IOManager* m_worker;

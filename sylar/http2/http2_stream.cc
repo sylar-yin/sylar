@@ -48,7 +48,7 @@ std::string Http2Settings::toString() const {
 
 Http2Stream::Http2Stream(Socket::ptr sock, bool client)
     :AsyncSocketStream(sock, true)
-    ,m_sn(client ? -1 : 0)
+    ,m_sn(client ? 1 : 0)
     ,m_isClient(client)
     ,m_ssl(false) {
     m_codec = std::make_shared<FrameCodec>();
@@ -87,6 +87,22 @@ bool Http2Stream::handleShakeClient() {
             << " errno=" << errno << " - " << strerror(errno);
         return false;
     }
+    //setting ack & setting
+    //for(int i = 0; i < 2; ++i) {
+    //    auto frame = m_codec->parseFrom(shared_from_this());
+    //    if(!frame) {
+    //        SYLAR_LOG_ERROR(g_logger) << "handleShakeClient recv SettingsFrame fail,"
+    //            << " errno=" << errno << " - " << strerror(errno);
+    //        return false;
+    //    }
+    //    if(frame->header.type != (uint8_t)FrameType::SETTINGS) {
+    //        SYLAR_LOG_ERROR(g_logger) << "handleShakeClient recv frame not SettingsFrame, type="
+    //            << FrameTypeToString((FrameType)frame->header.type);
+    //        return false;
+    //    }
+    //    handleRecvSetting(frame);
+    //}
+    //sendSettingsAck();
     //sendWindowUpdate(0, 1 << 30);
     sendWindowUpdate(0, MAX_INITIAL_WINDOW_SIZE - recv_window);
     return true;
@@ -287,7 +303,7 @@ int32_t Http2Stream::sendData(http2::Stream::ptr stream, const std::string& data
             len = max_frame_size;
         }
 
-        usleep(2 * 1000);
+        //usleep(2 * 1000);
 
         //while(stream->getSendWindow() <= 0) {
         //    SYLAR_LOG_DEBUG(g_logger) << "begin recv_window=" << stream->getSendWindow()
@@ -338,6 +354,7 @@ bool Http2Stream::RequestCtx::doSend(AsyncSocketStream::ptr stream) {
     for(auto& i : m) {
         hs.push_back(std::make_pair(sylar::ToLower(i.first), i.second));
     }
+    // debug stream_id
     hs.push_back(std::make_pair("stream_id", std::to_string(sn)));
     hp.pack(hs, data->data);
     headers->data = data;

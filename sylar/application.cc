@@ -309,9 +309,11 @@ int Application::run_fiber() {
     if(!g_service_discovery_zk->getValue().empty()) {
         m_serviceDiscovery = std::make_shared<ZKServiceDiscovery>(g_service_discovery_zk->getValue());
         m_rockSDLoadBalance = std::make_shared<RockSDLoadBalance>(m_serviceDiscovery);
+        m_grpcSDLoadBalance = std::make_shared<grpc::GrpcSDLoadBalance>(m_serviceDiscovery);
     } else if(!g_service_discovery_redis->getValue().empty()) {
         m_serviceDiscovery = std::make_shared<RedisServiceDiscovery>(g_service_discovery_redis->getValue());
         m_rockSDLoadBalance = std::make_shared<RockSDLoadBalance>(m_serviceDiscovery);
+        m_grpcSDLoadBalance = std::make_shared<grpc::GrpcSDLoadBalance>(m_serviceDiscovery);
     }
 
     //if(m_rockSDLoadBalance) {
@@ -320,6 +322,10 @@ int Application::run_fiber() {
 
     if(m_rockSDLoadBalance) {
         m_rockSDLoadBalance->start();
+        sleep(1);
+    }
+    if(m_grpcSDLoadBalance) {
+        m_grpcSDLoadBalance->start();
         sleep(1);
     }
 
@@ -337,6 +343,9 @@ int Application::run_fiber() {
 
     if(m_rockSDLoadBalance) {
         m_rockSDLoadBalance->doRegister();
+    }
+    if(m_grpcSDLoadBalance) {
+        m_grpcSDLoadBalance->doRegister();
     }
 
     modules.clear();
