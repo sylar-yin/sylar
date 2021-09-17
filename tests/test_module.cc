@@ -51,6 +51,8 @@ int32_t HandleHelloServiceHello(sylar::grpc::GrpcRequest::ptr request,
     return 0;
 }
 
+std::string bigstr(10, 'a');
+
 class MyModule : public sylar::RockModule {
 public:
     MyModule()
@@ -90,17 +92,52 @@ public:
                 << (rpy->str ? rpy->str : "(null)");
         }
 
+        /*
         sylar::IOManager::GetThis()->addTimer(1000, [](){
+            // test Hello
             auto lb = sylar::Application::GetInstance()->getGrpcSDLoadBalance();
             test::HelloRequest hr;
-            hr.set_id("hello_" + std::to_string(time(0)));
-            hr.set_msg("world_" + std::to_string(time(0)));
+            hr.set_id(bigstr + "hello_" + std::to_string(time(0)));
+            hr.set_msg(bigstr + "world_" + std::to_string(time(0)));
             auto rt = lb->request("grpc", "test", "/test.HelloService/Hello", hr, 1000);
             SYLAR_LOG_INFO(g_logger) << rt->toString();
             if(rt->getResponse()) {
                 SYLAR_LOG_INFO(g_logger) << *rt->getResponse();
             }
         }, true);
+        */
+
+        auto lb = sylar::Application::GetInstance()->getGrpcSDLoadBalance();
+        test::HelloRequest hr;
+        hr.set_id(bigstr + "hello_" + std::to_string(time(0)));
+        hr.set_msg(bigstr + "world_" + std::to_string(time(0)));
+
+        sylar::http::HttpRequest::ptr req = std::make_shared<sylar::http::HttpRequest>(0x20, false);
+        req->setMethod(sylar::http::HttpMethod::POST);
+        //req->setPath("/test.HelloService/HelloStreamA");
+        //req->setPath("/test.HelloService/HelloStreamC");
+        req->setPath("/test.HelloService/HelloStreamB");
+        req->setHeader("content-type", "application/grpc+proto");
+
+        auto cli = lb->openStreamClient("grpc", "test", req);
+        SYLAR_LOG_INFO(g_logger) << "=====" << cli;
+        sylar::IOManager::GetThis()->addTimer(1000, [cli](){
+            test::HelloRequest hr;
+            hr.set_id(bigstr + "hello_" + std::to_string(time(0)));
+            hr.set_msg(bigstr + "world_" + std::to_string(time(0)));
+            cli->sendMessage(hr);
+        }, false);
+        sylar::IOManager::GetThis()->schedule([cli](){
+            while(true) {
+                auto rsp = cli->recvMessage<test::HelloResponse>();
+                if(rsp) {
+                    SYLAR_LOG_INFO(g_logger) << "===" << sylar::PBToJsonString(*rsp);
+                } else {
+                    SYLAR_LOG_INFO(g_logger) << "out";
+                    break;
+                }
+            }
+        });
 
         return true;
     }

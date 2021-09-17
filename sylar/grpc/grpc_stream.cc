@@ -13,6 +13,13 @@ static sylar::ConfigVar<std::unordered_map<std::string
     sylar::Config::Lookup("grpc_services", std::unordered_map<std::string
     ,std::unordered_map<std::string, std::string> >(), "grpc_services");
 
+sylar::ByteArray::ptr GrpcMessage::packData() const {
+    sylar::ByteArray::ptr ba = std::make_shared<sylar::ByteArray>();
+    ba->writeFuint8(0);
+    ba->writeFuint32(data.size());
+    ba->write(data.c_str(), data.size());
+    return ba;
+}
 
 std::string GrpcRequest::toString() const {
     std::stringstream ss;
@@ -202,6 +209,74 @@ GrpcResult::ptr GrpcSDLoadBalance::request(const std::string& domain, const std:
     }
     stats.decDoing(1);
     return r;
+}
+
+
+GrpcStreamClient::GrpcStreamClient(http2::StreamClient::ptr client)
+    : m_client(client) {
+}
+
+int32_t GrpcStreamClient::sendData(const std::string& data, bool end_stream) {
+    return m_client->sendData(data, end_stream);
+}
+
+http2::DataFrame::ptr GrpcStreamClient::recvData() {
+    return m_client->recvData();
+}
+
+int32_t GrpcStreamClient::sendMessage(const google::protobuf::Message& msg, bool end_stream) {
+    GrpcMessage m;
+    msg.SerializeToString(&m.data);
+    auto ba = m.packData();
+    ba->setPosition(0);
+    return m_client->sendData(ba->toString(), end_stream);
+}
+
+std::shared_ptr<std::string> GrpcStreamClient::recvMessageData() {
+    try {
+        auto df = recvData();
+        if(!df) {
+            return nullptr;
+        }
+
+        auto rt = std::make_shared<std::string>();
+        auto& body = df->data;
+        sylar::ByteArray::ptr ba(new sylar::ByteArray((void*)&body[0], body.size()));
+        bool compress = ba->readFuint8();
+        (void)compress;
+        uint32_t length = ba->readFuint32();
+        *rt += ba->toString();
+        while(rt->size() < length) {
+            df = recvData();
+            if(!df) {
+                return nullptr;
+            }
+            *rt += df->data;
+        }
+        return rt;
+    } catch (...) {
+    }
+    return nullptr;
+}
+
+GrpcStreamClient::ptr GrpcSDLoadBalance::openStreamClient(const std::string& domain, const std::string& service,
+                                 sylar::http::HttpRequest::ptr request, uint64_t idx) {
+    auto lb = get(domain, service);
+    if(!lb) {
+        return nullptr;
+        //return std::make_shared<GrpcResult>(ILoadBalance::NO_SERVICE, "no_service", 0);
+    }
+    auto conn = lb->get(idx);
+    if(!conn) {
+        //return std::make_shared<GrpcResult>(ILoadBalance::NO_CONNECTION, "no_connection", 0);
+        return nullptr;
+    }
+
+    auto cli = conn->getStreamAs<GrpcConnection>()->openStreamClient(request);
+    if(cli) {
+        return std::make_shared<GrpcStreamClient>(cli);
+    }
+    return nullptr;
 }
 
 }

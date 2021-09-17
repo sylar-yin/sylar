@@ -5,6 +5,7 @@
 #include "sylar/mutex.h"
 #include <unordered_map>
 #include "sylar/http/http.h"
+#include "sylar/ds/blocking_queue.h"
 #include "hpack.h"
 //#include "http2_stream.h"
 
@@ -57,6 +58,7 @@ class Stream : public std::enable_shared_from_this<Stream> {
 public:
     friend class Http2Stream;
     typedef std::shared_ptr<Stream> ptr;
+    typedef std::function<int32_t(Frame::ptr)> frame_handler;
     enum class State {
         IDLE                = 0x0,
         OPEN                = 0x1,
@@ -67,6 +69,7 @@ public:
         HALF_CLOSE_REMOTE   = 0x6
     };
     Stream(std::shared_ptr<Http2Stream> stm, uint32_t id);
+    ~Stream();
 
     uint32_t getId() const { return m_id;}
 
@@ -74,7 +77,8 @@ public:
 
     int32_t handleFrame(Frame::ptr frame, bool is_client);
     int32_t sendFrame(Frame::ptr frame);
-    int32_t sendResponse(http::HttpResponse::ptr rsp);
+    int32_t sendResponse(sylar::http::HttpResponse::ptr rsp, bool end_stream = true);
+    int32_t sendRequest(sylar::http::HttpRequest::ptr req, bool end_stream = true);
 
     std::shared_ptr<Http2Stream> getStream() const;
     State getState() const { return m_state;}
@@ -87,6 +91,11 @@ public:
 
     int32_t getSendWindow() const { return send_window;}
     int32_t getRecvWindow() const { return recv_window;}
+
+    frame_handler getFrameHandler() const { return m_handler;}
+    void setFrameHandler(frame_handler v) { m_handler = v;}
+
+    void close();
 private:
     int32_t handleHeadersFrame(Frame::ptr frame, bool is_client);
     int32_t handleDataFrame(Frame::ptr frame, bool is_client);
@@ -100,10 +109,27 @@ private:
     http::HttpRequest::ptr m_request;
     http::HttpResponse::ptr m_response;
     HPack::ptr m_recvHPack;
+    frame_handler m_handler;
     std::string m_body;
 
     int32_t send_window = 0;
     int32_t recv_window = 0;
+};
+
+class StreamClient : public std::enable_shared_from_this<StreamClient> {
+public:
+    typedef std::shared_ptr<StreamClient> ptr;
+
+    static StreamClient::ptr Create(Stream::ptr stream);
+
+    int32_t sendData(const std::string& data, bool end_stream = false);
+    DataFrame::ptr recvData();
+
+private:
+    int32_t onFrame(Frame::ptr frame);
+private:
+    Stream::ptr m_stream;
+    sylar::ds::BlockingQueue<DataFrame> m_data;
 };
 
 class StreamManager {

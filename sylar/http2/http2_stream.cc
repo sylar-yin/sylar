@@ -59,6 +59,11 @@ Http2Stream::~Http2Stream() {
     SYLAR_LOG_INFO(g_logger) << "Http2Stream::~Http2Stream " << this;
 }
 
+void Http2Stream::onClose() {
+    SYLAR_LOG_INFO(g_logger) << "******** onClose";
+    m_streamMgr.clear();
+}
+
 bool Http2Stream::handleShakeClient() {
     SYLAR_LOG_INFO(g_logger) << "handleShakeClient";
     if(!isConnected()) {
@@ -216,7 +221,6 @@ AsyncSocketStream::Ctx::ptr Http2Stream::doRecv() {
             }
         }
 
-        stream->handleFrame(frame, m_isClient);
         if(frame->header.type == (uint8_t)FrameType::DATA) {
             if(frame->header.length) {
 
@@ -238,6 +242,7 @@ AsyncSocketStream::Ctx::ptr Http2Stream::doRecv() {
                 }
             }
         } 
+        stream->handleFrame(frame, m_isClient);
         if(stream->getState() == http2::Stream::State::CLOSED) {
             if(m_isClient) {
                 delStream(stream->getId());
@@ -342,47 +347,65 @@ int32_t Http2Stream::sendData(http2::Stream::ptr stream, const std::string& data
 
 bool Http2Stream::RequestCtx::doSend(AsyncSocketStream::ptr stream) {
     auto h2stream = std::dynamic_pointer_cast<Http2Stream>(stream);
-    Frame::ptr headers = std::make_shared<Frame>();
-    headers->header.type = (uint8_t)FrameType::HEADERS;
-    headers->header.flags = (uint8_t)FrameFlagHeaders::END_HEADERS;
-    headers->header.identifier = sn;
-    HeadersFrame::ptr data;
-    data = std::make_shared<HeadersFrame>();
-    auto m = request->getHeaders();
-    if(request->getBody().empty()) {
-        headers->header.flags |= (uint8_t)FrameFlagHeaders::END_STREAM;
+    auto stm = h2stream->getStream(sn);
+    if(!stm) {
+        SYLAR_LOG_ERROR(g_logger) << "RequestCtx doSend Fail, sn=" << sn
+            << " not exists";
+        return false;
     }
+    return stm->sendRequest(request);
+    //Frame::ptr headers = std::make_shared<Frame>();
+    //headers->header.type = (uint8_t)FrameType::HEADERS;
+    //headers->header.flags = (uint8_t)FrameFlagHeaders::END_HEADERS;
+    //headers->header.identifier = sn;
+    //HeadersFrame::ptr data;
+    //data = std::make_shared<HeadersFrame>();
+    //auto m = request->getHeaders();
+    //if(request->getBody().empty()) {
+    //    headers->header.flags |= (uint8_t)FrameFlagHeaders::END_STREAM;
+    //}
 
-    HPack hp(h2stream->m_sendTable);
-    std::vector<std::pair<std::string, std::string> > hs;
-    for(auto& i : m) {
-        hs.push_back(std::make_pair(sylar::ToLower(i.first), i.second));
-    }
-    // debug stream_id
-    hs.push_back(std::make_pair("stream_id", std::to_string(sn)));
-    hp.pack(hs, data->data);
-    headers->data = data;
-    bool ok = std::dynamic_pointer_cast<Http2Stream>(stream)->sendFrame(headers, false) > 0;
-    if(!ok) {
-        SYLAR_LOG_INFO(g_logger) << "sendHeaders fail";
-        return ok;
-    }
-    if(!request->getBody().empty()) {
-        auto stm = h2stream->getStream(sn);
-        if(!stm) {
-            SYLAR_LOG_ERROR(g_logger) << "RequestCtx doSend Fail, sn=" << sn
-                << " not exists";
-            return false;
-        }
+    //HPack hp(h2stream->m_sendTable);
+    //std::vector<std::pair<std::string, std::string> > hs;
+    //for(auto& i : m) {
+    //    hs.push_back(std::make_pair(sylar::ToLower(i.first), i.second));
+    //}
+    //// debug stream_id
+    //hs.push_back(std::make_pair("stream_id", std::to_string(sn)));
+    //hp.pack(hs, data->data);
+    //headers->data = data;
+    //bool ok = h2stream->sendFrame(headers, false) > 0;
+    //if(!ok) {
+    //    SYLAR_LOG_INFO(g_logger) << "sendHeaders fail";
+    //    return ok;
+    //}
+    //if(!request->getBody().empty()) {
+    //    auto stm = h2stream->getStream(sn);
+    //    if(!stm) {
+    //        SYLAR_LOG_ERROR(g_logger) << "RequestCtx doSend Fail, sn=" << sn
+    //            << " not exists";
+    //        return false;
+    //    }
 
-        ok = h2stream->sendData(stm, request->getBody(), false);
-        if(ok <= 0) {
-            SYLAR_LOG_ERROR(g_logger) << "Stream id=" << sn
-                << " sendData fail, rt=" << ok << " size=" << request->getBody().size();
-            return ok;
-        }
+    //    ok = h2stream->sendData(stm, request->getBody(), false);
+    //    if(ok <= 0) {
+    //        SYLAR_LOG_ERROR(g_logger) << "Stream id=" << sn
+    //            << " sendData fail, rt=" << ok << " size=" << request->getBody().size();
+    //        return ok;
+    //    }
+    //}
+    //return ok;
+}
+
+bool Http2Stream::StreamCtx::doSend(AsyncSocketStream::ptr stream) {
+    auto h2stream = std::dynamic_pointer_cast<Http2Stream>(stream);
+    auto stm = h2stream->getStream(sn);
+    if(!stm) {
+        SYLAR_LOG_ERROR(g_logger) << "StreamCtx doSend Fail, sn=" << sn
+            << " not exists";
+        return false;
     }
-    return ok;
+    return stm->sendRequest(request, false);
 }
 
 void Http2Stream::onTimeOut(AsyncSocketStream::Ctx::ptr ctx) {
@@ -390,9 +413,22 @@ void Http2Stream::onTimeOut(AsyncSocketStream::Ctx::ptr ctx) {
     delStream(ctx->sn);
 }
 
+StreamClient::ptr Http2Stream::openStreamClient(sylar::http::HttpRequest::ptr request) {
+    if(isConnected()) {
+        //Http2InitRequestForWrite(req, m_ssl);
+        auto stream = newStream();
+        StreamCtx::ptr ctx = std::make_shared<StreamCtx>();
+        ctx->request = request;
+        ctx->sn = stream->getId();
+        enqueue(ctx);
+        return StreamClient::Create(stream);
+    }
+    return nullptr;
+}
+
 http::HttpResult::ptr Http2Stream::request(http::HttpRequest::ptr req, uint64_t timeout_ms) {
     if(isConnected()) {
-        Http2InitRequestForWrite(req, m_ssl);
+        //Http2InitRequestForWrite(req, m_ssl);
         auto stream = newStream();
         RequestCtx::ptr ctx = std::make_shared<RequestCtx>();
         ctx->request = req;

@@ -21,7 +21,7 @@ static const std::vector<std::string> s_state_strings = {
 std::string Stream::StateToString(State state) {
     uint8_t v = (uint8_t)state;
     if(v < 7) {
-        return s_state_strings[7];
+        return s_state_strings[v];
     }
     return "UNKNOW(" + std::to_string((uint32_t)v) + ")";
 }
@@ -33,6 +33,18 @@ Stream::Stream(std::shared_ptr<Http2Stream> stm, uint32_t id)
 
     send_window = stm->getPeerSettings().initial_window_size;
     recv_window = stm->getOwnerSettings().initial_window_size;
+}
+
+Stream::~Stream() {
+    close();
+    SYLAR_LOG_INFO(g_logger) << "Stream::~Stream id=" << m_id
+            << " - " << StateToString(m_state);
+}
+
+void Stream::close() {
+    if(m_handler) {
+        m_handler(nullptr);
+    }
 }
 
 std::shared_ptr<Http2Stream> Stream::getStream() const {
@@ -54,6 +66,11 @@ int32_t Stream::handleFrame(Frame::ptr frame, bool is_client) {
     } else if(frame->header.type == (uint8_t)FrameType::RST_STREAM) {
         rt = handleRstStreamFrame(frame, is_client);
     }
+
+    if(m_handler) {
+        m_handler(frame);
+    }
+
     if(frame->header.flags & (uint8_t)FrameFlagHeaders::END_STREAM) {
         m_state = State::CLOSED;
         if(is_client) {
@@ -136,7 +153,54 @@ int32_t Stream::handleDataFrame(Frame::ptr frame, bool is_client) {
     return 0;
 }
 
-int32_t Stream::sendResponse(http::HttpResponse::ptr rsp) {
+int32_t Stream::sendRequest(sylar::http::HttpRequest::ptr req, bool end_stream) {
+    auto stream = getStream();
+    if(!stream) {
+        SYLAR_LOG_ERROR(g_logger) << "Stream id=" << m_id
+            << " sendResponse stream is closed";
+        return -1;
+    }
+
+    Http2InitRequestForWrite(req, stream->isSsl());
+
+    Frame::ptr headers = std::make_shared<Frame>();
+    headers->header.type = (uint8_t)FrameType::HEADERS;
+    headers->header.flags = (uint8_t)FrameFlagHeaders::END_HEADERS;
+    headers->header.identifier = m_id;
+    HeadersFrame::ptr data;
+    data = std::make_shared<HeadersFrame>();
+    auto m = req->getHeaders();
+    if(end_stream && req->getBody().empty()) {
+        headers->header.flags |= (uint8_t)FrameFlagHeaders::END_STREAM;
+    }
+
+    HPack hp(stream->m_sendTable);
+    std::vector<std::pair<std::string, std::string> > hs;
+    for(auto& i : m) {
+        hs.push_back(std::make_pair(sylar::ToLower(i.first), i.second));
+    }
+    // debug stream_id
+    hs.push_back(std::make_pair("stream_id", std::to_string(m_id)));
+    hp.pack(hs, data->data);
+    headers->data = data;
+    int32_t ok = stream->sendFrame(headers, false);
+    if(ok < 0) {
+        SYLAR_LOG_INFO(g_logger) << "sendHeaders fail";
+        return ok;
+    }
+    if(!req->getBody().empty()) {
+        ok = stream->sendData(shared_from_this(), req->getBody(), false);
+        if(ok <= 0) {
+            SYLAR_LOG_ERROR(g_logger) << "Stream id=" << m_id 
+                << " sendData fail, rt=" << ok << " size=" << req->getBody().size();
+            return ok;
+        }
+    }
+    return ok;
+
+}
+
+int32_t Stream::sendResponse(http::HttpResponse::ptr rsp, bool end_stream) {
     auto stream = getStream();
     if(!stream) {
         SYLAR_LOG_ERROR(g_logger) << "Stream id=" << m_id
@@ -163,7 +227,7 @@ int32_t Stream::sendResponse(http::HttpResponse::ptr rsp) {
         }
     }
 
-    if(rsp->getBody().empty() && trailers.empty()) {
+    if(end_stream && rsp->getBody().empty() && trailers.empty()) {
         headers->header.flags |= (uint8_t)FrameFlagHeaders::END_STREAM;
     }
 
@@ -191,7 +255,7 @@ int32_t Stream::sendResponse(http::HttpResponse::ptr rsp) {
                 << " sendData fail, rt=" << ok << " size=" << rsp->getBody().size();
         }
     }
-    if(!trailers.empty()) {
+    if(end_stream && !trailers.empty()) {
         Frame::ptr headers = std::make_shared<Frame>();
         headers->header.type = (uint8_t)FrameType::HEADERS;
         headers->header.flags = (uint8_t)FrameFlagHeaders::END_HEADERS | (uint8_t)FrameFlagHeaders::END_STREAM;
@@ -212,13 +276,16 @@ int32_t Stream::sendResponse(http::HttpResponse::ptr rsp) {
             SYLAR_LOG_INFO(g_logger) << "sendHeaders trailer fail";
             return ok;
         }
-
     }
 
     return ok;
 }
 
 int32_t Stream::sendFrame(Frame::ptr frame) {
+    auto stream = getStream();
+    if(stream) {
+        return stream->sendFrame(frame);
+    }
     return 0;
 }
 
@@ -243,6 +310,44 @@ int32_t Stream::updateWindowSizeByDiff(int32_t* window_size, int32_t diff) {
     return 0;
 }
 
+StreamClient::ptr StreamClient::Create(Stream::ptr stream) {
+    auto rt = std::make_shared<StreamClient>();
+    rt->m_stream = stream;
+    stream->setFrameHandler(std::bind(&StreamClient::onFrame, rt, std::placeholders::_1));
+    return rt;
+}
+
+int32_t StreamClient::sendData(const std::string& data, bool end_stream) {
+    auto stm = m_stream->getStream();
+    if(stm) {
+        return stm->sendData(m_stream, data, true, end_stream);
+    }
+    return -1;
+}
+
+DataFrame::ptr StreamClient::recvData() {
+    auto pd = m_data.pop();
+    return pd;
+}
+
+int32_t StreamClient::onFrame(Frame::ptr frame) {
+    if(!frame) {
+        m_data.push(nullptr);
+        return 0;
+    }
+    if(frame->header.type == (uint8_t)FrameType::DATA) {
+        auto data = std::dynamic_pointer_cast<DataFrame>(frame->data);
+        if(!data) {
+            SYLAR_LOG_ERROR(g_logger) << "Stream id=" << m_stream->getId()
+                << " onFrame data not DataFrame "
+                << frame->toString();
+            return -1;
+        }
+        m_data.push(data);
+    }
+    return 0;
+}
+
 Stream::ptr StreamManager::get(uint32_t id) {
     RWMutexType::ReadLock lock(m_mutex);
     auto it = m_streams.find(id);
@@ -261,7 +366,11 @@ void StreamManager::del(uint32_t id) {
 
 void StreamManager::clear() {
     RWMutexType::WriteLock lock(m_mutex);
-    m_streams.clear();
+    auto streams = m_streams;
+    lock.unlock();
+    for(auto& i : streams) {
+        i.second->close();
+    }
 }
 
 void StreamManager::foreach(std::function<void(Stream::ptr)> cb) {

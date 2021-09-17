@@ -14,6 +14,8 @@ struct GrpcMessage {
     uint8_t compressed = 0;
     uint32_t length = 0;
     std::string data;
+
+    sylar::ByteArray::ptr packData() const;
 };
 
 class GrpcRequest {
@@ -127,6 +129,35 @@ public:
                               const std::map<std::string, std::string>& headers = {});
 };
 
+class GrpcStreamClient : public std::enable_shared_from_this<GrpcStreamClient> {
+public:
+    typedef std::shared_ptr<GrpcStreamClient> ptr;
+    GrpcStreamClient(http2::StreamClient::ptr client);
+    int32_t sendData(const std::string& data, bool end_stream = false);
+    http2::DataFrame::ptr recvData();
+
+    int32_t sendMessage(const google::protobuf::Message& msg, bool end_stream = false);
+    std::shared_ptr<std::string> recvMessageData();
+
+    template<class T>
+    std::shared_ptr<T> recvMessage() {
+        auto d = recvMessageData();
+        if(!d) {
+            return nullptr;
+        }
+        try {
+            std::shared_ptr<T> data = std::make_shared<T>();
+            if(data->ParseFromString(*d)) {
+                return data;
+            }
+        } catch(...) {
+        }
+        return nullptr;
+    }
+private:
+    http2::StreamClient::ptr m_client;
+};
+
 class GrpcSDLoadBalance : public SDLoadBalance {
 public:
     typedef std::shared_ptr<GrpcSDLoadBalance> ptr;
@@ -136,6 +167,9 @@ public:
     virtual void stop();
     void start(const std::unordered_map<std::string
                ,std::unordered_map<std::string,std::string> >& confs);
+
+    GrpcStreamClient::ptr openStreamClient(const std::string& domain, const std::string& service,
+                                 sylar::http::HttpRequest::ptr request, uint64_t idx = -1);
 
     GrpcResult::ptr request(const std::string& domain, const std::string& service,
                              GrpcRequest::ptr req, uint32_t timeout_ms, uint64_t idx = -1);

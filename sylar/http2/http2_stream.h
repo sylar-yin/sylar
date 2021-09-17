@@ -89,6 +89,11 @@ public:
 
     Http2Settings& getOwnerSettings() { return m_owner;}
     Http2Settings& getPeerSettings() { return m_peer;}
+
+    bool isSsl() const { return m_ssl;}
+
+    StreamClient::ptr openStreamClient(sylar::http::HttpRequest::ptr request);
+    void onClose() override;
 protected:
     struct FrameSendCtx : public SendCtx {
         typedef std::shared_ptr<FrameSendCtx> ptr;
@@ -101,6 +106,13 @@ protected:
         typedef std::shared_ptr<RequestCtx> ptr;
         http::HttpRequest::ptr request;
         http::HttpResponse::ptr response;
+
+        virtual bool doSend(AsyncSocketStream::ptr stream) override;
+    };
+
+    struct StreamCtx : public Ctx {
+        typedef std::shared_ptr<StreamCtx> ptr;
+        http::HttpRequest::ptr request;
 
         virtual bool doSend(AsyncSocketStream::ptr stream) override;
     };
