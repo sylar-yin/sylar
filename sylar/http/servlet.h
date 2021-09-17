@@ -51,7 +51,7 @@ public:
      */
     virtual int32_t handle(sylar::http::HttpRequest::ptr request
                    , sylar::http::HttpResponse::ptr response
-                   , sylar::http::HttpSession::ptr session) = 0;
+                   , sylar::SocketStream::ptr session) = 0;
                    
     /**
      * @brief 返回Servlet名称
@@ -72,7 +72,7 @@ public:
     /// 函数回调类型定义
     typedef std::function<int32_t (sylar::http::HttpRequest::ptr request
                    , sylar::http::HttpResponse::ptr response
-                   , sylar::http::HttpSession::ptr session)> callback;
+                   , sylar::SocketStream::ptr session)> callback;
 
 
     /**
@@ -82,7 +82,7 @@ public:
     FunctionServlet(callback cb);
     virtual int32_t handle(sylar::http::HttpRequest::ptr request
                    , sylar::http::HttpResponse::ptr response
-                   , sylar::http::HttpSession::ptr session) override;
+                   , sylar::SocketStream::ptr session) override;
 private:
     /// 回调函数
     callback m_cb;
@@ -147,7 +147,7 @@ public:
     ServletDispatch();
     virtual int32_t handle(sylar::http::HttpRequest::ptr request
                    , sylar::http::HttpResponse::ptr response
-                   , sylar::http::HttpSession::ptr session) override;
+                   , sylar::SocketStream::ptr session) override;
 
     /**
      * @brief 添加servlet
@@ -263,7 +263,7 @@ public:
     NotFoundServlet(const std::string& name);
     virtual int32_t handle(sylar::http::HttpRequest::ptr request
                    , sylar::http::HttpResponse::ptr response
-                   , sylar::http::HttpSession::ptr session) override;
+                   , sylar::SocketStream::ptr session) override;
 
 private:
     std::string m_name;

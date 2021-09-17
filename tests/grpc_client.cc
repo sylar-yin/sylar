@@ -19,7 +19,7 @@ void run() {
         prefx = prefx + prefx;
     }
 
-    for(int x = 0; x < 100; ++x) {
+    for(int x = 0; x < 1; ++x) {
         sylar::IOManager::GetThis()->schedule([conn, x, prefx](){
             int fail = 0;
             int error = 0;

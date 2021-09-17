@@ -62,7 +62,7 @@ public:
     ~Http2Stream();
 
     int32_t sendFrame(Frame::ptr frame, bool async = true);
-    int32_t sendData(http2::Stream::ptr stream, const std::string& data, bool async);
+    int32_t sendData(http2::Stream::ptr stream, const std::string& data, bool async, bool end_stream = true);
 
     bool handleShakeClient();
     bool handleShakeServer();

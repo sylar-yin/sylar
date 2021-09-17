@@ -10,7 +10,7 @@ ConfigServlet::ConfigServlet()
 
 int32_t ConfigServlet::handle(sylar::http::HttpRequest::ptr request
                               ,sylar::http::HttpResponse::ptr response
-                              ,sylar::http::HttpSession::ptr session) {
+                              ,sylar::SocketStream::ptr session) {
     std::string type = request->getParam("type");
     if(type == "json") {
         response->setHeader("Content-Type", "text/json charset=utf-8");

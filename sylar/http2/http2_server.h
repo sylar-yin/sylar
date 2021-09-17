@@ -11,8 +11,7 @@ namespace http2 {
 class Http2Server : public TcpServer {
 public:
     typedef std::shared_ptr<Http2Server> ptr;
-    Http2Server(const std::string& type = "http2"
-                ,sylar::IOManager* worker = sylar::IOManager::GetThis()
+    Http2Server(sylar::IOManager* worker = sylar::IOManager::GetThis()
                 ,sylar::IOManager* io_worker = sylar::IOManager::GetThis()
                 ,sylar::IOManager* accept_worker = sylar::IOManager::GetThis());
 

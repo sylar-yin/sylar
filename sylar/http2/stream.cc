@@ -149,18 +149,31 @@ int32_t Stream::sendResponse(http::HttpResponse::ptr rsp) {
     Frame::ptr headers = std::make_shared<Frame>();
     headers->header.type = (uint8_t)FrameType::HEADERS;
     headers->header.flags = (uint8_t)FrameFlagHeaders::END_HEADERS;
-    if(rsp->getBody().empty()) {
-        headers->header.flags |= (uint8_t)FrameFlagHeaders::END_STREAM;
-    }
     headers->header.identifier = m_id;
     HeadersFrame::ptr data;
     auto m = rsp->getHeaders();
     data = std::make_shared<HeadersFrame>();
 
+    auto trailer = rsp->getHeader("trailer");
+    std::set<std::string> trailers;
+    if(!trailer.empty()) {
+        auto vec = sylar::split(trailer, ',');
+        for(auto& i : vec) {
+            trailers.insert(sylar::StringUtil::Trim(i));
+        }
+    }
+
+    if(rsp->getBody().empty() && trailers.empty()) {
+        headers->header.flags |= (uint8_t)FrameFlagHeaders::END_STREAM;
+    }
 
     HPack hp(stream->getSendTable());
     std::vector<std::pair<std::string, std::string> > hs;
     for(auto& i : m) {
+        if(trailers.count(i.first)) {
+            continue;
+        }
+
         hs.push_back(std::make_pair(sylar::ToLower(i.first), i.second));
     }
     hp.pack(hs, data->data);
@@ -172,12 +185,36 @@ int32_t Stream::sendResponse(http::HttpResponse::ptr rsp) {
         return ok;
     }
     if(!rsp->getBody().empty()) {
-        ok = stream->sendData(shared_from_this(), rsp->getBody(), true);
+        ok = stream->sendData(shared_from_this(), rsp->getBody(), true, trailers.empty());
         if(ok < 0) {
             SYLAR_LOG_ERROR(g_logger) << "Stream id=" << m_id
                 << " sendData fail, rt=" << ok << " size=" << rsp->getBody().size();
         }
     }
+    if(!trailers.empty()) {
+        Frame::ptr headers = std::make_shared<Frame>();
+        headers->header.type = (uint8_t)FrameType::HEADERS;
+        headers->header.flags = (uint8_t)FrameFlagHeaders::END_HEADERS | (uint8_t)FrameFlagHeaders::END_STREAM;
+        headers->header.identifier = m_id;
+
+        HeadersFrame::ptr data = std::make_shared<HeadersFrame>();
+
+        HPack hp(stream->getSendTable());
+        std::vector<std::pair<std::string, std::string> > hs;
+        for(auto& i : trailers) {
+            auto v = rsp->getHeader(i);
+            hs.push_back(std::make_pair(sylar::ToLower(i), v));
+        }
+        hp.pack(hs, data->data);
+        headers->data = data;
+        bool ok = stream->sendFrame(headers) > 0;
+        if(!ok) {
+            SYLAR_LOG_INFO(g_logger) << "sendHeaders trailer fail";
+            return ok;
+        }
+
+    }
+
     return ok;
 }
 

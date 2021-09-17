@@ -7,6 +7,14 @@ servers:
       io_worker: http_io
       process_worker:  http_io
       type: http
+    - address: ["0.0.0.0:8092"]
+      keepalive: 1
+      timeout: 1000
+      name: sylar/1.1
+      accept_worker: accept
+      io_worker: http_io
+      process_worker:  http_io
+      type: http2
     - address: ["0.0.0.0:8062", "0.0.0.0:8061"]
       timeout: 1000
       name: sylar-rock/1.0

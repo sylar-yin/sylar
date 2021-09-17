@@ -14,7 +14,7 @@ void run() {
     sd->addServlet("/hello", 
     [](sylar::http::HttpRequest::ptr request
                    , sylar::http::HttpResponse::ptr response
-                   , sylar::http::HttpSession::ptr session) {
+                   , sylar::SocketStream::ptr session) {
         
         SYLAR_LOG_INFO(g_logger) << *request;
 

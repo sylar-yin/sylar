@@ -8,12 +8,11 @@ namespace http2 {
 
 static sylar::Logger::ptr g_logger = SYLAR_LOG_NAME("system");
 
-Http2Server::Http2Server(const std::string& type
-                        ,sylar::IOManager* worker
+Http2Server::Http2Server(sylar::IOManager* worker
                         ,sylar::IOManager* io_worker
                         ,sylar::IOManager* accept_worker)
     :TcpServer(worker, io_worker, accept_worker) {
-    m_type = type;
+    m_type = "http2";
     m_dispatch = std::make_shared<http::ServletDispatch>();
     m_dispatch->addServlet("/_/status", std::make_shared<http::StatusServlet>());
     m_dispatch->addServlet("/_/config", std::make_shared<http::ConfigServlet>());

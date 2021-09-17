@@ -100,7 +100,7 @@ public:
             if(!m_data) {
                 m_data = std::make_shared<GrpcMessage>();
             }
-            return v.SerializeToString(m_data->data);
+            return v.SerializeToString(&m_data->data);
         } catch (...) {
         }
         return false;

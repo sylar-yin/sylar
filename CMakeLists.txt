@@ -78,6 +78,7 @@ set(LIB_SRC
     sylar/fiber.cc
     sylar/fcontext/fcontext.S
     sylar/grpc/grpc_stream.cc
+    sylar/grpc/grpc_servlet.cc
     sylar/libaco/aco.c
     sylar/libaco/acosw.S
     sylar/libco/coctx.cc

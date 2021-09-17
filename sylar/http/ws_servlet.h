@@ -18,7 +18,7 @@ public:
 
     virtual int32_t handle(sylar::http::HttpRequest::ptr request
                    , sylar::http::HttpResponse::ptr response
-                   , sylar::http::HttpSession::ptr session) override {
+                   , sylar::SocketStream::ptr session) override {
         return 0;
     }
 

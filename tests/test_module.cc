@@ -4,6 +4,7 @@
 #include "sylar/log.h"
 #include "sylar/db/redis.h"
 #include "sylar/grpc/grpc_stream.h"
+#include "sylar/grpc/grpc_servlet.h"
 #include "sylar/application.h"
 #include "tests/test.pb.h"
 
@@ -20,6 +21,35 @@ public:
     }
 
 };
+
+
+int32_t HandleTest(sylar::http::HttpRequest::ptr request
+                   , sylar::http::HttpResponse::ptr response
+                   , sylar::SocketStream::ptr session) {
+    SYLAR_LOG_INFO(g_logger) << "request *** " << *request;
+    response->setBody("hello test");
+    response->setHeader("random", std::to_string(time(0)));
+    return 0;
+}
+
+int32_t HandleHelloServiceHello(sylar::grpc::GrpcRequest::ptr request,
+                                sylar::grpc::GrpcResult::ptr response,
+                                sylar::SocketStream::ptr session) {
+    SYLAR_LOG_INFO(g_logger) << *request->getRequest();
+    auto req = request->getAsPB<test::HelloRequest>();
+    if(!req) {
+        response->setResult(100);
+        response->setError("invalid pb");
+        return -1;
+    }
+    SYLAR_LOG_INFO(g_logger) << "---" << sylar::PBToJsonString(*req) << " - " << req;
+
+    test::HelloResponse rsp;
+    //rsp.set_id("hello");
+    //rsp.set_msg("world");
+    response->setAsPB(rsp);
+    return 0;
+}
 
 class MyModule : public sylar::RockModule {
 public:
@@ -41,6 +71,16 @@ public:
     }
 
     bool onServerReady() {
+        std::vector<sylar::TcpServer::ptr> svrs;
+        sylar::Application::GetInstance()->getServer("http2", svrs);
+        for(auto& i : svrs) {
+            auto h2 = std::dynamic_pointer_cast<sylar::http2::Http2Server>(i);
+            auto slt = h2->getServletDispatch();
+            slt->addServlet("/test", HandleTest);
+
+            slt->addServlet(sylar::grpc::GrpcServlet::GetGrpcPath("test", "HelloService", "Hello")
+                    , sylar::grpc::GrpcFunctionServlet::Create(HandleHelloServiceHello));
+        }
         registerService("rock", "sylar.top", "blog");
         auto rpy = sylar::RedisUtil::Cmd("local", "get abc");
         if(!rpy) {

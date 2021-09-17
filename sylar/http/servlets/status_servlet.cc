@@ -49,7 +49,7 @@ std::string format_used_time(int64_t ts) {
 
 int32_t StatusServlet::handle(sylar::http::HttpRequest::ptr request
                               ,sylar::http::HttpResponse::ptr response
-                              ,sylar::http::HttpSession::ptr session) {
+                              ,sylar::SocketStream::ptr session) {
     response->setHeader("Content-Type", "text/text; charset=utf-8");
 #define XX(key) \
     ss << std::setw(30) << std::right << key ": "

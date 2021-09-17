@@ -268,6 +268,9 @@ int Application::run_fiber() {
         if(i.type == "http") {
             server = std::make_shared<sylar::http::HttpServer>(i.keepalive,
                             process_worker, io_worker, accept_worker);
+        } else if(i.type == "http2") {
+            server = std::make_shared<sylar::http2::Http2Server>(process_worker,
+                            io_worker, accept_worker);
         } else if(i.type == "ws") {
             server = std::make_shared<sylar::http::WSServer>(
                             process_worker, io_worker, accept_worker);
