@@ -1,5 +1,6 @@
 #include "sylar/sylar.h"
 
+
 sylar::Logger::ptr g_logger = SYLAR_LOG_ROOT();
 
 void run_in_fiber() {
@@ -14,12 +15,12 @@ void test_fiber() {
     {
         sylar::Fiber::GetThis();
         SYLAR_LOG_INFO(g_logger) << "main begin";
-        sylar::Fiber::ptr fiber(new sylar::Fiber(run_in_fiber));
-        fiber->swapIn();
+        sylar::Fiber::ptr fiber(new sylar::Fiber(run_in_fiber,0,true));
+        fiber->call();
         SYLAR_LOG_INFO(g_logger) << "main after swapIn";
-        fiber->swapIn();
+        fiber->call();
         SYLAR_LOG_INFO(g_logger) << "main after end";
-        fiber->swapIn();
+        fiber->call();
     }
     SYLAR_LOG_INFO(g_logger) << "main after end2";
 }
