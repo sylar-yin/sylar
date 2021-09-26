@@ -27,7 +27,7 @@ int32_t ServletDispatch::handle(sylar::http::HttpRequest::ptr request
                , sylar::SocketStream::ptr session) {
     auto slt = getMatchedServlet(request->getPath());
     if(slt) {
-        slt->handle(request, response, session);
+        return slt->handle(request, response, session);
     }
     return 0;
 }

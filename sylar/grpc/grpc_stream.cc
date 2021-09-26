@@ -216,6 +216,10 @@ GrpcStreamClient::GrpcStreamClient(http2::StreamClient::ptr client)
     : m_client(client) {
 }
 
+http2::Stream::ptr GrpcStreamClient::getStream() {
+    return m_client->getStream();
+}
+
 int32_t GrpcStreamClient::sendData(const std::string& data, bool end_stream) {
     return m_client->sendData(data, end_stream);
 }
@@ -241,6 +245,9 @@ std::shared_ptr<std::string> GrpcStreamClient::recvMessageData() {
 
         auto rt = std::make_shared<std::string>();
         auto& body = df->data;
+        if(body.empty()) {
+            return nullptr;
+        }
         sylar::ByteArray::ptr ba(new sylar::ByteArray((void*)&body[0], body.size()));
         bool compress = ba->readFuint8();
         (void)compress;
@@ -255,6 +262,7 @@ std::shared_ptr<std::string> GrpcStreamClient::recvMessageData() {
         }
         return rt;
     } catch (...) {
+        SYLAR_LOG_ERROR(g_logger) << "recvMessageData error";
     }
     return nullptr;
 }

@@ -352,6 +352,9 @@ public:
      */
     void setWebsocket(bool v) { m_websocket = v;}
 
+    uint32_t getStreamId() const { return m_streamId;}
+    void setStreamId(uint32_t v) { m_streamId = v;}
+
     /**
      * @brief 设置HTTP请求的头部MAP
      * @param[in] v map
@@ -568,6 +571,8 @@ private:
     bool m_websocket;
 
     uint8_t m_parserParamFlag;
+
+    uint32_t m_streamId;
     /// 请求路径
     std::string m_path;
     /// 请求参数

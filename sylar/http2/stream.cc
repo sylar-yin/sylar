@@ -29,10 +29,28 @@ std::string Stream::StateToString(State state) {
 Stream::Stream(std::shared_ptr<Http2Stream> stm, uint32_t id)
     :m_stream(stm)
     ,m_state(State::IDLE)
+    ,m_handleCount(0)
     ,m_id(id){
 
     send_window = stm->getPeerSettings().initial_window_size;
     recv_window = stm->getOwnerSettings().initial_window_size;
+}
+
+void Stream::addHandleCount() {
+    ++m_handleCount;
+}
+
+std::string Stream::getHeader(const std::string& name) const {
+    if(!m_recvHPack) {
+        return "";
+    }
+    auto& m = m_recvHPack->getHeaders();
+    for(auto& i : m) {
+        if(i.name == name) {
+            return i.value;
+        }
+    }
+    return "";
 }
 
 Stream::~Stream() {
@@ -86,22 +104,26 @@ int32_t Stream::handleFrame(Frame::ptr frame, bool is_client) {
             }
             Http2InitResponseForRead(m_response);
         } else {
-            if(!m_request) {
-                m_request = std::make_shared<http::HttpRequest>(0x20);
-            }
-            m_request->setBody(m_body);
-            if(m_recvHPack) {
-                auto& m = m_recvHPack->getHeaders();
-                for(auto& i : m) {
-                    m_request->setHeader(i.name, i.value);
-                }
-            }
-            Http2InitRequestForRead(m_request);
+            initRequest();
         }
         SYLAR_LOG_DEBUG(g_logger) << "id=" << m_id << " is_client=" << is_client
             << " req=" << m_request << " rsp=" << m_response;
     }
     return rt;
+}
+
+void Stream::initRequest() {
+    if(!m_request) {
+        m_request = std::make_shared<http::HttpRequest>(0x20);
+    }
+    m_request->setBody(m_body);
+    if(m_recvHPack) {
+        auto& m = m_recvHPack->getHeaders();
+        for(auto& i : m) {
+            m_request->setHeader(i.name, i.value);
+        }
+    }
+    Http2InitRequestForRead(m_request);
 }
 
 int32_t Stream::handleHeadersFrame(Frame::ptr frame, bool is_client) {
@@ -127,6 +149,10 @@ int32_t Stream::handleHeadersFrame(Frame::ptr frame, bool is_client) {
 }
 
 int32_t Stream::handleDataFrame(Frame::ptr frame, bool is_client) {
+    sleep(1);
+    if(m_handleCount > 0) {
+        return 0;
+    }
     auto data = std::dynamic_pointer_cast<DataFrame>(frame->data);
     if(!data) {
         SYLAR_LOG_ERROR(g_logger) << "Stream id=" << m_id
@@ -198,6 +224,40 @@ int32_t Stream::sendRequest(sylar::http::HttpRequest::ptr req, bool end_stream) 
     }
     return ok;
 
+}
+
+int32_t Stream::sendHeaders(const std::map<std::string, std::string>& m, bool end_stream) {
+    auto stream = getStream();
+    if(!stream) {
+        SYLAR_LOG_ERROR(g_logger) << "Stream id=" << m_id
+            << " sendHeaders stream is closed";
+        return -1;
+    }
+
+    Frame::ptr headers = std::make_shared<Frame>();
+    headers->header.type = (uint8_t)FrameType::HEADERS;
+    headers->header.flags = (uint8_t)FrameFlagHeaders::END_HEADERS;
+    if(end_stream) {
+        headers->header.flags |= (uint8_t)FrameFlagHeaders::END_STREAM;
+    }
+    headers->header.identifier = m_id;
+    HeadersFrame::ptr data;
+    data = std::make_shared<HeadersFrame>();
+
+    HPack hp(stream->getSendTable());
+    std::vector<std::pair<std::string, std::string> > hs;
+    for(auto& i : m) {
+        hs.push_back(std::make_pair(sylar::ToLower(i.first), i.second));
+    }
+    hp.pack(hs, data->data);
+    headers->data = data;
+    int ok = stream->sendFrame(headers, false);
+    if(ok < 0) {
+        SYLAR_LOG_ERROR(g_logger) << "Stream id=" << m_id
+            << " sendResponse send Headers fail";
+        return ok;
+    }
+    return ok;
 }
 
 int32_t Stream::sendResponse(http::HttpResponse::ptr rsp, bool end_stream) {
@@ -317,6 +377,10 @@ StreamClient::ptr StreamClient::Create(Stream::ptr stream) {
     return rt;
 }
 
+int32_t StreamClient::close() {
+    return sendData("", true);
+}
+
 int32_t StreamClient::sendData(const std::string& data, bool end_stream) {
     auto stm = m_stream->getStream();
     if(stm) {
@@ -344,6 +408,9 @@ int32_t StreamClient::onFrame(Frame::ptr frame) {
             return -1;
         }
         m_data.push(data);
+    }
+    if(frame->header.flags & (uint8_t)FrameFlagHeaders::END_STREAM) {
+        m_data.push(nullptr);
     }
     return 0;
 }

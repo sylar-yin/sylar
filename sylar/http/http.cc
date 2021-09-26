@@ -61,6 +61,7 @@ HttpRequest::HttpRequest(uint8_t version, bool close)
     ,m_close(close)
     ,m_websocket(false)
     ,m_parserParamFlag(0)
+    ,m_streamId(0)
     ,m_path("/") {
 }
 

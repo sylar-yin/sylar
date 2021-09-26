@@ -5,6 +5,6 @@ service_discovery:
 rock_services:
     sylar.top:
         all: fair
-grpc_services:
+xgrpc_services:
     grpc:
         all: fair

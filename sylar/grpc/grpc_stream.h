@@ -154,6 +154,9 @@ public:
         }
         return nullptr;
     }
+
+    http2::StreamClient::ptr getClient() {return m_client;}
+    http2::Stream::ptr getStream();
 private:
     http2::StreamClient::ptr m_client;
 };

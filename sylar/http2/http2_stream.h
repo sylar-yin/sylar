@@ -118,9 +118,9 @@ protected:
     };
 
     virtual Ctx::ptr doRecv() override;
-private:
+protected:
     void updateSettings(Http2Settings& sts, SettingsFrame::ptr frame);
-    void handleRequest(http::HttpRequest::ptr req, http2::Stream::ptr stream);
+    virtual void handleRequest(http::HttpRequest::ptr req, http2::Stream::ptr stream);
     void updateSendWindowByDiff(int32_t diff);
     void updateRecvWindowByDiff(int32_t diff);
     void onTimeOut(AsyncSocketStream::Ctx::ptr ctx) override;

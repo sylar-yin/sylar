@@ -6,6 +6,7 @@
 #include "sylar/grpc/grpc_stream.h"
 #include "sylar/grpc/grpc_servlet.h"
 #include "sylar/application.h"
+#include "sylar/sylar.h"
 #include "tests/test.pb.h"
 
 static sylar::Logger::ptr g_logger = SYLAR_LOG_ROOT();
@@ -51,6 +52,222 @@ int32_t HandleHelloServiceHello(sylar::grpc::GrpcRequest::ptr request,
     return 0;
 }
 
+int32_t HandleHelloServiceHelloStreamA(sylar::grpc::GrpcRequest::ptr request,
+                                sylar::grpc::GrpcResult::ptr response,
+                                sylar::SocketStream::ptr session) {
+    SYLAR_LOG_INFO(g_logger) << "stream_id = " << request->getRequest()->getStreamId();
+    SYLAR_LOG_INFO(g_logger) << *request->getRequest();
+    auto req = request->getAsPB<test::HelloRequest>();
+    if(!req) {
+        response->setResult(100);
+        response->setError("invalid pb");
+        return -1;
+    }
+    SYLAR_LOG_INFO(g_logger) << "---" << sylar::PBToJsonString(*req) << " - " << req;
+
+    auto stream_id = request->getRequest()->getStreamId();
+    auto h2session = std::dynamic_pointer_cast<sylar::http2::Http2Session>(session);
+
+    auto stream = h2session->getStream(stream_id);
+    sylar::grpc::GrpcStreamClient::ptr cli = std::make_shared<sylar::grpc::GrpcStreamClient>(sylar::http2::StreamClient::Create(stream));
+
+    while(true) {
+        auto rsp = cli->recvMessage<test::HelloResponse>();
+        if(rsp) {
+            SYLAR_LOG_INFO(g_logger) << "recv " << sylar::PBToJsonString(*rsp);
+        } else {
+            break;
+        }
+    }
+
+    test::HelloResponse rsp;
+    rsp.set_id("hello");
+    rsp.set_msg("world");
+
+    response->setAsPB(rsp);
+    SYLAR_LOG_INFO(g_logger) << "HandleHelloServiceHelloStreamA over";
+    //for(int i = 0; i < 10; ++i) {
+    //    test::HelloResponse rsp;
+    //    rsp.set_id("hello");
+    //    rsp.set_msg("world");
+    //    cli->sendMessage(rsp);
+    //    sleep(1);
+    //}
+    //response->getResponse()->setHeader("content-type", "application/grpc+proto");
+    //stream->sendResponse(response->getResponse(), false);
+    //stream->sendHeaders({
+    //    {"grpc-status", "0"},
+    //    {"grpc-message", "test message"},
+    //}, true);
+    //sleep(100);
+    return 0;
+}
+
+int32_t HandleHelloServiceHelloStreamB(sylar::grpc::GrpcRequest::ptr request,
+                                sylar::grpc::GrpcResult::ptr response,
+                                sylar::SocketStream::ptr session) {
+    SYLAR_LOG_INFO(g_logger) << "stream_id = " << request->getRequest()->getStreamId();
+    SYLAR_LOG_INFO(g_logger) << *request->getRequest();
+    auto req = request->getAsPB<test::HelloRequest>();
+    if(!req) {
+        response->setResult(100);
+        response->setError("invalid pb");
+        return -1;
+    }
+    SYLAR_LOG_INFO(g_logger) << "---" << sylar::PBToJsonString(*req) << " - " << req;
+
+    auto stream_id = request->getRequest()->getStreamId();
+    auto h2session = std::dynamic_pointer_cast<sylar::http2::Http2Session>(session);
+
+    auto stream = h2session->getStream(stream_id);
+    sylar::grpc::GrpcStreamClient::ptr cli = std::make_shared<sylar::grpc::GrpcStreamClient>(sylar::http2::StreamClient::Create(stream));
+
+    stream->sendResponse(response->getResponse(), false);
+
+    for(int i = 0; i < 10; ++i) {
+        test::HelloResponse rsp;
+        rsp.set_id("hello");
+        rsp.set_msg("world");
+        cli->sendMessage(rsp);
+        sleep(1);
+    }
+    stream->sendHeaders({
+        {"grpc-status", "0"},
+        {"grpc-message", "test message"},
+    }, true);
+    SYLAR_LOG_INFO(g_logger) << "HandleHelloServiceHelloStreamB over";
+    return 0;
+}
+
+int32_t HandleHelloServiceHelloStreamC(sylar::grpc::GrpcRequest::ptr request,
+                                sylar::grpc::GrpcResult::ptr response,
+                                sylar::SocketStream::ptr session) {
+    SYLAR_LOG_INFO(g_logger) << "stream_id = " << request->getRequest()->getStreamId();
+    SYLAR_LOG_INFO(g_logger) << *request->getRequest();
+    auto req = request->getAsPB<test::HelloRequest>();
+    if(!req) {
+        response->setResult(100);
+        response->setError("invalid pb");
+        return -1;
+    }
+    SYLAR_LOG_INFO(g_logger) << "---" << sylar::PBToJsonString(*req) << " - " << req;
+
+    auto stream_id = request->getRequest()->getStreamId();
+    auto h2session = std::dynamic_pointer_cast<sylar::http2::Http2Session>(session);
+
+    auto stream = h2session->getStream(stream_id);
+    sylar::grpc::GrpcStreamClient::ptr cli = std::make_shared<sylar::grpc::GrpcStreamClient>(sylar::http2::StreamClient::Create(stream));
+
+    stream->sendResponse(response->getResponse(), false);
+
+    auto wg = sylar::WorkerGroup::Create(1);
+    wg->schedule([cli](){
+        for(int i = 0; i < 5; ++i) {
+            test::HelloResponse rsp;
+            rsp.set_id("hello");
+            rsp.set_msg("world");
+            cli->sendMessage(rsp);
+            sleep(1);
+        }
+    });
+    //while(true) {
+    for(int i = 0; i < 5; ++i) {
+        auto rsp = cli->recvMessage<test::HelloResponse>();
+        if(!rsp) {
+            break;
+        }
+        SYLAR_LOG_INFO(g_logger) << "recv " << sylar::PBToJsonString(*rsp);
+    }
+    wg->waitAll();
+    stream->sendHeaders({
+        {"grpc-status", "0"},
+        {"grpc-message", "test message"},
+    }, true);
+    SYLAR_LOG_INFO(g_logger) << "HandleHelloServiceHelloStreamC over";
+    return 0;
+}
+
+int32_t HandleHelloServiceHelloStreamA2(sylar::grpc::GrpcRequest::ptr request,
+                                sylar::grpc::GrpcResult::ptr response,
+                                sylar::grpc::GrpcStreamClient::ptr cli,
+                                sylar::http2::Http2Session::ptr session) {
+    SYLAR_LOG_INFO(g_logger) << "stream_id = " << request->getRequest()->getStreamId();
+    SYLAR_LOG_INFO(g_logger) << *request->getRequest();
+    while(true) {
+        auto rsp = cli->recvMessage<test::HelloResponse>();
+        if(rsp) {
+            SYLAR_LOG_INFO(g_logger) << "recv " << sylar::PBToJsonString(*rsp);
+        } else {
+            break;
+        }
+    }
+
+    test::HelloResponse rsp;
+    rsp.set_id("hello");
+    rsp.set_msg("world");
+
+    response->setAsPB(rsp);
+    SYLAR_LOG_INFO(g_logger) << "HandleHelloServiceHelloStreamA2 over";
+    return 0;
+}
+
+
+
+int32_t HandleHelloServiceHelloStreamB2(sylar::grpc::GrpcRequest::ptr request,
+                                sylar::grpc::GrpcResult::ptr response,
+                                sylar::grpc::GrpcStreamClient::ptr cli,
+                                sylar::http2::Http2Session::ptr session) {
+    SYLAR_LOG_INFO(g_logger) << "stream_id = " << request->getRequest()->getStreamId();
+    SYLAR_LOG_INFO(g_logger) << *request->getRequest();
+    auto req = request->getAsPB<test::HelloRequest>();
+    if(!req) {
+        response->setResult(100);
+        response->setError("invalid pb");
+        return -1;
+    }
+    SYLAR_LOG_INFO(g_logger) << "---" << sylar::PBToJsonString(*req) << " - " << req;
+
+    for(int i = 0; i < 10; ++i) {
+        test::HelloResponse rsp;
+        rsp.set_id("hello");
+        rsp.set_msg("world");
+        cli->sendMessage(rsp);
+        sleep(1);
+    }
+    SYLAR_LOG_INFO(g_logger) << "HandleHelloServiceHelloStreamB2 over";
+    return 0;
+}
+
+int32_t HandleHelloServiceHelloStreamC2(sylar::grpc::GrpcRequest::ptr request,
+                                sylar::grpc::GrpcResult::ptr response,
+                                sylar::grpc::GrpcStreamClient::ptr cli,
+                                sylar::http2::Http2Session::ptr session) {
+    SYLAR_LOG_INFO(g_logger) << "stream_id = " << request->getRequest()->getStreamId();
+    SYLAR_LOG_INFO(g_logger) << *request->getRequest();
+    auto wg = sylar::WorkerGroup::Create(1);
+    wg->schedule([cli](){
+        for(int i = 0; i < 5; ++i) {
+            test::HelloResponse rsp;
+            rsp.set_id("hello");
+            rsp.set_msg("world");
+            cli->sendMessage(rsp);
+            sleep(1);
+        }
+    });
+    //while(true) {
+    for(int i = 0; i < 5; ++i) {
+        auto rsp = cli->recvMessage<test::HelloResponse>();
+        if(!rsp) {
+            break;
+        }
+        SYLAR_LOG_INFO(g_logger) << "recv " << sylar::PBToJsonString(*rsp);
+    }
+    wg->waitAll();
+    SYLAR_LOG_INFO(g_logger) << "HandleHelloServiceHelloStreamC2 over";
+    return 0;
+}
+
+
 std::string bigstr(10, 'a');
 
 class MyModule : public sylar::RockModule {
@@ -80,8 +297,15 @@ public:
             auto slt = h2->getServletDispatch();
             slt->addServlet("/test", HandleTest);
 
-            slt->addServlet(sylar::grpc::GrpcServlet::GetGrpcPath("test", "HelloService", "Hello")
-                    , sylar::grpc::GrpcFunctionServlet::Create(HandleHelloServiceHello));
+            h2->addGrpcServlet(sylar::grpc::GrpcServlet::GetGrpcPath("test", "HelloService", "Hello")
+                    , sylar::grpc::GrpcFunctionServlet::Create(sylar::grpc::GrpcType::UNARY, HandleHelloServiceHello, nullptr));
+
+            h2->addGrpcStreamClientServlet(sylar::grpc::GrpcServlet::GetGrpcPath("test", "HelloService", "HelloStreamA")
+                    , sylar::grpc::GrpcFunctionServlet::Create(sylar::grpc::GrpcType::CLIENT, HandleHelloServiceHelloStreamA, HandleHelloServiceHelloStreamA2));
+            h2->addGrpcStreamServerServlet(sylar::grpc::GrpcServlet::GetGrpcPath("test", "HelloService", "HelloStreamB")
+                    , sylar::grpc::GrpcFunctionServlet::Create(sylar::grpc::GrpcType::SERVER, HandleHelloServiceHelloStreamB, HandleHelloServiceHelloStreamB2));
+            h2->addGrpcStreamBothServlet(sylar::grpc::GrpcServlet::GetGrpcPath("test", "HelloService", "HelloStreamC")
+                    , sylar::grpc::GrpcFunctionServlet::Create(sylar::grpc::GrpcType::BOTH, HandleHelloServiceHelloStreamC, HandleHelloServiceHelloStreamC2));
         }
         registerService("rock", "sylar.top", "blog");
         auto rpy = sylar::RedisUtil::Cmd("local", "get abc");
@@ -107,6 +331,7 @@ public:
         }, true);
         */
 
+        /*
         auto lb = sylar::Application::GetInstance()->getGrpcSDLoadBalance();
         test::HelloRequest hr;
         hr.set_id(bigstr + "hello_" + std::to_string(time(0)));
@@ -138,6 +363,7 @@ public:
                 }
             }
         });
+        */
 
         return true;
     }

@@ -72,6 +72,8 @@ public:
     ~Stream();
 
     uint32_t getId() const { return m_id;}
+    uint8_t getHandleCount() const { return m_handleCount;}
+    void addHandleCount();
 
     static std::string StateToString(State state);
 
@@ -79,6 +81,8 @@ public:
     int32_t sendFrame(Frame::ptr frame);
     int32_t sendResponse(sylar::http::HttpResponse::ptr rsp, bool end_stream = true);
     int32_t sendRequest(sylar::http::HttpRequest::ptr req, bool end_stream = true);
+
+    int32_t sendHeaders(const std::map<std::string, std::string>& headers, bool end_stream = false);
 
     std::shared_ptr<Http2Stream> getStream() const;
     State getState() const { return m_state;}
@@ -95,6 +99,10 @@ public:
     frame_handler getFrameHandler() const { return m_handler;}
     void setFrameHandler(frame_handler v) { m_handler = v;}
 
+    std::string getHeader(const std::string& name) const;
+
+    void initRequest();
+
     void close();
 private:
     int32_t handleHeadersFrame(Frame::ptr frame, bool is_client);
@@ -105,6 +113,7 @@ private:
 private:
     std::weak_ptr<Http2Stream> m_stream;
     State m_state;
+    uint8_t m_handleCount;
     uint32_t m_id;
     http::HttpRequest::ptr m_request;
     http::HttpResponse::ptr m_response;
@@ -125,6 +134,8 @@ public:
     int32_t sendData(const std::string& data, bool end_stream = false);
     DataFrame::ptr recvData();
 
+    Stream::ptr getStream() { return m_stream;}
+    int32_t close();
 private:
     int32_t onFrame(Frame::ptr frame);
 private:

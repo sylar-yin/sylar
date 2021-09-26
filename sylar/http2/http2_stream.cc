@@ -48,11 +48,13 @@ std::string Http2Settings::toString() const {
 
 Http2Stream::Http2Stream(Socket::ptr sock, bool client)
     :AsyncSocketStream(sock, true)
-    ,m_sn(client ? 1 : 0)
+    ,m_sn(client ? -1 : 0)
     ,m_isClient(client)
     ,m_ssl(false) {
     m_codec = std::make_shared<FrameCodec>();
     m_server = nullptr;
+
+    SYLAR_LOG_INFO(g_logger) << "===Http2Stream::Http2Stream sock=" << sock << " - " << this;
 }
 
 Http2Stream::~Http2Stream() {
@@ -60,7 +62,7 @@ Http2Stream::~Http2Stream() {
 }
 
 void Http2Stream::onClose() {
-    SYLAR_LOG_INFO(g_logger) << "******** onClose";
+    SYLAR_LOG_INFO(g_logger) << "******** onClose " << getLocalAddressString() << " - " << getRemoteAddressString();
     m_streamMgr.clear();
 }
 
@@ -215,7 +217,10 @@ AsyncSocketStream::Ctx::ptr Http2Stream::doRecv() {
             } else {
                 stream = newStream(frame->header.identifier);
                 if(!stream) {
-                    sendGoAway(m_sn, (uint32_t)Http2Error::PROTOCOL_ERROR, "");
+                    if(frame->header.type != (uint8_t)FrameType::RST_STREAM) {
+                        //sendGoAway(m_sn, (uint32_t)Http2Error::PROTOCOL_ERROR, "");
+                        sendRstStream(m_sn, (uint32_t)Http2Error::STREAM_CLOSED_ERROR);
+                    }
                     return nullptr;
                 }
             }
@@ -241,7 +246,7 @@ AsyncSocketStream::Ctx::ptr Http2Stream::doRecv() {
                     sendWindowUpdate(stream->getId(), MAX_INITIAL_WINDOW_SIZE - stream->recv_window);
                 }
             }
-        } 
+        }
         stream->handleFrame(frame, m_isClient);
         if(stream->getState() == http2::Stream::State::CLOSED) {
             if(m_isClient) {
@@ -262,6 +267,21 @@ AsyncSocketStream::Ctx::ptr Http2Stream::doRecv() {
                     delStream(stream->getId());
                     return nullptr;
                 }
+                if(stream->getHandleCount() == 0) {
+                    m_worker->schedule(std::bind(&Http2Stream::handleRequest, std::dynamic_pointer_cast<Http2Stream>(shared_from_this()), req, stream));
+                }
+            }
+        } else if(frame->header.type == (uint8_t)FrameType::HEADERS
+                    && frame->header.flags & (uint8_t)FrameFlagHeaders::END_HEADERS) {
+            auto path = stream->getHeader(":path");
+            SYLAR_LOG_INFO(g_logger) << " ******* header *********" << path
+                << " - " << (int)(!path.empty())
+                << " - " << (int)m_server->isStreamPath(path)
+                << " - " << (int)(stream->getHandleCount() == 0);
+            if(!path.empty() && m_server->isStreamPath(path) && stream->getHandleCount() == 0) {
+                SYLAR_LOG_INFO(g_logger) << "StreamPath: " << path;
+                stream->initRequest();
+                auto req = stream->getRequest();
                 m_worker->schedule(std::bind(&Http2Stream::handleRequest, std::dynamic_pointer_cast<Http2Stream>(shared_from_this()), req, stream));
             }
         }
@@ -282,11 +302,19 @@ AsyncSocketStream::Ctx::ptr Http2Stream::doRecv() {
 }
 
 void Http2Stream::handleRequest(http::HttpRequest::ptr req, http2::Stream::ptr stream) {
+    if(stream->getHandleCount() > 0) {
+        return;
+    }
+    stream->addHandleCount();
     http::HttpResponse::ptr rsp = std::make_shared<http::HttpResponse>(req->getVersion(), false);
+    req->setStreamId(stream->getId());
     SYLAR_LOG_DEBUG(g_logger) << *req;
     rsp->setHeader("server", m_server->getName());
-    m_server->getServletDispatch()->handle(req, rsp, nullptr);
-    stream->sendResponse(rsp);
+    int rt = m_server->getServletDispatch()->handle(req, rsp, shared_from_this());
+    if(rt != 0 || m_server->needSendResponse(req->getPath())) {
+        SYLAR_LOG_INFO(g_logger) << "send response ======";
+        stream->sendResponse(rsp);
+    }
     delStream(stream->getId());
 }
 
@@ -694,7 +722,7 @@ void Http2InitRequestForRead(sylar::http::HttpRequest::ptr req) {
     req->setMethod(http::StringToHttpMethod(req->getHeader(":method")));
     if(req->hasHeader(":path", nullptr)) {
         req->setUri(req->getHeader(":path"));
-        SYLAR_LOG_INFO(g_logger) << req->getPath() << " - " << req->getQuery() << " - " << req->getFragment();
+        //SYLAR_LOG_INFO(g_logger) << req->getPath() << " - " << req->getQuery() << " - " << req->getFragment();
     }
 }
 
