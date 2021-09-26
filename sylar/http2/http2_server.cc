@@ -25,6 +25,10 @@ void Http2Server::setName(const std::string& v) {
 }
 
 bool Http2Server::isStreamPath(const std::string& path) {
+    SYLAR_LOG_INFO(g_logger) << "size: " << m_streamTypes.size();
+    for(auto& i : m_streamTypes) {
+        SYLAR_LOG_INFO(g_logger) << "<<<< " << i.first << " : " << i.second;
+    }
     return getStreamPathType(path) > 0;
 }
 

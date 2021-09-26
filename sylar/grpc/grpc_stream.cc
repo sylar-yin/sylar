@@ -287,5 +287,24 @@ GrpcStreamClient::ptr GrpcSDLoadBalance::openStreamClient(const std::string& dom
     return nullptr;
 }
 
+GrpcStreamBase::GrpcStreamBase(GrpcStreamClient::ptr client)
+        :m_client(client) {
+}
+
+int32_t GrpcStreamBase::close(int err) {
+    if(!m_client) {
+        return -1;
+    }
+    auto stm = m_client->getStream();
+    if(!stm) {
+        return -2;
+    }
+    auto hs = stm->getStream();
+    if(!hs) {
+        return -3;
+    }
+    return hs->sendRstStream(stm->getId(), err);
+}
+
 }
 }

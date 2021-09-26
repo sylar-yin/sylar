@@ -179,6 +179,8 @@ struct HeadersFrame : public IFrame {
     PriorityFrame priority; //flag & FrameFlagHeaders::PRIORITY
     std::string data;
     std::string padding;
+    HPack::ptr hpack;
+    std::vector<std::pair<std::string, std::string> > kvs;
 
     std::string toString() const;
     bool writeTo(ByteArray::ptr ba, const FrameHeader& header);

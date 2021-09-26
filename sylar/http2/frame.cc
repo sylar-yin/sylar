@@ -146,6 +146,9 @@ bool HeadersFrame::writeTo(ByteArray::ptr ba, const FrameHeader& header) {
         if(header.flags & (uint8_t)FrameFlagHeaders::PRIORITY) {
             priority.writeTo(ba, header);
         }
+        if(hpack && !kvs.empty()) {
+            hpack->pack(kvs, data);
+        }
         ba->write(data.c_str(), data.size());
         if(header.flags & (uint8_t)FrameFlagHeaders::PADDED) {
             ba->write(padding.c_str(), padding.size());

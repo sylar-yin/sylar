@@ -179,7 +179,7 @@ int32_t Stream::handleDataFrame(Frame::ptr frame, bool is_client) {
     return 0;
 }
 
-int32_t Stream::sendRequest(sylar::http::HttpRequest::ptr req, bool end_stream) {
+int32_t Stream::sendRequest(sylar::http::HttpRequest::ptr req, bool end_stream, bool async) {
     auto stream = getStream();
     if(!stream) {
         SYLAR_LOG_ERROR(g_logger) << "Stream id=" << m_id
@@ -200,22 +200,20 @@ int32_t Stream::sendRequest(sylar::http::HttpRequest::ptr req, bool end_stream) 
         headers->header.flags |= (uint8_t)FrameFlagHeaders::END_STREAM;
     }
 
-    HPack hp(stream->m_sendTable);
-    std::vector<std::pair<std::string, std::string> > hs;
+    data->hpack = std::make_shared<HPack>(stream->m_sendTable);
     for(auto& i : m) {
-        hs.push_back(std::make_pair(sylar::ToLower(i.first), i.second));
+        data->kvs.emplace_back(sylar::ToLower(i.first), i.second);
     }
     // debug stream_id
-    hs.push_back(std::make_pair("stream_id", std::to_string(m_id)));
-    hp.pack(hs, data->data);
+    data->kvs.push_back(std::make_pair("stream_id", std::to_string(m_id)));
     headers->data = data;
-    int32_t ok = stream->sendFrame(headers, false);
+    int32_t ok = stream->sendFrame(headers, async);
     if(ok < 0) {
         SYLAR_LOG_INFO(g_logger) << "sendHeaders fail";
         return ok;
     }
     if(!req->getBody().empty()) {
-        ok = stream->sendData(shared_from_this(), req->getBody(), false);
+        ok = stream->sendData(shared_from_this(), req->getBody(), async);
         if(ok <= 0) {
             SYLAR_LOG_ERROR(g_logger) << "Stream id=" << m_id 
                 << " sendData fail, rt=" << ok << " size=" << req->getBody().size();
@@ -223,10 +221,9 @@ int32_t Stream::sendRequest(sylar::http::HttpRequest::ptr req, bool end_stream) 
         }
     }
     return ok;
-
 }
 
-int32_t Stream::sendHeaders(const std::map<std::string, std::string>& m, bool end_stream) {
+int32_t Stream::sendHeaders(const std::map<std::string, std::string>& m, bool end_stream, bool async) {
     auto stream = getStream();
     if(!stream) {
         SYLAR_LOG_ERROR(g_logger) << "Stream id=" << m_id
@@ -244,23 +241,21 @@ int32_t Stream::sendHeaders(const std::map<std::string, std::string>& m, bool en
     HeadersFrame::ptr data;
     data = std::make_shared<HeadersFrame>();
 
-    HPack hp(stream->getSendTable());
-    std::vector<std::pair<std::string, std::string> > hs;
+    data->hpack = std::make_shared<HPack>(stream->getSendTable());
     for(auto& i : m) {
-        hs.push_back(std::make_pair(sylar::ToLower(i.first), i.second));
+        data->kvs.emplace_back(sylar::ToLower(i.first), i.second);
     }
-    hp.pack(hs, data->data);
     headers->data = data;
-    int ok = stream->sendFrame(headers, false);
+    int ok = stream->sendFrame(headers, async);
     if(ok < 0) {
         SYLAR_LOG_ERROR(g_logger) << "Stream id=" << m_id
-            << " sendResponse send Headers fail";
+            << " sendHeaders fail " << ok;
         return ok;
     }
     return ok;
 }
 
-int32_t Stream::sendResponse(http::HttpResponse::ptr rsp, bool end_stream) {
+int32_t Stream::sendResponse(http::HttpResponse::ptr rsp, bool end_stream, bool async) {
     auto stream = getStream();
     if(!stream) {
         SYLAR_LOG_ERROR(g_logger) << "Stream id=" << m_id
@@ -291,25 +286,23 @@ int32_t Stream::sendResponse(http::HttpResponse::ptr rsp, bool end_stream) {
         headers->header.flags |= (uint8_t)FrameFlagHeaders::END_STREAM;
     }
 
-    HPack hp(stream->getSendTable());
-    std::vector<std::pair<std::string, std::string> > hs;
+    data->hpack = std::make_shared<HPack>(stream->getSendTable());
     for(auto& i : m) {
         if(trailers.count(i.first)) {
             continue;
         }
 
-        hs.push_back(std::make_pair(sylar::ToLower(i.first), i.second));
+        data->kvs.emplace_back(sylar::ToLower(i.first), i.second);
     }
-    hp.pack(hs, data->data);
     headers->data = data;
-    int ok = stream->sendFrame(headers);
+    int ok = stream->sendFrame(headers, async);
     if(ok < 0) {
         SYLAR_LOG_ERROR(g_logger) << "Stream id=" << m_id
             << " sendResponse send Headers fail";
         return ok;
     }
     if(!rsp->getBody().empty()) {
-        ok = stream->sendData(shared_from_this(), rsp->getBody(), true, trailers.empty());
+        ok = stream->sendData(shared_from_this(), rsp->getBody(), async, trailers.empty());
         if(ok < 0) {
             SYLAR_LOG_ERROR(g_logger) << "Stream id=" << m_id
                 << " sendData fail, rt=" << ok << " size=" << rsp->getBody().size();
@@ -322,16 +315,13 @@ int32_t Stream::sendResponse(http::HttpResponse::ptr rsp, bool end_stream) {
         headers->header.identifier = m_id;
 
         HeadersFrame::ptr data = std::make_shared<HeadersFrame>();
-
-        HPack hp(stream->getSendTable());
-        std::vector<std::pair<std::string, std::string> > hs;
+        data->hpack = std::make_shared<HPack>(stream->getSendTable());
         for(auto& i : trailers) {
             auto v = rsp->getHeader(i);
-            hs.push_back(std::make_pair(sylar::ToLower(i), v));
+            data->kvs.emplace_back(sylar::ToLower(i), v);
         }
-        hp.pack(hs, data->data);
         headers->data = data;
-        bool ok = stream->sendFrame(headers) > 0;
+        bool ok = stream->sendFrame(headers, async) > 0;
         if(!ok) {
             SYLAR_LOG_INFO(g_logger) << "sendHeaders trailer fail";
             return ok;
@@ -341,10 +331,10 @@ int32_t Stream::sendResponse(http::HttpResponse::ptr rsp, bool end_stream) {
     return ok;
 }
 
-int32_t Stream::sendFrame(Frame::ptr frame) {
+int32_t Stream::sendFrame(Frame::ptr frame, bool async) {
     auto stream = getStream();
     if(stream) {
-        return stream->sendFrame(frame);
+        return stream->sendFrame(frame, async);
     }
     return 0;
 }

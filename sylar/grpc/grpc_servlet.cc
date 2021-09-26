@@ -21,9 +21,27 @@ GrpcServlet::GrpcServlet(const std::string& name, GrpcType type)
     ,m_type(type) {
 }
 
+int32_t GrpcServlet::process(sylar::grpc::GrpcRequest::ptr request,
+                            sylar::grpc::GrpcResult::ptr response,
+                            sylar::http2::Http2Session::ptr session) {
+    SYLAR_LOG_WARN(g_logger) << "GrpcServlet name=" << m_name << " unhandle unary process";
+    session->sendRstStream(request->getRequest()->getStreamId(), 404);
+    return -1;
+}
+
+int32_t GrpcServlet::processStream(sylar::grpc::GrpcRequest::ptr request,
+                            sylar::grpc::GrpcResult::ptr response,
+                            sylar::grpc::GrpcStreamClient::ptr stream,
+                            sylar::http2::Http2Session::ptr session) {
+    SYLAR_LOG_WARN(g_logger) << "GrpcServlet name=" << m_name << " unhandle stream processStream type=" << (uint32_t)m_type;
+    session->sendRstStream(request->getRequest()->getStreamId(), 404);
+    return -1;
+}
+
 int32_t GrpcServlet::handle(sylar::http::HttpRequest::ptr request
                    , sylar::http::HttpResponse::ptr response
                    , sylar::SocketStream::ptr session) {
+    SYLAR_LOG_INFO(g_logger) << "GrpcServlet handle " << request->getPath();
     std::string content_type = request->getHeader("content-type");
     if(content_type.empty()
             || content_type.find("application/grpc") == std::string::npos) {
@@ -93,6 +111,7 @@ int32_t GrpcServlet::handle(sylar::http::HttpRequest::ptr request
                 SYLAR_LOG_INFO(g_logger) << i.first << " - " << i.second;
             }
         }
+        SYLAR_LOG_INFO(g_logger) << "=== stream type=" << (uint32_t)m_type;
         rt = processStream(greq, grsp, cli, h2session);
     }
     if(rt == 0) {
@@ -113,7 +132,7 @@ int32_t GrpcServlet::handle(sylar::http::HttpRequest::ptr request
             std::map<std::string, std::string> headers;
             headers["grpc-status"] = std::to_string(grsp->getResult());
             headers["grpc-message"] = grsp->getError();
-            cli->getStream()->sendHeaders(headers, true);
+            cli->getStream()->sendHeaders(headers, true, true);
 
             for(auto& i : headers) {
                 SYLAR_LOG_INFO(g_logger) << i.first << " : " << i.second;
@@ -154,7 +173,6 @@ int32_t GrpcFunctionServlet::processStream(sylar::grpc::GrpcRequest::ptr request
         return -1;
     }
 }
-
 
 GrpcFunctionServlet::ptr GrpcFunctionServlet::Create(GrpcType type, callback cb, stream_callback scb) {
     return std::make_shared<GrpcFunctionServlet>(type, cb, scb);

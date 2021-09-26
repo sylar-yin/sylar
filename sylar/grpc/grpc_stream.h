@@ -155,11 +155,79 @@ public:
         return nullptr;
     }
 
-    http2::StreamClient::ptr getClient() {return m_client;}
+    http2::StreamClient::ptr getClient() const {return m_client;}
     http2::Stream::ptr getStream();
 private:
     http2::StreamClient::ptr m_client;
 };
+
+class GrpcStreamBase {
+public:
+    typedef std::shared_ptr<GrpcStreamBase> ptr;
+    GrpcStreamBase() {};
+    GrpcStreamBase(GrpcStreamClient::ptr client);
+    GrpcStreamClient::ptr getClient() const { return m_client;}
+    int32_t close(int err = 0);
+protected:
+    GrpcStreamClient::ptr m_client;
+};
+
+template<class T>
+class GrpcStreamReader : virtual public GrpcStreamBase {
+public:
+    typedef std::shared_ptr<GrpcStreamReader> ptr;
+    GrpcStreamReader() {}
+    GrpcStreamReader(GrpcStreamClient::ptr client)
+        :GrpcStreamBase(client) {
+    }
+
+    std::shared_ptr<T> recvMessage() {
+        return m_client->recvMessage<T>();
+    }
+};
+
+template<class T>
+class GrpcStreamWriter : virtual public GrpcStreamBase {
+public:
+    typedef std::shared_ptr<GrpcStreamWriter> ptr;
+    GrpcStreamWriter();
+    GrpcStreamWriter(GrpcStreamClient::ptr client)
+        :GrpcStreamBase(client) {
+    }
+
+    int32_t sendMessage(std::shared_ptr<T> msg) {
+        return m_client->sendMessage(*msg, false);
+    }
+};
+
+template<class R, class W>
+class GrpcStream : public GrpcStreamBase {
+public:
+    typedef std::shared_ptr<GrpcStream> ptr;
+    GrpcStream(GrpcStreamClient::ptr client)
+        :GrpcStreamBase(client) {
+    }
+
+    std::shared_ptr<R> recvMessage() {
+        return m_client->recvMessage<R>();
+    }
+
+    int32_t sendMessage(std::shared_ptr<W> msg) {
+        return m_client->sendMessage(*msg, false);
+    }
+};
+
+//template<class R, class W>
+//class GrpcStream : public GrpcStreamReader<R>, public GrpcStreamWriter<W> {
+//public:
+//    typedef std::shared_ptr<GrpcStream> ptr;
+//    GrpcStream(GrpcStreamClient::ptr client)
+//        :GrpcStreamBase(client) {
+//    }
+//};
+
+template<class Req, class Rsp> using GrpcStreamSession = GrpcStream<Req, Rsp>;
+template<class Req, class Rsp> using GrpcStreamConnection = GrpcStream<Rsp, Req>;
 
 class GrpcSDLoadBalance : public SDLoadBalance {
 public:

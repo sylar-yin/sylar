@@ -78,11 +78,11 @@ public:
     static std::string StateToString(State state);
 
     int32_t handleFrame(Frame::ptr frame, bool is_client);
-    int32_t sendFrame(Frame::ptr frame);
-    int32_t sendResponse(sylar::http::HttpResponse::ptr rsp, bool end_stream = true);
-    int32_t sendRequest(sylar::http::HttpRequest::ptr req, bool end_stream = true);
+    int32_t sendFrame(Frame::ptr frame, bool async);
+    int32_t sendResponse(sylar::http::HttpResponse::ptr rsp, bool end_stream = true, bool async = true);
+    int32_t sendRequest(sylar::http::HttpRequest::ptr req, bool end_stream = true, bool async = true);
 
-    int32_t sendHeaders(const std::map<std::string, std::string>& headers, bool end_stream = false);
+    int32_t sendHeaders(const std::map<std::string, std::string>& headers, bool end_stream = false, bool async = false);
 
     std::shared_ptr<Http2Stream> getStream() const;
     State getState() const { return m_state;}
