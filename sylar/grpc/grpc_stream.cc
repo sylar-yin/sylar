@@ -1,6 +1,8 @@
 #include "grpc_stream.h"
 #include "sylar/log.h"
 #include "sylar/worker.h"
+#include "sylar/streams/zlib_stream.h"
+#include "grpc_util.h"
 #include <sstream>
 
 namespace sylar {
@@ -13,11 +15,21 @@ static sylar::ConfigVar<std::unordered_map<std::string
     sylar::Config::Lookup("grpc_services", std::unordered_map<std::string
     ,std::unordered_map<std::string, std::string> >(), "grpc_services");
 
-sylar::ByteArray::ptr GrpcMessage::packData() const {
+sylar::ByteArray::ptr GrpcMessage::packData(bool gzip) const {
     sylar::ByteArray::ptr ba = std::make_shared<sylar::ByteArray>();
-    ba->writeFuint8(0);
-    ba->writeFuint32(data.size());
-    ba->write(data.c_str(), data.size());
+    if(!gzip) {
+        ba->writeFuint8(0);
+        ba->writeFuint32(data.size());
+        ba->write(data.c_str(), data.size());
+    } else {
+        ba->writeFuint8(1);
+        auto zs = sylar::ZlibStream::CreateGzip(true);
+        zs->write(data.c_str(), data.size());
+        zs->close();
+        auto rt = zs->getResult();
+        ba->writeFuint32(rt.size());
+        ba->write(rt.c_str(), rt.size());
+    }
     return ba;
 }
 
@@ -61,16 +73,8 @@ GrpcResult::ptr GrpcConnection::request(GrpcRequest::ptr req, uint64_t timeout_m
 
         auto& body = result->response->getBody();
         if(!body.empty()) {
-            sylar::ByteArray::ptr ba(new sylar::ByteArray((void*)&body[0], body.size()));
             GrpcMessage::ptr msg = std::make_shared<GrpcMessage>();
-            rsp->setData(msg);
-
-            try {
-                msg->compressed = ba->readFuint8();
-                msg->length = ba->readFuint32();
-                msg->data = ba->toString();
-            } catch (...) {
-                SYLAR_LOG_ERROR(g_logger) << "invalid grpc body";
+            if(!DecodeGrpcBody(body, *msg)) {
                 result->result = -501;
                 result->error = "invalid grpc body";
             }
@@ -91,18 +95,6 @@ GrpcResult::ptr GrpcConnection::request(const std::string& method
         http_req->setHeader(i.first, i.second);
     }
     grpc_req->setAsPB(message);
-
-    //GrpcMessage::ptr msg = std::make_shared<GrpcMessage>();
-    //msg->compressed = 0;
-    //if(!message.SerializeToString(&msg->data)) {
-    //    SYLAR_LOG_ERROR(g_logger) << "SerializeToString fail, " << sylar::PBToJsonString(message);
-    //    GrpcResult::ptr rsp = std::make_shared<GrpcResult>();
-    //    rsp->setResult(-100);
-    //    rsp->setError("pb SerializeToString fail");
-    //    return rsp;
-    //}
-    //msg->compressed = msg->data.size();
-    //grpc_req->setData(msg);
     return request(grpc_req, timeout_ms);
 }
 
@@ -231,7 +223,7 @@ http2::DataFrame::ptr GrpcStreamClient::recvData() {
 int32_t GrpcStreamClient::sendMessage(const google::protobuf::Message& msg, bool end_stream) {
     GrpcMessage m;
     msg.SerializeToString(&m.data);
-    auto ba = m.packData();
+    auto ba = m.packData(m_enableGzip);
     ba->setPosition(0);
     return m_client->sendData(ba->toString(), end_stream);
 }
@@ -259,6 +251,12 @@ std::shared_ptr<std::string> GrpcStreamClient::recvMessageData() {
                 return nullptr;
             }
             *rt += df->data;
+        }
+        if(compress) {
+            auto zs = sylar::ZlibStream::CreateGzip(false);
+            zs->write(rt->c_str(), rt->size());
+            zs->close();
+            *rt = zs->getResult();
         }
         return rt;
     } catch (...) {

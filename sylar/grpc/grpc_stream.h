@@ -15,7 +15,7 @@ struct GrpcMessage {
     uint32_t length = 0;
     std::string data;
 
-    sylar::ByteArray::ptr packData() const;
+    sylar::ByteArray::ptr packData(bool gzip) const;
 };
 
 class GrpcRequest {
@@ -157,8 +157,12 @@ public:
 
     http2::StreamClient::ptr getClient() const {return m_client;}
     http2::Stream::ptr getStream();
+
+    bool getEnableGzip() const { return m_enableGzip;}
+    void setEnableGzip(bool v) { m_enableGzip =v;}
 private:
     http2::StreamClient::ptr m_client;
+    bool m_enableGzip = false;
 };
 
 class GrpcStreamBase {

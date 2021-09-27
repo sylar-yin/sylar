@@ -624,8 +624,8 @@ public:
 
             //h2->addGrpcServlet(sylar::grpc::GrpcServlet::GetGrpcPath("test", "HelloService", "Hello")
             //        , sylar::grpc::GrpcUnaryFunctionServlet<test::HelloRequest, test::HelloResponse>::Create(HandleTest2));
-            h2->addGrpcServlet(sylar::grpc::GrpcServlet::GetGrpcPath("test", "HelloService", "Hello")
-                    , sylar::grpc::GrpcUnaryFullFunctionServlet<test::HelloRequest, test::HelloResponse>::Create(HandleTest2Full));
+            //h2->addGrpcServlet(sylar::grpc::GrpcServlet::GetGrpcPath("test", "HelloService", "Hello")
+            //        , sylar::grpc::GrpcUnaryFullFunctionServlet<test::HelloRequest, test::HelloResponse>::Create(HandleTest2Full));
             //h2->addGrpcServlet(sylar::grpc::GrpcServlet::GetGrpcPath("test", "HelloService", "Hello")
             //        , std::make_shared<HelloServiceHello>());
 

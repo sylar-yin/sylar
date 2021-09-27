@@ -1,5 +1,7 @@
 #include "grpc_servlet.h"
 #include "sylar/log.h"
+#include "sylar/streams/zlib_stream.h"
+#include "grpc_util.h"
 
 namespace sylar {
 namespace grpc {
@@ -70,12 +72,7 @@ int32_t GrpcServlet::handle(sylar::http::HttpRequest::ptr request
             return 1;
         }
 
-        sylar::ByteArray::ptr ba(new sylar::ByteArray((void*)&body[0], body.size()));
-        try {
-            msg->compressed = ba->readFuint8();
-            msg->length = ba->readFuint32();
-            msg->data = ba->toString();
-        } catch (...) {
+        if(!DecodeGrpcBody(body, msg->data)) {
             SYLAR_LOG_ERROR(g_logger) << "invalid grpc body";
             response->setStatus(sylar::http::HttpStatus::BAD_REQUEST);
             response->setReason("invalid grpc body");
@@ -103,6 +100,10 @@ int32_t GrpcServlet::handle(sylar::http::HttpRequest::ptr request
     if(m_type == GrpcType::UNARY) {
         rt = process(greq, grsp, h2session);
     } else {
+        if(request->getHeader("grpc-accept-encoding") == "gzip") {
+            response->setHeader("grpc-encoding", "gzip");
+            cli->setEnableGzip(true);
+        }
         if(m_type != GrpcType::CLIENT) {
             SYLAR_LOG_INFO(g_logger) << "**** rsp: " << *response;
             cli->getStream()->sendResponse(grsp->getResponse(), false);
@@ -120,13 +121,16 @@ int32_t GrpcServlet::handle(sylar::http::HttpRequest::ptr request
             response->setHeader("grpc-message", grsp->getError());
             auto grpc_data = grsp->getData();
             if(grpc_data) {
-                std::string data;
-                data.resize(grpc_data->data.size() + 5);
-                sylar::ByteArray::ptr ba(new sylar::ByteArray(&data[0], data.size()));
-                ba->writeFuint8(0);
-                ba->writeFuint32(grpc_data->data.size());
-                ba->write(grpc_data->data.c_str(), grpc_data->data.size());
-                response->setBody(data);
+                //hardcode TODO
+                sylar::ByteArray::ptr ba;
+                if(request->getHeader("grpc-accept-encoding") == "gzip") {
+                    response->setHeader("grpc-encoding", "gzip");
+                    ba = grpc_data->packData(true);
+                } else {
+                    ba = grpc_data->packData(false);
+                }
+                ba->setPosition(0);
+                response->setBody(ba->toString());
             }
         } else {
             std::map<std::string, std::string> headers;
@@ -138,6 +142,9 @@ int32_t GrpcServlet::handle(sylar::http::HttpRequest::ptr request
                 SYLAR_LOG_INFO(g_logger) << i.first << " : " << i.second;
             }
         }
+    } else {
+        response->setHeader("grpc-status", std::to_string(grsp->getResult()));
+        response->setHeader("grpc-message", grsp->getError());
     }
     return rt;
 }
