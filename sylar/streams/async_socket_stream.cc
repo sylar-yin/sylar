@@ -106,7 +106,9 @@ bool AsyncSocketStream::start() {
 void AsyncSocketStream::doRead() {
     try {
         while(isConnected()) {
+            recving = true;
             auto ctx = doRecv();
+            recving = false;
             if(ctx) {
                 ctx->doRsp();
             }

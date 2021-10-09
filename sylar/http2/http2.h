@@ -4,9 +4,11 @@
 #include "sylar/http2/dynamic_table.h"
 #include "sylar/http2/frame.h"
 #include "sylar/http2/hpack.h"
+#include "sylar/http2/http2_connection.h"
+#include "sylar/http2/http2_session.h"
 #include "sylar/http2/http2_server.h"
-#include "sylar/http2/http2_stream.h"
+#include "sylar/http2/http2_socket_stream.h"
 #include "sylar/http2/huffman.h"
-#include "sylar/http2/stream.h"
+#include "sylar/http2/http2_stream.h"
 
 #endif

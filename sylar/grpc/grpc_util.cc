@@ -33,5 +33,27 @@ bool DecodeGrpcBody(const std::string& body, GrpcMessage& data, const std::strin
     return false;
 }
 
+bool EncodeGrpcBody(const std::string& data, std::string& body, bool compress, const std::string& encoding) {
+    if(compress) {
+        sylar::ByteArray::ptr ba = std::make_shared<sylar::ByteArray>();
+        ba->writeFuint8(1);
+        auto zs = sylar::ZlibStream::CreateGzip(true);
+        zs->write(data.c_str(), data.size());
+        zs->close();
+        auto cdata = zs->getResult();
+        ba->writeFuint32(cdata.size());
+        ba->write(cdata.c_str(), cdata.size());
+        ba->setPosition(0);
+        body = ba->toString();
+    } else {
+        body.resize(data.size() + 5);
+        sylar::ByteArray::ptr ba(new sylar::ByteArray(&body[0], body.size()));
+        ba->writeFuint8(0);
+        ba->writeFuint32(data.size());
+        ba->write(data.c_str(), data.size());
+    }
+    return true;
+}
+
 }
 }

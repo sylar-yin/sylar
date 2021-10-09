@@ -1,138 +1,17 @@
 #ifndef __SYLAR_GRPC_GRPC_STREAM_H__
 #define __SYLAR_GRPC_GRPC_STREAM_H__
 
-#include "sylar/http2/http2.h"
-#include "sylar/streams/load_balance.h"
 #include <google/protobuf/message.h>
+#include "sylar/http2/http2_stream.h"
 
 namespace sylar {
 namespace grpc {
 
-struct GrpcMessage {
-    typedef std::shared_ptr<GrpcMessage> ptr;
-
-    uint8_t compressed = 0;
-    uint32_t length = 0;
-    std::string data;
-
-    sylar::ByteArray::ptr packData(bool gzip) const;
-};
-
-class GrpcRequest {
+class GrpcStream : public std::enable_shared_from_this<GrpcStream> {
 public:
-    typedef std::shared_ptr<GrpcRequest> ptr;
+    typedef std::shared_ptr<GrpcStream> ptr;
+    GrpcStream(http2::Http2Stream::ptr stream);
 
-    http::HttpRequest::ptr getRequest() const { return m_request;}
-    GrpcMessage::ptr getData() const { return m_data;}
-    void setRequest(http::HttpRequest::ptr v) { m_request = v;}
-    void setData(GrpcMessage::ptr v) { m_data = v;}
-    std::string toString() const;
-
-    template<class T>
-    std::shared_ptr<T> getAsPB() const {
-        if(!m_data) {
-            return nullptr;
-        }
-        try {
-            std::shared_ptr<T> data = std::make_shared<T>();
-            if(data->ParseFromString(m_data->data)) {
-                return data;
-            }
-        } catch (...) {
-        }
-        return nullptr;
-    }
-
-    template<class T>
-    bool setAsPB(const T& v) {
-        try {
-            if(!m_data) {
-                m_data = std::make_shared<GrpcMessage>();
-            }
-            return v.SerializeToString(&m_data->data);
-        } catch (...) {
-        }
-        return false;
-    }
-
-private:
-    http::HttpRequest::ptr m_request;
-    GrpcMessage::ptr m_data;
-};
-
-class GrpcResult {
-public:
-    typedef std::shared_ptr<GrpcResult> ptr;
-    GrpcResult() {
-    }
-    GrpcResult(int32_t result, const std::string& err, int32_t used)
-        :m_result(result), m_used(used), m_error(err) {
-    }
-
-    http::HttpResponse::ptr getResponse() const { return m_response;}
-    GrpcMessage::ptr getData() const { return m_data;}
-    void setResponse(http::HttpResponse::ptr v) { m_response = v;}
-    void setData(GrpcMessage::ptr v) { m_data = v;}
-
-    int getResult() const { return m_result;}
-    const std::string& getError() const { return m_error;}
-
-    void setResult(int v) { m_result = v;}
-    void setError(const std::string& v) { m_error = v;}
-    std::string toString() const;
-
-    template<class T>
-    std::shared_ptr<T> getAsPB() const {
-        if(!m_data) {
-            return nullptr;
-        }
-        try {
-            std::shared_ptr<T> data = std::make_shared<T>();
-            if(data->ParseFromString(m_data->data)) {
-                return data;
-            }
-        } catch (...) {
-        }
-        return nullptr;
-    }
-
-    template<class T>
-    bool setAsPB(const T& v) {
-        try {
-            if(!m_data) {
-                m_data = std::make_shared<GrpcMessage>();
-            }
-            return v.SerializeToString(&m_data->data);
-        } catch (...) {
-        }
-        return false;
-    }
-
-    void setUsed(int32_t v) { m_used = v;}
-    int32_t getUsed() const { return m_used;}
-private:
-    int m_result = 0;
-    int m_used = 0;
-    std::string m_error;
-    http::HttpResponse::ptr m_response;
-    GrpcMessage::ptr m_data;
-};
-
-class GrpcConnection : public http2::Http2Connection {
-public:
-    typedef std::shared_ptr<GrpcConnection> ptr;
-    GrpcConnection();
-    GrpcResult::ptr request(GrpcRequest::ptr req, uint64_t timeout_ms);
-    GrpcResult::ptr request(const std::string& method,
-                              const google::protobuf::Message& message,
-                              uint64_t timeout_ms,
-                              const std::map<std::string, std::string>& headers = {});
-};
-
-class GrpcStreamClient : public std::enable_shared_from_this<GrpcStreamClient> {
-public:
-    typedef std::shared_ptr<GrpcStreamClient> ptr;
-    GrpcStreamClient(http2::StreamClient::ptr client);
     int32_t sendData(const std::string& data, bool end_stream = false);
     http2::DataFrame::ptr recvData();
 
@@ -155,16 +34,156 @@ public:
         return nullptr;
     }
 
-    http2::StreamClient::ptr getClient() const {return m_client;}
-    http2::Stream::ptr getStream();
+    http2::Http2Stream::ptr getStream() const { return m_stream;}
 
     bool getEnableGzip() const { return m_enableGzip;}
     void setEnableGzip(bool v) { m_enableGzip =v;}
 private:
-    http2::StreamClient::ptr m_client;
+    http2::Http2Stream::ptr m_stream;
     bool m_enableGzip = false;
 };
 
+class GrpcServerStream {
+public:
+    typedef std::shared_ptr<GrpcServerStream> ptr;
+    GrpcServerStream(GrpcStream::ptr stream);
+
+    GrpcStream::ptr getStream() const { return m_stream;}
+protected:
+    GrpcStream::ptr m_stream;
+};
+
+//GrpcType::CLIENT
+template<class Req, class Rsp>
+class GrpcServerStreamClient : public GrpcServerStream {
+public:
+    typedef std::shared_ptr<GrpcServerStreamClient> ptr;
+    typedef std::shared_ptr<Req> ReqPtr;
+    typedef std::shared_ptr<Rsp> RspPtr;
+
+    GrpcServerStreamClient(GrpcStream::ptr stream)
+        :GrpcServerStream(stream) {
+    }
+
+    ReqPtr recv() {
+        return m_stream->recvMessage<Req>();
+    }
+};
+
+//GrpcType::SERVER
+template<class Req, class Rsp>
+class GrpcServerStreamServer : public GrpcServerStream {
+public:
+    typedef std::shared_ptr<GrpcServerStreamServer> ptr;
+    typedef std::shared_ptr<Req> ReqPtr;
+    typedef std::shared_ptr<Rsp> RspPtr;
+
+    GrpcServerStreamServer(GrpcStream::ptr stream)
+        :GrpcServerStream(stream) {
+    }
+
+    int32_t send(RspPtr msg) {
+        return m_stream->sendMessage(*msg);
+    }
+};
+
+//GrpcType::BIDI
+template<class Req, class Rsp>
+class GrpcServerStreamBidirection : public GrpcServerStream {
+public:
+    typedef std::shared_ptr<GrpcServerStreamBidirection> ptr;
+    typedef std::shared_ptr<Req> ReqPtr;
+    typedef std::shared_ptr<Rsp> RspPtr;
+
+    GrpcServerStreamBidirection(GrpcStream::ptr stream)
+        :GrpcServerStream(stream) {
+    }
+
+    int32_t send(RspPtr msg) {
+        return m_stream->sendMessage(*msg);
+    }
+
+    ReqPtr recv() {
+        return m_stream->recvMessage<Req>();
+    }
+};
+
+
+class GrpcClientStream {
+public:
+    typedef std::shared_ptr<GrpcClientStream> ptr;
+    GrpcClientStream(GrpcStream::ptr stream);
+
+    GrpcStream::ptr getStream() const { return m_stream;}
+protected:
+    GrpcStream::ptr m_stream;
+};
+
+//GrpcType::CLIENT
+template<class Req, class Rsp>
+class GrpcClientStreamClient : public GrpcClientStream {
+public:
+    typedef std::shared_ptr<GrpcClientStreamClient> ptr;
+    typedef std::shared_ptr<Req> ReqPtr;
+    typedef std::shared_ptr<Rsp> RspPtr;
+
+    GrpcClientStreamClient(GrpcStream::ptr stream)
+        :GrpcClientStream(stream) {
+    }
+
+    int32_t send(ReqPtr req) {
+        return m_stream->sendMessage(*req);
+    }
+
+    RspPtr closeAndRecv() {
+        m_stream->sendData("", true);
+        return m_stream->recvMessage<Rsp>();
+    }
+};
+
+//GrpcType::SERVER
+template<class Req, class Rsp>
+class GrpcClientStreamServer : public GrpcClientStream {
+public:
+    typedef std::shared_ptr<GrpcClientStreamServer> ptr;
+    typedef std::shared_ptr<Req> ReqPtr;
+    typedef std::shared_ptr<Rsp> RspPtr;
+
+    GrpcClientStreamServer(GrpcStream::ptr stream)
+        :GrpcClientStream(stream) {
+    }
+
+    RspPtr recv() {
+        return m_stream->recvMessage<Rsp>();
+    }
+};
+
+//GrpcType::BIDI
+template<class Req, class Rsp>
+class GrpcClientStreamBidirection : public GrpcClientStream {
+public:
+    typedef std::shared_ptr<GrpcClientStreamBidirection> ptr;
+    typedef std::shared_ptr<Req> ReqPtr;
+    typedef std::shared_ptr<Rsp> RspPtr;
+
+    GrpcClientStreamBidirection(GrpcStream::ptr stream)
+        :GrpcClientStream(stream) {
+    }
+
+    RspPtr recv() {
+        return m_stream->recvMessage<Rsp>();
+    }
+
+    int32_t send(ReqPtr req) {
+        return m_stream->sendMessage(*req);
+    }
+
+    int32_t close() {
+        return m_stream->sendData("", true);
+    }
+};
+
+/*
 class GrpcStreamBase {
 public:
     typedef std::shared_ptr<GrpcStreamBase> ptr;
@@ -220,42 +239,9 @@ public:
         return m_client->sendMessage(*msg, false);
     }
 };
-
-//template<class R, class W>
-//class GrpcStream : public GrpcStreamReader<R>, public GrpcStreamWriter<W> {
-//public:
-//    typedef std::shared_ptr<GrpcStream> ptr;
-//    GrpcStream(GrpcStreamClient::ptr client)
-//        :GrpcStreamBase(client) {
-//    }
-//};
-
 template<class Req, class Rsp> using GrpcStreamSession = GrpcStream<Req, Rsp>;
 template<class Req, class Rsp> using GrpcStreamConnection = GrpcStream<Rsp, Req>;
-
-class GrpcSDLoadBalance : public SDLoadBalance {
-public:
-    typedef std::shared_ptr<GrpcSDLoadBalance> ptr;
-    GrpcSDLoadBalance(IServiceDiscovery::ptr sd);
-
-    virtual void start();
-    virtual void stop();
-    void start(const std::unordered_map<std::string
-               ,std::unordered_map<std::string,std::string> >& confs);
-
-    GrpcStreamClient::ptr openStreamClient(const std::string& domain, const std::string& service,
-                                 sylar::http::HttpRequest::ptr request, uint64_t idx = -1);
-
-    GrpcResult::ptr request(const std::string& domain, const std::string& service,
-                             GrpcRequest::ptr req, uint32_t timeout_ms, uint64_t idx = -1);
-
-    GrpcResult::ptr request(const std::string& domain, const std::string& service,
-                             const std::string& method, const google::protobuf::Message& message,
-                             uint32_t timeout_ms,
-                             const std::map<std::string, std::string>& headers = {},
-                             uint64_t idx = -1);
-};
-
+*/
 
 }
 }

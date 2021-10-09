@@ -39,6 +39,10 @@ public:
         MutexType::Lock lock(m_mutex);
         return m_datas.empty();
     }
+
+    void notifyAll() {
+        m_sem.notifyAll();
+    }
 private:
     sylar::FiberSemaphore m_sem;
     MutexType m_mutex;

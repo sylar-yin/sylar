@@ -136,6 +136,8 @@ protected:
     disconnect_callback m_disconnectCb;
 
     boost::any m_data;
+public:
+    bool recving = false;
 };
 
 class AsyncSocketStreamManager {

@@ -18,6 +18,8 @@
 #include "sylar/db/redis.h"
 #include "sylar/db/tair.h"
 #include "sylar/dns.h"
+#include "sylar/http2/http2_server.h"
+#include "sylar/grpc/grpc_server.h"
 
 namespace sylar {
 
@@ -270,6 +272,9 @@ int Application::run_fiber() {
                             process_worker, io_worker, accept_worker);
         } else if(i.type == "http2") {
             server = std::make_shared<sylar::http2::Http2Server>(process_worker,
+                            io_worker, accept_worker);
+        } else if(i.type == "grpc") {
+            server = std::make_shared<sylar::grpc::GrpcServer>(process_worker,
                             io_worker, accept_worker);
         } else if(i.type == "ws") {
             server = std::make_shared<sylar::http::WSServer>(

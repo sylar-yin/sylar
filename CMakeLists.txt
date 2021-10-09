@@ -10,8 +10,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include (cmake/utils.cmake)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
-set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations -Wno-class-memaccess")
-set(CMAKE_C_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -fPIC -ggdb -std=c11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
+set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O0 -fPIC -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations -Wno-class-memaccess")
+set(CMAKE_C_FLAGS "$ENV{CXXFLAGS} -rdynamic -O0 -fPIC -ggdb -std=c11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
 #set(CMAKE_CXX_FLAGS "-static ${CMAKE_CXX_FLAGS}")
 
 ENABLE_LANGUAGE(ASM)
@@ -77,8 +77,13 @@ set(LIB_SRC
     sylar/file_manager.cc
     sylar/fiber.cc
     sylar/fcontext/fcontext.S
+    sylar/grpc/grpc_connection.cc
+    sylar/grpc/grpc_loadbalance.cc
+    sylar/grpc/grpc_protocol.cc
+    sylar/grpc/grpc_session.cc
     sylar/grpc/grpc_stream.cc
     sylar/grpc/grpc_servlet.cc
+    sylar/grpc/grpc_server.cc
     sylar/grpc/grpc_util.cc
     sylar/libaco/aco.c
     sylar/libaco/acosw.S
@@ -100,10 +105,13 @@ set(LIB_SRC
     sylar/http2/dynamic_table.cc
     sylar/http2/frame.cc
     sylar/http2/hpack.cc
-    sylar/http2/http2_stream.cc
+    sylar/http2/http2_connection.cc
+    sylar/http2/http2_protocol.cc
+    sylar/http2/http2_socket_stream.cc
+    sylar/http2/http2_session.cc
     sylar/http2/http2_server.cc
+    sylar/http2/http2_stream.cc
     sylar/http2/huffman.cc
-    sylar/http2/stream.cc
     sylar/hook.cc
     sylar/iomanager.cc
     sylar/kafka_client.cc
@@ -250,6 +258,13 @@ set(GRPC_SRCS
     )
 protobufmaker(tests/test.proto GRPC_SRCS ${CMAKE_CURRENT_SOURCE_DIR})
 sylar_add_executable(test_grpcclient "${GRPC_SRCS}" sylar "${LIBS}")
+
+set(GRPC_SERVER_SRCS
+    tests/grpc_server.cc
+    )
+protobufmaker(tests/test.proto GRPC_SERVER_SRCS ${CMAKE_CURRENT_SOURCE_DIR})
+sylar_add_executable(test_grpcserver "${GRPC_SERVER_SRCS}" sylar "${LIBS}")
+
 
 #set(ORM_SRCS
 #    sylar/orm/table.cc

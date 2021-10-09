@@ -2,166 +2,172 @@
 #define __SYLAR_HTTP2_HTTP2_STREAM_H__
 
 #include "frame.h"
-#include "hpack.h"
+#include "sylar/mutex.h"
+#include <unordered_map>
 #include "sylar/http/http.h"
-#include "sylar/http/http_connection.h"
-#include "sylar/streams/async_socket_stream.h"
-#include "stream.h"
+#include "sylar/ds/blocking_queue.h"
+#include "hpack.h"
 
 namespace sylar {
 namespace http2 {
 
-static const uint32_t DEFAULT_MAX_FRAME_SIZE = 16384;
-static const uint32_t MAX_MAX_FRAME_SIZE = 0xFFFFFF;
-static const uint32_t DEFAULT_HEADER_TABLE_SIZE = 4096;
-static const uint32_t DEFAULT_MAX_HEADER_LIST_SIZE = 0x400000;
-static const uint32_t DEFAULT_INITIAL_WINDOW_SIZE = 65535;
-static const uint32_t MAX_INITIAL_WINDOW_SIZE = 0x7FFFFFFF;
-static const uint32_t DEFAULT_MAX_READ_FRAME_SIZE = 1 << 20;
-static const uint32_t DEFAULT_MAX_CONCURRENT_STREAMS = 0xffffffffu;
+/*
+                                +--------+
+                        send PP |        | recv PP
+                       ,--------|  idle  |--------.
+                      /         |        |         \
+                     v          +--------+          v
+              +----------+          |           +----------+
+              |          |          | send H /  |          |
+       ,------| reserved |          | recv H    | reserved |------.
+       |      | (local)  |          |           | (remote) |      |
+       |      +----------+          v           +----------+      |
+       |          |             +--------+             |          |
+       |          |     recv ES |        | send ES     |          |
+       |   send H |     ,-------|  open  |-------.     | recv H   |
+       |          |    /        |        |        \    |          |
+       |          v   v         +--------+         v   v          |
+       |      +----------+          |           +----------+      |
+       |      |   half   |          |           |   half   |      |
+       |      |  closed  |          | send R /  |  closed  |      |
+       |      | (remote) |          | recv R    | (local)  |      |
+       |      +----------+          |           +----------+      |
+       |           |                |                 |           |
+       |           | send ES /      |       recv ES / |           |
+       |           | send R /       v        send R / |           |
+       |           | recv R     +--------+   recv R   |           |
+       | send R /  `----------->|        |<-----------'  send R / |
+       | recv R                 | closed |               recv R   |
+       `----------------------->|        |<----------------------'
+                                +--------+
 
-class Http2Server;
+          send:   endpoint sends this frame
+          recv:   endpoint receives this frame
 
-enum class Http2Error {
-    OK                          = 0x0,
-    PROTOCOL_ERROR              = 0x1,
-    INTERNAL_ERROR              = 0x2,
-    FLOW_CONTROL_ERROR          = 0x3,
-    SETTINGS_TIMEOUT_ERROR      = 0x4,
-    STREAM_CLOSED_ERROR         = 0x5,
-    FRAME_SIZE_ERROR            = 0x6,
-    REFUSED_STREAM_ERROR        = 0x7,
-    CANCEL_ERROR                = 0x8,
-    COMPRESSION_ERROR           = 0x9,
-    CONNECT_ERROR               = 0xa,
-    ENHANCE_YOUR_CALM_ERROR     = 0xb,
-    INADEQUATE_SECURITY_ERROR   = 0xc,
-    HTTP11_REQUIRED_ERROR       = 0xd,
-};
+          H:  HEADERS frame (with implied CONTINUATIONs)
+          PP: PUSH_PROMISE frame (with implied CONTINUATIONs)
+          ES: END_STREAM flag
+          R:  RST_STREAM frame
+*/
 
-std::string Http2ErrorToString(Http2Error error);
+class Http2SocketStream;
 
-struct Http2Settings {
-    uint32_t header_table_size = DEFAULT_HEADER_TABLE_SIZE;
-    uint32_t max_header_list_size = DEFAULT_MAX_HEADER_LIST_SIZE;
-    uint32_t max_concurrent_streams = DEFAULT_MAX_CONCURRENT_STREAMS;
-    uint32_t max_frame_size = DEFAULT_MAX_FRAME_SIZE;
-    uint32_t initial_window_size = DEFAULT_INITIAL_WINDOW_SIZE;
-    bool enable_push = 0;
 
-   std::string toString() const;
-};
-
-class Http2Stream : public AsyncSocketStream {
+class Http2Stream : public std::enable_shared_from_this<Http2Stream> {
 public:
-    friend class http2::Stream;
+    friend class Http2SocketStream;
     typedef std::shared_ptr<Http2Stream> ptr;
-    typedef sylar::RWSpinlock RWMutexType;
-
-    Http2Stream(Socket::ptr sock, bool client);
+    typedef std::function<int32_t(Frame::ptr)> frame_handler;
+    enum class State {
+        IDLE                = 0x0,
+        OPEN                = 0x1,
+        CLOSED              = 0x2,
+        RESERVED_LOCAL      = 0x3,
+        RESERVED_REMOTE     = 0x4,
+        HALF_CLOSE_LOCAL    = 0x5,
+        HALF_CLOSE_REMOTE   = 0x6
+    };
+    Http2Stream(std::shared_ptr<Http2SocketStream> stm, uint32_t id);
     ~Http2Stream();
 
-    int32_t sendFrame(Frame::ptr frame, bool async = true);
-    int32_t sendData(http2::Stream::ptr stream, const std::string& data, bool async, bool end_stream = true);
+    uint32_t getId() const { return m_id;}
+    uint8_t getHandleCount() const { return m_handleCount;}
+    void addHandleCount();
 
-    bool handleShakeClient();
-    bool handleShakeServer();
+    static std::string StateToString(State state);
 
-    http::HttpResult::ptr request(http::HttpRequest::ptr req, uint64_t timeout_ms);
+    int32_t handleFrame(Frame::ptr frame, bool is_client);
+    int32_t sendFrame(Frame::ptr frame, bool async);
+    int32_t sendResponse(sylar::http::HttpResponse::ptr rsp, bool end_stream, bool async);
+    int32_t sendRequest(sylar::http::HttpRequest::ptr req, bool end_stream, bool async);
 
-    void handleRecvSetting(Frame::ptr frame);
-    void handleSendSetting(Frame::ptr frame);
+    int32_t sendHeaders(const std::map<std::string, std::string>& headers, bool end_stream, bool async);
 
-    int32_t sendGoAway(uint32_t last_stream_id, uint32_t error, const std::string& debug);
-    int32_t sendSettings(const std::vector<SettingsItem>& items);
-    int32_t sendSettingsAck();
-    int32_t sendRstStream(uint32_t stream_id, uint32_t error_code);
-    int32_t sendPing(bool ack, uint64_t v);
-    int32_t sendWindowUpdate(uint32_t stream_id, uint32_t n);
+    std::shared_ptr<Http2SocketStream> getSockStream() const;
+    State getState() const { return m_state;}
 
-    http2::Stream::ptr newStream();
-    http2::Stream::ptr newStream(uint32_t id);
-    http2::Stream::ptr getStream(uint32_t id);
-    void delStream(uint32_t id);
+    http::HttpRequest::ptr getRequest() const { return m_request;}
+    http::HttpResponse::ptr getResponse() const { return m_response;}
 
-    DynamicTable& getSendTable() { return m_sendTable;}
-    DynamicTable& getRecvTable() { return m_recvTable;}
+    int32_t updateSendWindowByDiff(int32_t diff);
+    int32_t updateRecvWindowByDiff(int32_t diff);
 
-    Http2Settings& getOwnerSettings() { return m_owner;}
-    Http2Settings& getPeerSettings() { return m_peer;}
+    int32_t getSendWindow() const { return m_sendWindow;}
+    int32_t getRecvWindow() const { return m_recvWindow;}
 
-    bool isSsl() const { return m_ssl;}
+    frame_handler getFrameHandler() const { return m_handler;}
+    void setFrameHandler(frame_handler v) { m_handler = v;}
 
-    StreamClient::ptr openStreamClient(sylar::http::HttpRequest::ptr request);
-    void onClose() override;
-protected:
-    struct FrameSendCtx : public SendCtx {
-        typedef std::shared_ptr<FrameSendCtx> ptr;
-        Frame::ptr frame;
+    std::string getHeader(const std::string& name) const;
 
-        virtual bool doSend(AsyncSocketStream::ptr stream) override;
-    };
+    void initRequest();
 
-    struct RequestCtx : public Ctx {
-        typedef std::shared_ptr<RequestCtx> ptr;
-        http::HttpRequest::ptr request;
-        http::HttpResponse::ptr response;
+    void close();
+    void endStream();
 
-        virtual bool doSend(AsyncSocketStream::ptr stream) override;
-    };
+    std::string getDataBody();
 
-    struct StreamCtx : public Ctx {
-        typedef std::shared_ptr<StreamCtx> ptr;
-        http::HttpRequest::ptr request;
+    DataFrame::ptr recvData();
+    int32_t sendData(const std::string& data, bool end_stream, bool async);
+    
+    bool getIsStream() const { return m_isStream;}
+    void setIsStream(bool v) { m_isStream = v;}
+private:
+    int32_t handleHeadersFrame(Frame::ptr frame, bool is_client);
+    int32_t handleDataFrame(Frame::ptr frame, bool is_client);
+    int32_t handleRstStreamFrame(Frame::ptr frame, bool is_client);
 
-        virtual bool doSend(AsyncSocketStream::ptr stream) override;
-    };
+    int32_t updateWindowSizeByDiff(int32_t* window_size, int32_t diff);
+private:
+    std::weak_ptr<Http2SocketStream> m_stream;
+    State m_state;
+    uint8_t m_handleCount;
+    bool m_isStream;
+    uint32_t m_id;
+    http::HttpRequest::ptr m_request;
+    http::HttpResponse::ptr m_response;
+    HPack::ptr m_recvHPack;
+    frame_handler m_handler;
+    //std::string m_body;
+    sylar::ds::BlockingQueue<DataFrame> m_data;
 
-    virtual Ctx::ptr doRecv() override;
-protected:
-    void updateSettings(Http2Settings& sts, SettingsFrame::ptr frame);
-    virtual void handleRequest(http::HttpRequest::ptr req, http2::Stream::ptr stream);
-    void updateSendWindowByDiff(int32_t diff);
-    void updateRecvWindowByDiff(int32_t diff);
-    void onTimeOut(AsyncSocketStream::Ctx::ptr ctx) override;
-protected:
-    DynamicTable m_sendTable;
-    DynamicTable m_recvTable;
-    FrameCodec::ptr m_codec;
-    uint32_t m_sn;
-    bool m_isClient;
-    bool m_ssl;
-    Http2Settings m_owner;
-    Http2Settings m_peer;
-    StreamManager m_streamMgr;
-    Http2Server* m_server;
+    int32_t m_sendWindow = 0;
+    int32_t m_recvWindow = 0;
+};
 
+//class StreamClient : public std::enable_shared_from_this<StreamClient> {
+//public:
+//    typedef std::shared_ptr<StreamClient> ptr;
+//
+//    static StreamClient::ptr Create(Http2Stream::ptr stream);
+//
+//    int32_t sendData(const std::string& data, bool end_stream);
+//    DataFrame::ptr recvData();
+//
+//    Http2Stream::ptr getStream() { return m_stream;}
+//    int32_t close();
+//private:
+//    int32_t onFrame(Frame::ptr frame);
+//private:
+//    Http2Stream::ptr m_stream;
+//    sylar::ds::BlockingQueue<DataFrame> m_data;
+//};
+
+class Http2StreamManager {
+public:
+    typedef std::shared_ptr<Http2StreamManager> ptr;
+    typedef sylar::RWSpinlock RWMutexType;
+
+    Http2Stream::ptr get(uint32_t id);
+    void add(Http2Stream::ptr stream);
+    void del(uint32_t id);
+    void clear();
+
+    void foreach(std::function<void(Http2Stream::ptr)> cb);
+private:
     RWMutexType m_mutex;
-    std::list<Frame::ptr> m_waits;
-
-    int32_t send_window = DEFAULT_INITIAL_WINDOW_SIZE;
-    int32_t recv_window = DEFAULT_INITIAL_WINDOW_SIZE;
+    std::unordered_map<uint32_t, Http2Stream::ptr> m_streams;
 };
-
-class Http2Session : public Http2Stream {
-public:
-    typedef std::shared_ptr<Http2Session> ptr;
-    Http2Session(Socket::ptr sock, Http2Server* server);
-};
-
-class Http2Connection : public Http2Stream {
-public:
-    typedef std::shared_ptr<Http2Connection> ptr;
-    Http2Connection();
-    bool connect(sylar::Address::ptr addr, bool ssl = false);
-    void reset();
-};
-
-void Http2InitRequestForWrite(sylar::http::HttpRequest::ptr req, bool ssl = false);
-void Http2InitResponseForWrite(sylar::http::HttpResponse::ptr rsp);
-
-void Http2InitRequestForRead(sylar::http::HttpRequest::ptr req);
-void Http2InitResponseForRead(sylar::http::HttpResponse::ptr rsp);
 
 }
 }

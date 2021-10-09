@@ -1,8 +1,27 @@
 #ifndef __SYLAR_GRPC_SERVLET_H__
 #define __SYLAR_GRPC_SERVLET_H__
 
+#include <type_traits>
+
 #include "sylar/http/servlet.h"
-#include "sylar/grpc/grpc_stream.h"
+#include "grpc_stream.h"
+#include "grpc_protocol.h"
+#include "grpc_session.h"
+
+#define GRPC_SERVLET_CLONE(class_name) \
+    sylar::grpc::GrpcServlet::ptr clone() override { \
+        return std::make_shared<class_name>(*this); \
+    }
+//return std::make_shared<std::remove_pointer<decltype(this)>::type>(*this);
+
+#define GRPC_SERVLET_CTOR(class_name) \
+    class_name() \
+        :Base(#class_name) { \
+    }
+
+#define GRPC_SERVLET_INIT(class_name) \
+    GRPC_SERVLET_CTOR(class_name) \
+    GRPC_SERVLET_CLONE(class_name)
 
 namespace sylar {
 namespace grpc {
@@ -11,7 +30,7 @@ enum class GrpcType {
     UNARY = 0,
     SERVER = 1,
     CLIENT = 2,
-    BOTH = 3
+    BIDI = 3    //Bidirectional
 };
 
 class GrpcServlet : public sylar::http::Servlet {
@@ -23,19 +42,49 @@ public:
                    , sylar::SocketStream::ptr session) override;
 
     virtual int32_t process(sylar::grpc::GrpcRequest::ptr request,
-                            sylar::grpc::GrpcResult::ptr response,
-                            sylar::http2::Http2Session::ptr session);
+                            sylar::grpc::GrpcResponse::ptr response,
+                            sylar::grpc::GrpcSession::ptr session);
 
     virtual int32_t processStream(sylar::grpc::GrpcRequest::ptr request,
-                            sylar::grpc::GrpcResult::ptr response,
-                            sylar::grpc::GrpcStreamClient::ptr stream,
-                            sylar::http2::Http2Session::ptr session);
+                            sylar::grpc::GrpcResponse::ptr response,
+                            sylar::grpc::GrpcStream::ptr stream,
+                            sylar::grpc::GrpcSession::ptr session);
 
     static std::string GetGrpcPath(const std::string& ns,
                     const std::string& service, const std::string& method);
 
+    GrpcType getType() const { return m_type;}
+
+    virtual GrpcServlet::ptr clone() = 0;
+public:
+    sylar::grpc::GrpcRequest::ptr  getRequest() const { return m_request;}
+    sylar::grpc::GrpcResponse::ptr getResponse() const { return m_response;}
+    sylar::grpc::GrpcSession::ptr  getSession() const { return m_session;}
+    sylar::grpc::GrpcStream::ptr   getStream() const { return m_stream;}
 protected:
     GrpcType m_type;
+    sylar::grpc::GrpcRequest::ptr m_request;
+    sylar::grpc::GrpcResponse::ptr m_response;
+    sylar::grpc::GrpcSession::ptr m_session;
+    sylar::grpc::GrpcStream::ptr m_stream;
+};
+
+class CloneServletCreator : public sylar::http::IServletCreator {
+public:
+    typedef std::shared_ptr<CloneServletCreator> ptr;
+    CloneServletCreator(GrpcServlet::ptr slt)
+        :m_servlet(slt) {
+    }
+
+    sylar::http::Servlet::ptr get() const override {
+        return m_servlet->clone();
+    }
+
+    std::string getName() const override {
+        return m_servlet->getName();
+    }
+private:
+    GrpcServlet::ptr m_servlet;
 };
 
 class GrpcFunctionServlet : public GrpcServlet {
@@ -43,24 +92,26 @@ public:
     typedef std::shared_ptr<GrpcFunctionServlet> ptr;
 
     typedef std::function<int32_t(sylar::grpc::GrpcRequest::ptr request,
-                                  sylar::grpc::GrpcResult::ptr response,
-                                  sylar::http2::Http2Session::ptr session)> callback;
+                                  sylar::grpc::GrpcResponse::ptr response,
+                                  sylar::grpc::GrpcSession::ptr session)> callback;
 
     typedef std::function<int32_t(sylar::grpc::GrpcRequest::ptr request,
-                                  sylar::grpc::GrpcResult::ptr response,
-                                  sylar::grpc::GrpcStreamClient::ptr stream,
-                                  sylar::http2::Http2Session::ptr session)> stream_callback;
+                                  sylar::grpc::GrpcResponse::ptr response,
+                                  sylar::grpc::GrpcStream::ptr stream,
+                                  sylar::grpc::GrpcSession::ptr session)> stream_callback;
 
     GrpcFunctionServlet(GrpcType type, callback cb, stream_callback scb);
 
     int32_t process(sylar::grpc::GrpcRequest::ptr request,
-                    sylar::grpc::GrpcResult::ptr response,
-                    sylar::http2::Http2Session::ptr session) override;
+                    sylar::grpc::GrpcResponse::ptr response,
+                    sylar::grpc::GrpcSession::ptr session) override;
 
     int32_t processStream(sylar::grpc::GrpcRequest::ptr request,
-                    sylar::grpc::GrpcResult::ptr response,
-                    sylar::grpc::GrpcStreamClient::ptr stream,
-                    sylar::http2::Http2Session::ptr session) override;
+                    sylar::grpc::GrpcResponse::ptr response,
+                    sylar::grpc::GrpcStream::ptr stream,
+                    sylar::grpc::GrpcSession::ptr session) override;
+
+    GrpcServlet::ptr clone() override;
 
     static GrpcFunctionServlet::ptr Create(GrpcType type, callback cb, stream_callback scb);
 private:
@@ -81,8 +132,8 @@ public:
     }
 
     virtual int32_t process(sylar::grpc::GrpcRequest::ptr request,
-                            sylar::grpc::GrpcResult::ptr response,
-                            sylar::http2::Http2Session::ptr session) {
+                            sylar::grpc::GrpcResponse::ptr response,
+                            sylar::grpc::GrpcSession::ptr session) {
         auto req = request->getAsPB<Req>();
         if(!req) {
             response->setResult(100);
@@ -98,39 +149,93 @@ public:
     virtual int32_t handle(ReqPtr req, RspPtr rsp) = 0;
 };
 
+//Client
 template<class Req, class Rsp>
-class GrpcUnaryFullServlet : public GrpcServlet {
+class GrpcStreamClientServlet : public GrpcServlet {
 public:
-    typedef std::shared_ptr<GrpcUnaryFullServlet> ptr;
+    typedef std::shared_ptr<GrpcStreamClientServlet> ptr;
     typedef std::shared_ptr<Req> ReqPtr;
     typedef std::shared_ptr<Rsp> RspPtr;
-    typedef GrpcUnaryFullServlet Base;
+    typedef GrpcStreamClientServlet Base;
+    typedef sylar::grpc::GrpcServerStreamClient<Req, Rsp> ServerStream;
 
-    GrpcUnaryFullServlet(const std::string& name)
-        :GrpcServlet(name, GrpcType::UNARY) {
+    GrpcStreamClientServlet(const std::string& name)
+        :GrpcServlet(name, GrpcType::CLIENT) {
     }
 
-    virtual int32_t process(sylar::grpc::GrpcRequest::ptr request,
-                            sylar::grpc::GrpcResult::ptr response,
-                            sylar::http2::Http2Session::ptr session) {
-        auto req = request->getAsPB<Req>();
-        if(!req) {
-            response->setResult(100);
-            response->setError("invalid request pb");
-            return -1;
-        }
+    int32_t processStream(sylar::grpc::GrpcRequest::ptr request,
+                          sylar::grpc::GrpcResponse::ptr response,
+                          sylar::grpc::GrpcStream::ptr stream,
+                          sylar::grpc::GrpcSession::ptr session) override {
+        typename ServerStream::ptr reader = std::make_shared<ServerStream>(stream);
         RspPtr rsp = std::make_shared<Rsp>();
-        int32_t rt = handle(req, rsp, request, response, session);
+        int32_t rt = handle(reader, rsp);
         response->setAsPB(*rsp);
         return rt;
     }
 
-    virtual int32_t handle(typename Base::ReqPtr req, typename Base::RspPtr rsp
-                           ,sylar::grpc::GrpcRequest::ptr request
-                           ,sylar::grpc::GrpcResult::ptr response
-                           ,sylar::http2::Http2Session::ptr session) = 0;
+    virtual int32_t handle(typename ServerStream::ptr stream, RspPtr rsp) = 0;
 };
 
+//Server
+template<class Req, class Rsp>
+class GrpcStreamServerServlet : public GrpcServlet {
+public:
+    typedef std::shared_ptr<GrpcStreamServerServlet> ptr;
+    typedef std::shared_ptr<Req> ReqPtr;
+    typedef std::shared_ptr<Rsp> RspPtr;
+    typedef GrpcStreamServerServlet Base;
+    typedef sylar::grpc::GrpcServerStreamServer<Req, Rsp> ServerStream;
+
+    GrpcStreamServerServlet(const std::string& name)
+        :GrpcServlet(name, GrpcType::SERVER) {
+    }
+
+    int32_t processStream(sylar::grpc::GrpcRequest::ptr request,
+                          sylar::grpc::GrpcResponse::ptr response,
+                          sylar::grpc::GrpcStream::ptr stream,
+                          sylar::grpc::GrpcSession::ptr session) override {
+        typename ServerStream::ptr writer = std::make_shared<ServerStream>(stream);
+        ReqPtr req = request->getAsPB<Req>();
+        if(req) {
+            int32_t rt = handle(writer, req);
+            return rt;
+        } else {
+            //TODO log
+            return -1;
+        }
+    }
+
+    virtual int32_t handle(typename ServerStream::ptr writer, ReqPtr req) = 0;
+};
+
+//Bidirectional
+template<class Req, class Rsp>
+class GrpcStreamBidirectionServlet : public GrpcServlet {
+public:
+    typedef std::shared_ptr<GrpcStreamBidirectionServlet> ptr;
+    typedef std::shared_ptr<Req> ReqPtr;
+    typedef std::shared_ptr<Rsp> RspPtr;
+    typedef GrpcStreamBidirectionServlet Base;
+    typedef sylar::grpc::GrpcServerStreamBidirection<Req, Rsp> ServerStream;
+
+    GrpcStreamBidirectionServlet(const std::string& name)
+        :GrpcServlet(name, GrpcType::BIDI) {
+    }
+
+    int32_t processStream(sylar::grpc::GrpcRequest::ptr request,
+                          sylar::grpc::GrpcResponse::ptr response,
+                          sylar::grpc::GrpcStream::ptr stream,
+                          sylar::grpc::GrpcSession::ptr session) override {
+        typename ServerStream::ptr stm = std::make_shared<ServerStream>(stream);
+        return handle(stm);
+    }
+
+    virtual int32_t handle(typename ServerStream::ptr stream) = 0;
+};
+
+
+#if 0
 template<class Req, class Rsp>
 class GrpcUnaryFunctionServlet : public GrpcUnaryServlet<Req, Rsp> {
 public:
@@ -155,66 +260,6 @@ public:
     }
 private:
     callback m_cb;
-};
-
-template<class Req, class Rsp>
-class GrpcUnaryFullFunctionServlet : public GrpcUnaryFullServlet<Req, Rsp> {
-public:
-    typedef std::shared_ptr<GrpcUnaryFullFunctionServlet> ptr;
-    typedef typename GrpcUnaryFullServlet<Req, Rsp>::ReqPtr ReqPtr;
-    typedef typename GrpcUnaryFullServlet<Req, Rsp>::RspPtr RspPtr;
-    typedef typename GrpcUnaryFullServlet<Req, Rsp>::Base Base;
-
-    typedef std::function<int32_t(ReqPtr req, RspPtr rsp,
-                                  sylar::grpc::GrpcRequest::ptr request,
-                                  sylar::grpc::GrpcResult::ptr response,
-                                  sylar::http2::Http2Session::ptr session)> callback;
-
-    GrpcUnaryFullFunctionServlet(callback cb)
-        :Base("GrpcUnaryFullFunctionServlet")
-        ,m_cb(cb) {
-    }
-
-    int32_t handle(ReqPtr req, RspPtr rsp,
-                   sylar::grpc::GrpcRequest::ptr request,
-                   sylar::grpc::GrpcResult::ptr response,
-                   sylar::http2::Http2Session::ptr session) override {
-        return m_cb(req, rsp, request, response, session);
-    }
-
-    static GrpcUnaryFullFunctionServlet::ptr Create(callback cb) {
-        return std::make_shared<GrpcUnaryFullFunctionServlet>(cb);
-    }
-private:
-    callback m_cb;
-};
-
-//Client
-template<class Req, class Rsp>
-class GrpcStreamClientServlet : public GrpcServlet {
-public:
-    typedef std::shared_ptr<GrpcStreamClientServlet> ptr;
-    typedef std::shared_ptr<Req> ReqPtr;
-    typedef std::shared_ptr<Rsp> RspPtr;
-    typedef GrpcStreamClientServlet Base;
-    typedef sylar::grpc::GrpcStreamReader<Req> Reader;
-
-    GrpcStreamClientServlet(const std::string& name)
-        :GrpcServlet(name, GrpcType::CLIENT) {
-    }
-
-    int32_t processStream(sylar::grpc::GrpcRequest::ptr request,
-                          sylar::grpc::GrpcResult::ptr response,
-                          sylar::grpc::GrpcStreamClient::ptr stream,
-                          sylar::http2::Http2Session::ptr session) override {
-        typename Reader::ptr reader = std::make_shared<Reader>(stream);
-        RspPtr rsp = std::make_shared<Rsp>();
-        int32_t rt = handle(reader, rsp);
-        response->setAsPB(*rsp);
-        return rt;
-    }
-
-    virtual int32_t handle(typename Reader::ptr reader, RspPtr rsp) = 0;
 };
 
 template<class Req, class Rsp>
@@ -259,9 +304,9 @@ public:
     }
 
     int32_t processStream(sylar::grpc::GrpcRequest::ptr request,
-                          sylar::grpc::GrpcResult::ptr response,
-                          sylar::grpc::GrpcStreamClient::ptr stream,
-                          sylar::http2::Http2Session::ptr session) override {
+                          sylar::grpc::GrpcResponse::ptr response,
+                          sylar::grpc::GrpcStream::ptr stream,
+                          sylar::grpc::GrpcSession::ptr session) override {
         typename Reader::ptr reader = std::make_shared<Reader>(stream);
         RspPtr rsp = std::make_shared<Rsp>();
         int32_t rt = handle(reader, rsp, request, response, stream, session);
@@ -271,9 +316,9 @@ public:
 
     virtual int32_t handle(typename Reader::ptr reader, RspPtr rsp,
                            sylar::grpc::GrpcRequest::ptr request,
-                           sylar::grpc::GrpcResult::ptr response,
-                           sylar::grpc::GrpcStreamClient::ptr stream,
-                           sylar::http2::Http2Session::ptr session) = 0;
+                           sylar::grpc::GrpcResponse::ptr response,
+                           sylar::grpc::GrpcStream::ptr stream,
+                           sylar::grpc::GrpcSession::ptr session) = 0;
 };
 
 template<class Req, class Rsp>
@@ -288,9 +333,9 @@ public:
 
     typedef std::function<int32_t(typename Reader::ptr reader, RspPtr rsp,
                    sylar::grpc::GrpcRequest::ptr request,
-                   sylar::grpc::GrpcResult::ptr response,
-                   sylar::grpc::GrpcStreamClient::ptr stream,
-                   sylar::http2::Http2Session::ptr session)> callback;
+                   sylar::grpc::GrpcResponse::ptr response,
+                   sylar::grpc::GrpcStream::ptr stream,
+                   sylar::grpc::GrpcSession::ptr session)> callback;
 
     GrpcStreamClientFullFunctionServlet(callback cb)
         :Base("GrpcStreamClientFullFunctionServlet")
@@ -299,9 +344,9 @@ public:
 
     int32_t handle(typename Reader::ptr reader, RspPtr rsp,
                    sylar::grpc::GrpcRequest::ptr request,
-                   sylar::grpc::GrpcResult::ptr response,
-                   sylar::grpc::GrpcStreamClient::ptr stream,
-                   sylar::http2::Http2Session::ptr session) override {
+                   sylar::grpc::GrpcResponse::ptr response,
+                   sylar::grpc::GrpcStream::ptr stream,
+                   sylar::grpc::GrpcSession::ptr session) override {
         return m_cb(reader, rsp, request, response, stream, session);
     }
 
@@ -327,9 +372,9 @@ public:
     }
 
     int32_t processStream(sylar::grpc::GrpcRequest::ptr request,
-                          sylar::grpc::GrpcResult::ptr response,
-                          sylar::grpc::GrpcStreamClient::ptr stream,
-                          sylar::http2::Http2Session::ptr session) override {
+                          sylar::grpc::GrpcResponse::ptr response,
+                          sylar::grpc::GrpcStream::ptr stream,
+                          sylar::grpc::GrpcSession::ptr session) override {
         auto req = request->getAsPB<Req>();
         if(!req) {
             response->setResult(100);
@@ -386,9 +431,9 @@ public:
     }
 
     int32_t processStream(sylar::grpc::GrpcRequest::ptr request,
-                          sylar::grpc::GrpcResult::ptr response,
-                          sylar::grpc::GrpcStreamClient::ptr stream,
-                          sylar::http2::Http2Session::ptr session) override {
+                          sylar::grpc::GrpcResponse::ptr response,
+                          sylar::grpc::GrpcStream::ptr stream,
+                          sylar::grpc::GrpcSession::ptr session) override {
         auto req = request->getAsPB<Req>();
         if(!req) {
             response->setResult(100);
@@ -402,9 +447,9 @@ public:
 
     virtual int32_t handle(ReqPtr req, typename Writer::ptr writer,
                            sylar::grpc::GrpcRequest::ptr request,
-                           sylar::grpc::GrpcResult::ptr response,
-                           sylar::grpc::GrpcStreamClient::ptr stream,
-                           sylar::http2::Http2Session::ptr session) = 0;
+                           sylar::grpc::GrpcResponse::ptr response,
+                           sylar::grpc::GrpcStream::ptr stream,
+                           sylar::grpc::GrpcSession::ptr session) = 0;
 };
 
 template<class Req, class Rsp>
@@ -419,9 +464,9 @@ public:
 
     typedef std::function<int32_t(ReqPtr req, typename Writer::ptr writer,
                                   sylar::grpc::GrpcRequest::ptr request,
-                                  sylar::grpc::GrpcResult::ptr response,
-                                  sylar::grpc::GrpcStreamClient::ptr stream,
-                                  sylar::http2::Http2Session::ptr session)> callback;
+                                  sylar::grpc::GrpcResponse::ptr response,
+                                  sylar::grpc::GrpcStream::ptr stream,
+                                  sylar::grpc::GrpcSession::ptr session)> callback;
 
     GrpcStreamServerFullFunctionServlet(callback cb)
         :Base("GrpcStreamServerFullFunctionServlet")
@@ -430,9 +475,9 @@ public:
 
     int32_t handle(ReqPtr req, typename Writer::ptr writer,
                    sylar::grpc::GrpcRequest::ptr request,
-                   sylar::grpc::GrpcResult::ptr response,
-                   sylar::grpc::GrpcStreamClient::ptr stream,
-                   sylar::http2::Http2Session::ptr session) override {
+                   sylar::grpc::GrpcResponse::ptr response,
+                   sylar::grpc::GrpcStream::ptr stream,
+                   sylar::grpc::GrpcSession::ptr session) override {
         return m_cb(req, writer, request, response, stream, session);
     }
 
@@ -458,9 +503,9 @@ public:
     }
 
     int32_t processStream(sylar::grpc::GrpcRequest::ptr request,
-                          sylar::grpc::GrpcResult::ptr response,
-                          sylar::grpc::GrpcStreamClient::ptr stream,
-                          sylar::http2::Http2Session::ptr session) override {
+                          sylar::grpc::GrpcResponse::ptr response,
+                          sylar::grpc::GrpcStream::ptr stream,
+                          sylar::grpc::GrpcSession::ptr session) override {
         typename ReaderWriter::ptr rw = std::make_shared<ReaderWriter>(stream);
         int32_t rt = handle(rw);
         return rt;
@@ -511,9 +556,9 @@ public:
     }
 
     int32_t processStream(sylar::grpc::GrpcRequest::ptr request,
-                          sylar::grpc::GrpcResult::ptr response,
-                          sylar::grpc::GrpcStreamClient::ptr stream,
-                          sylar::http2::Http2Session::ptr session) override {
+                          sylar::grpc::GrpcResponse::ptr response,
+                          sylar::grpc::GrpcStream::ptr stream,
+                          sylar::grpc::GrpcSession::ptr session) override {
         typename ReaderWriter::ptr rw = std::make_shared<ReaderWriter>(stream);
         int32_t rt = handle(rw, request, response, stream, session);
         return rt;
@@ -521,9 +566,9 @@ public:
 
     virtual int32_t handle(typename ReaderWriter::ptr rw,
                            sylar::grpc::GrpcRequest::ptr request,
-                           sylar::grpc::GrpcResult::ptr response,
-                           sylar::grpc::GrpcStreamClient::ptr stream,
-                           sylar::http2::Http2Session::ptr session) = 0;
+                           sylar::grpc::GrpcResponse::ptr response,
+                           sylar::grpc::GrpcStream::ptr stream,
+                           sylar::grpc::GrpcSession::ptr session) = 0;
 };
 
 template<class Req, class Rsp>
@@ -538,9 +583,9 @@ public:
 
     typedef std::function<int32_t(typename ReaderWriter::ptr reader,
                                   sylar::grpc::GrpcRequest::ptr request,
-                                  sylar::grpc::GrpcResult::ptr response,
-                                  sylar::grpc::GrpcStreamClient::ptr stream,
-                                  sylar::http2::Http2Session::ptr session)> callback;
+                                  sylar::grpc::GrpcResponse::ptr response,
+                                  sylar::grpc::GrpcStream::ptr stream,
+                                  sylar::grpc::GrpcSession::ptr session)> callback;
 
     GrpcStreamBothFullFunctionServlet(callback cb)
         :Base("GrpcStreamBothFullFunctionServlet")
@@ -549,9 +594,9 @@ public:
 
     int32_t handle(typename ReaderWriter::ptr reader,
                    sylar::grpc::GrpcRequest::ptr request,
-                   sylar::grpc::GrpcResult::ptr response,
-                   sylar::grpc::GrpcStreamClient::ptr stream,
-                   sylar::http2::Http2Session::ptr session) override {
+                   sylar::grpc::GrpcResponse::ptr response,
+                   sylar::grpc::GrpcStream::ptr stream,
+                   sylar::grpc::GrpcSession::ptr session) override {
         return m_cb(reader, request, response, stream, session);
     }
 
@@ -561,6 +606,8 @@ public:
 private:
     callback m_cb;
 };
+
+#endif
 
 
 }

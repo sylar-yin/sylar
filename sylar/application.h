@@ -4,7 +4,7 @@
 #include "sylar/http/http_server.h"
 #include "sylar/streams/service_discovery.h"
 #include "sylar/rock/rock_stream.h"
-#include "sylar/grpc/grpc_stream.h"
+#include "sylar/grpc/grpc_loadbalance.h"
 
 namespace sylar {
 

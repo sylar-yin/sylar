@@ -1,5 +1,5 @@
 #include "sylar/sylar.h"
-#include "sylar/http2/http2_stream.h"
+#include "sylar/http2/http2_connection.h"
 
 std::string bigstr;
 
@@ -22,11 +22,11 @@ void test() {
     //    return;
     //}
     stream->start();
-    sleep(1);
+    //sleep(1);
 
-    for(int x = 0; x < 3; ++x) {
+    for(int x = 0; x < 30; ++x) {
         sylar::IOManager::GetThis()->schedule([stream, x](){
-            for(int i = 0; i < 1024; ++i) {
+            for(int i = 0; i < 10240; ++i) {
                 sylar::http::HttpRequest::ptr req(new sylar::http::HttpRequest);
                 //req->setHeader(":path", "/");
                 //req->setHeader(":method", "GET");
@@ -38,16 +38,16 @@ void test() {
                 req->setHeader(":path", "/_/config?abc=111#cde");
                 req->setHeader(":authority", "127.0.0.1:8090");
                 req->setHeader("content-type", "text/html");
-                req->setHeader("content-encoding", "gzip");
+                //req->setHeader("content-encoding", "gzip");
                 req->setHeader("user-agent", "grpc-go/1.37.0");
                 req->setHeader("hello", "world");
                 req->setHeader("id", std::to_string(x) + "_" + std::to_string(i));
 
                 auto body = bigstr + "_hello";
-                auto zs = sylar::ZlibStream::CreateGzip(true);
-                zs->write(body.c_str(), body.size());
-                zs->flush();
-                zs->getResult().swap(body);
+                //auto zs = sylar::ZlibStream::CreateGzip(true);
+                //zs->write(body.c_str(), body.size());
+                //zs->flush();
+                //zs->getResult().swap(body);
                 req->setBody(body);
 
                 auto rt = stream->request(req, 100000);
