@@ -208,6 +208,19 @@ public:
     void initConf(const std::unordered_map<std::string, std::unordered_map<std::string, std::string> >& confs);
 
     std::string statusString();
+
+    template<class Conn>
+    std::shared_ptr<Conn> getConnAs(const std::string& domain, const std::string& service, uint32_t idx = -1) {
+        auto lb = get(domain, service);
+        if(!lb) {
+            return nullptr;
+        }
+        auto conn = lb->get(idx);
+        if(!conn) {
+            return nullptr;
+        }
+        return conn->getStreamAs<Conn>();
+    }
 private:
     void onServiceChange(const std::string& domain, const std::string& service
                 ,const std::unordered_map<uint64_t, ServiceItemInfo::ptr>& old_value

@@ -3,6 +3,7 @@
 
 #include <google/protobuf/message.h>
 #include "sylar/http2/http2_stream.h"
+#include "sylar/util.h"
 
 namespace sylar {
 namespace grpc {
@@ -15,7 +16,7 @@ public:
     int32_t sendData(const std::string& data, bool end_stream = false);
     http2::DataFrame::ptr recvData();
 
-    int32_t sendMessage(const google::protobuf::Message& msg, bool end_stream = false);
+    int32_t sendMessage(PbMessagePtr msg, bool end_stream = false);
     std::shared_ptr<std::string> recvMessageData();
 
     template<class T>
@@ -83,11 +84,11 @@ public:
     }
 
     int32_t send(RspPtr msg) {
-        return m_stream->sendMessage(*msg);
+        return m_stream->sendMessage(msg);
     }
 };
 
-//GrpcType::BIDI
+//GrpcType::BIDIRECTION
 template<class Req, class Rsp>
 class GrpcServerStreamBidirection : public GrpcServerStream {
 public:
@@ -100,7 +101,7 @@ public:
     }
 
     int32_t send(RspPtr msg) {
-        return m_stream->sendMessage(*msg);
+        return m_stream->sendMessage(msg);
     }
 
     ReqPtr recv() {
@@ -132,7 +133,7 @@ public:
     }
 
     int32_t send(ReqPtr req) {
-        return m_stream->sendMessage(*req);
+        return m_stream->sendMessage(req);
     }
 
     RspPtr closeAndRecv() {
@@ -158,7 +159,7 @@ public:
     }
 };
 
-//GrpcType::BIDI
+//GrpcType::BIDIRECTION
 template<class Req, class Rsp>
 class GrpcClientStreamBidirection : public GrpcClientStream {
 public:
@@ -175,7 +176,7 @@ public:
     }
 
     int32_t send(ReqPtr req) {
-        return m_stream->sendMessage(*req);
+        return m_stream->sendMessage(req);
     }
 
     int32_t close() {

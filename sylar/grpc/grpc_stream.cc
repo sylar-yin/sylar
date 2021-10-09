@@ -20,9 +20,9 @@ http2::DataFrame::ptr GrpcStream::recvData() {
     return m_stream->recvData();
 }
 
-int32_t GrpcStream::sendMessage(const google::protobuf::Message& msg, bool end_stream) {
+int32_t GrpcStream::sendMessage(PbMessagePtr msg, bool end_stream) {
     GrpcMessage m;
-    msg.SerializeToString(&m.data);
+    msg->SerializeToString(&m.data);
     auto ba = m.packData(m_enableGzip);
     ba->setPosition(0);
     return m_stream->sendData(ba->toString(), end_stream, true);

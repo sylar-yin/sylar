@@ -62,7 +62,7 @@ GrpcResponse::ptr GrpcConnection::request(GrpcRequest::ptr req, uint64_t timeout
 }
 
 GrpcResponse::ptr GrpcConnection::request(const std::string& method,
-                            const google::protobuf::Message& message,
+                            PbMessagePtr message,
                             uint64_t timeout_ms,
                             const std::map<std::string, std::string>& headers) {
     GrpcRequest::ptr grpc_req = std::make_shared<GrpcRequest>();
@@ -73,7 +73,7 @@ GrpcResponse::ptr GrpcConnection::request(const std::string& method,
     for(auto & i : headers) {
         http_req->setHeader(i.first, i.second);
     }
-    grpc_req->setAsPB(message);
+    grpc_req->setAsPB(*message);
     return request(grpc_req, timeout_ms);
 }
 

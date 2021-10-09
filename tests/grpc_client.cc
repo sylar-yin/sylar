@@ -18,10 +18,10 @@ void testUnary(sylar::grpc::GrpcConnection::ptr conn) {
             int error = 0;
             static int sn = 0;
             for(int i = 0; i < 20; ++i) {
-                test::HelloRequest hr;
+                auto hr = std::make_shared<test::HelloRequest>();
                 auto tmp = sylar::Atomic::addFetch(sn);
-                hr.set_id(prefx + "hello_" + std::to_string(tmp));
-                hr.set_msg(prefx + "world_" + std::to_string(tmp));
+                hr->set_id(prefx + "hello_" + std::to_string(tmp));
+                hr->set_msg(prefx + "world_" + std::to_string(tmp));
                 auto rsp = conn->request("/test.HelloService/Hello", hr, 100000);
                 SYLAR_LOG_INFO(g_logger) << rsp->toString() << std::endl;
                 if(rsp->getResponse()) {
@@ -30,9 +30,9 @@ void testUnary(sylar::grpc::GrpcConnection::ptr conn) {
                     auto hrp = rsp->getAsPB<test::HelloResponse>();
                     if(hrp) {
                         //std::cout << sylar::PBToJsonString(*hrp) << std::endl;
-                        SYLAR_LOG_INFO(g_logger) << "========" << rsp->getResult() << " - " << sylar::PBToJsonString(hr);
+                        SYLAR_LOG_INFO(g_logger) << "========" << rsp->getResult() << " - " << sylar::PBToJsonString(*hr);
                     } else { 
-                        SYLAR_LOG_INFO(g_logger) << "########" << rsp->getResult() << " - " << sylar::PBToJsonString(hr);
+                        SYLAR_LOG_INFO(g_logger) << "########" << rsp->getResult() << " - " << sylar::PBToJsonString(*hr);
                         ++error;
                     }
                     //SYLAR_LOG_INFO(g_logger) << *rsp->getResponse();
@@ -51,9 +51,9 @@ void testStreamClient(sylar::grpc::GrpcConnection::ptr conn) {
             auto stm = conn->openGrpcStream("/test.HelloService/HelloStreamA");
             //sleep(1);
             for(int i = 0; i < 10; ++i) {
-                test::HelloRequest hr;
-                hr.set_id("hello_stream_a");
-                hr.set_msg("world_stream_a");
+                auto hr = std::make_shared<test::HelloRequest>();
+                hr->set_id("hello_stream_a");
+                hr->set_msg("world_stream_a");
 
                 stm->sendMessage(hr);
             }
@@ -93,9 +93,9 @@ void testStreamServer(sylar::grpc::GrpcConnection::ptr conn) {
     while(true) {
         for(int x = 0; x < 100; ++x) {
             auto stm = conn->openGrpcStream("/test.HelloService/HelloStreamB");
-            test::HelloRequest hr;
-            hr.set_id("hello_stream_b");
-            hr.set_msg("world_stream_b");
+            auto hr = std::make_shared<test::HelloRequest>();
+            hr->set_id("hello_stream_b");
+            hr->set_msg("world_stream_b");
             stm->sendMessage(hr, true);
             while(true) {
                 auto rsp = stm->recvMessage<test::HelloResponse>();
@@ -118,7 +118,7 @@ void testStreamServer2(sylar::grpc::GrpcConnection::ptr conn) {
             auto hr = std::make_shared<test::HelloRequest>();
             hr->set_id("hello_stream_b");
             hr->set_msg("world_stream_b");
-            auto stm = conn->openGrpcServerStream<test::HelloRequest, test::HelloResponse>("/test.HelloService/HelloStreamB", *hr);
+            auto stm = conn->openGrpcServerStream<test::HelloRequest, test::HelloResponse>("/test.HelloService/HelloStreamB", hr);
             while(true) {
                 auto rsp = stm->recv();
                 if(rsp) {
@@ -141,9 +141,9 @@ void testStreamBidi(sylar::grpc::GrpcConnection::ptr conn) {
             auto wg = sylar::WorkerGroup::Create(1);
             wg->schedule([stm](){
                 for(int i = 0; i< 10; ++i) {
-                    test::HelloRequest hr;
-                    hr.set_id("hello_stream_c");
-                    hr.set_msg("world_stream_c");
+                    auto hr = std::make_shared<test::HelloRequest>();
+                    hr->set_id("hello_stream_c");
+                    hr->set_msg("world_stream_c");
                     stm->sendMessage(hr);
                 }
                 stm->sendData("", true);

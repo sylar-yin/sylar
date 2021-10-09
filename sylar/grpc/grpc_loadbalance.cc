@@ -87,7 +87,7 @@ GrpcResponse::ptr GrpcSDLoadBalance::request(const std::string& domain, const st
 }
 
 GrpcResponse::ptr GrpcSDLoadBalance::request(const std::string& domain, const std::string& service,
-                                           const std::string& method, const google::protobuf::Message& message,
+                                           const std::string& method, PbMessagePtr message,
                                            uint32_t timeout_ms,
                                            const std::map<std::string, std::string>& headers,
                                            uint64_t idx) {
@@ -119,8 +119,11 @@ GrpcResponse::ptr GrpcSDLoadBalance::request(const std::string& domain, const st
 }
 
 
-GrpcStream::ptr GrpcSDLoadBalance::openStream(const std::string& domain, const std::string& service,
-                                 sylar::http::HttpRequest::ptr request, uint64_t idx) {
+GrpcStream::ptr GrpcSDLoadBalance::openGrpcStream(const std::string& domain,
+                                   const std::string& service,
+                                   const std::string& method,
+                                   const std::map<std::string, std::string>& headers,
+                                   uint64_t idx) {
     auto lb = get(domain, service);
     if(!lb) {
         return nullptr;
@@ -132,12 +135,9 @@ GrpcStream::ptr GrpcSDLoadBalance::openStream(const std::string& domain, const s
         return nullptr;
     }
 
-    auto cli = conn->getStreamAs<GrpcConnection>()->openStream(request);
-    if(cli) {
-        return std::make_shared<GrpcStream>(cli);
-    }
-    return nullptr;
+    return conn->getStreamAs<GrpcConnection>()->openGrpcStream(method, headers);
 }
+
 
 /*
 GrpcStreamBase::GrpcStreamBase(GrpcStreamClient::ptr client)

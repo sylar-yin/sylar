@@ -317,6 +317,7 @@ const char* TypeToName() {
     return s_name;
 }
 
+typedef std::shared_ptr<google::protobuf::Message> PbMessagePtr;
 std::string PBToJsonString(const google::protobuf::Message& message);
 
 template<class Iter>

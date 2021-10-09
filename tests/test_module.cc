@@ -174,9 +174,9 @@ int32_t HandleHelloServiceHelloStreamB(sylar::grpc::GrpcRequest::ptr request,
     stream->sendResponse(response->getResponse(), false, true);
 
     for(int i = 0; i < 10; ++i) {
-        test::HelloResponse rsp;
-        rsp.set_id("hello");
-        rsp.set_msg("world");
+        auto rsp = std::make_shared<test::HelloResponse>();
+        rsp->set_id("hello");
+        rsp->set_msg("world");
         cli->sendMessage(rsp);
         sleep(1);
     }
@@ -212,9 +212,9 @@ int32_t HandleHelloServiceHelloStreamC(sylar::grpc::GrpcRequest::ptr request,
     auto wg = sylar::WorkerGroup::Create(1);
     wg->schedule([cli](){
         for(int i = 0; i < 5; ++i) {
-            test::HelloResponse rsp;
-            rsp.set_id("hello");
-            rsp.set_msg("world");
+            auto rsp = std::make_shared<test::HelloResponse>();
+            rsp->set_id("hello");
+            rsp->set_msg("world");
             cli->sendMessage(rsp);
             sleep(1);
         }
@@ -426,9 +426,9 @@ int32_t HandleHelloServiceHelloStreamB2(sylar::grpc::GrpcRequest::ptr request,
     SYLAR_LOG_INFO(g_logger) << "---" << sylar::PBToJsonString(*req) << " - " << req;
 
     for(int i = 0; i < 10; ++i) {
-        test::HelloResponse rsp;
-        rsp.set_id("hello");
-        rsp.set_msg("world");
+        auto rsp = std::make_shared<test::HelloResponse>();
+        rsp->set_id("hello");
+        rsp->set_msg("world");
         cli->sendMessage(rsp);
         sleep(1);
     }
@@ -569,9 +569,9 @@ int32_t HandleHelloServiceHelloStreamC2(sylar::grpc::GrpcRequest::ptr request,
     auto wg = sylar::WorkerGroup::Create(1);
     wg->schedule([cli](){
         for(int i = 0; i < 5; ++i) {
-            test::HelloResponse rsp;
-            rsp.set_id("hello");
-            rsp.set_msg("world");
+            auto rsp = std::make_shared<test::HelloResponse>();
+            rsp->set_id("hello");
+            rsp->set_msg("world");
             cli->sendMessage(rsp);
             sleep(1);
         }

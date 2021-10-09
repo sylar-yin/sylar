@@ -30,7 +30,7 @@ enum class GrpcType {
     UNARY = 0,
     SERVER = 1,
     CLIENT = 2,
-    BIDI = 3    //Bidirectional
+    BIDIRECTION = 3    //Bidirectional
 };
 
 class GrpcServlet : public sylar::http::Servlet {
@@ -220,7 +220,7 @@ public:
     typedef sylar::grpc::GrpcServerStreamBidirection<Req, Rsp> ServerStream;
 
     GrpcStreamBidirectionServlet(const std::string& name)
-        :GrpcServlet(name, GrpcType::BIDI) {
+        :GrpcServlet(name, GrpcType::BIDIRECTION) {
     }
 
     int32_t processStream(sylar::grpc::GrpcRequest::ptr request,

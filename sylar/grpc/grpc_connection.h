@@ -2,6 +2,7 @@
 #define __SYLAR_GRPC_GRPC_CONNECTION_H__
 
 #include "sylar/http2/http2_connection.h"
+#include "sylar/util.h"
 #include "grpc_protocol.h"
 #include "grpc_stream.h"
 #include <google/protobuf/message.h>
@@ -18,7 +19,7 @@ public:
     GrpcResponse::ptr request(GrpcRequest::ptr req, uint64_t timeout_ms);
 
     GrpcResponse::ptr request(const std::string& method,
-                            const google::protobuf::Message& message,
+                            PbMessagePtr message,
                             uint64_t timeout_ms,
                             const std::map<std::string, std::string>& headers = {});
 
@@ -37,7 +38,7 @@ public:
 
     template<class Req, class Rsp>
     typename GrpcClientStreamServer<Req, Rsp>::ptr openGrpcServerStream(const std::string& method,
-            const google::protobuf::Message& message,
+            PbMessagePtr message,
             const std::map<std::string, std::string>& headers = {}) {
         auto stm = openGrpcStream(method, headers);
         if(stm) {
