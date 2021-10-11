@@ -261,6 +261,11 @@ sylar_add_executable(test_grpcclient "${GRPC_SRCS}" sylar "${LIBS}")
 
 set(GRPC_SERVER_SRCS
     tests/grpc_server.cc
+    tests/test.HelloService.grpc.cc
+    tests/test.HelloService.Hello.grpc.cc
+    tests/test.HelloService.HelloStreamA.grpc.cc
+    tests/test.HelloService.HelloStreamB.grpc.cc
+    tests/test.HelloService.HelloStreamC.grpc.cc
     )
 protobufmaker(tests/test.proto GRPC_SERVER_SRCS ${CMAKE_CURRENT_SOURCE_DIR})
 sylar_add_executable(test_grpcserver "${GRPC_SERVER_SRCS}" sylar "${LIBS}")
@@ -284,6 +289,20 @@ add_library(test_module SHARED "${TEST_MODULE}")
 
 sylar_add_executable(bin_sylar "sylar/main.cc" sylar "${LIBS}")
 set_target_properties(bin_sylar PROPERTIES OUTPUT_NAME "sylar")
+
+set(TOOLS_GRPC_SRC
+        tools/grpc/main.cc
+        tools/grpc/sylar_generator.cc
+    )
+set(TOOLS_GRPC_LIB
+    protoc
+    protobuf
+    pthread
+    ${LIBS}
+    )
+sylar_add_executable(protoc_sylar "${TOOLS_GRPC_SRC}" sylar "${TOOLS_GRPC_LIB}")
+set_target_properties(protoc_sylar PROPERTIES OUTPUT_NAME "protoc-sylar")
+
 
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/orm_out)
 #set(OLIBS ${LIBS} orm_data)

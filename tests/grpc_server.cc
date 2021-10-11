@@ -2,6 +2,7 @@
 #include "sylar/grpc/grpc_servlet.h"
 #include "tests/test.pb.h"
 #include "sylar/log.h"
+#include "tests/test.HelloService.grpc.h"
 
 static sylar::Logger::ptr g_logger = SYLAR_LOG_NAME("test");
 
@@ -125,6 +126,8 @@ void run() {
 
     server->addGrpcServlet(sylar::grpc::GrpcServlet::GetGrpcPath("test", "HelloService", "HelloStreamC"),
                            std::make_shared<HelloServiceHelloStreamC>());
+
+    test::HelloService::RegisterService(server);
     server->bind(addr, false);
     server->start();
 }

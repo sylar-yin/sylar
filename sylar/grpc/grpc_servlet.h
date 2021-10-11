@@ -23,6 +23,16 @@
     GRPC_SERVLET_CTOR(class_name) \
     GRPC_SERVLET_CLONE(class_name)
 
+#define GRPC_SERVLET_CTOR_NAME(class_name, name) \
+    class_name() \
+        :Base(name) { \
+    }
+
+#define GRPC_SERVLET_INIT_NAME(class_name, name) \
+    GRPC_SERVLET_CTOR_NAME(class_name, name) \
+    GRPC_SERVLET_CLONE(class_name)
+
+
 namespace sylar {
 namespace grpc {
 
