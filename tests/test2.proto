@@ -1,0 +1,16 @@
+syntax = "proto3";
+import "test.proto";
+
+package test2;
+
+//test message 1
+message Test2 { //test message 2
+    //test message 3
+    int32 id = 1; //test message 8
+    //test message 4
+    string name = 2; //test message 9
+    //test message 5
+    test.HelloRequest request = 3; //test message 10
+    //test message 6
+}
+//test message 7
