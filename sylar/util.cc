@@ -869,4 +869,89 @@ bool WriteFixToStreamWithSpeed(std::ostream& os, const char* data,
     return offset == size;
 }
 
+
+std::string ToCamelString(const std::string& input, bool first_upper) {
+    bool capitalize_next = false;
+    bool was_cap = true;
+    bool is_cap = false;
+    bool first_word = true;
+    std::string result;
+    result.reserve(input.size());
+    
+    for (size_t i = 0; i < input.size(); ++i, was_cap = is_cap) {
+        is_cap = ::isupper(input[i]);
+        if (input[i] == '_') {
+            capitalize_next = true;
+            if (!result.empty()) first_word = false;
+            continue;
+        } else if (first_word) {
+            // Consider when the current character B is capitalized,
+            // first word ends when:
+            // 1) following a lowercase:   "...aB..."
+            // 2) followed by a lowercase: "...ABc..."
+            if (!result.empty() && is_cap &&
+                (!was_cap ||
+                 (i + 1 < input.size() && ::islower(input[i + 1])))) {
+              first_word = false;
+              result.push_back(input[i]);
+            } else {
+              result.push_back(::tolower(input[i]));
+              continue;
+            }
+        } else if (capitalize_next) {
+            capitalize_next = false;
+            if (::islower(input[i])) {
+                result.push_back(::toupper(input[i]));
+                continue;
+            } else {
+                result.push_back(input[i]);
+                continue;
+            }
+        } else {
+            result.push_back(::tolower(input[i]));
+        }
+    }
+    //std::cout << "result=" << result << std::endl;
+    if(first_upper && !result.empty()) {
+        result[0] = ::toupper(result[0]);
+    }
+    return result;
+}
+
+std::string ToSnakeString(const std::string& input) {
+    bool was_not_underscore = false;  // Initialize to false for case 1 (below)
+    bool was_not_cap = false;
+    std::string result;
+    result.reserve(input.size() << 1);
+
+    for (size_t i = 0; i < input.size(); ++i) {
+        if (::isupper(input[i])) {
+            // Consider when the current character B is capitalized:
+            // 1) At beginning of input:   "B..." => "b..."
+            //    (e.g. "Biscuit" => "biscuit")
+            // 2) Following a lowercase:   "...aB..." => "...a_b..."
+            //    (e.g. "gBike" => "g_bike")
+            // 3) At the end of input:     "...AB" => "...ab"
+            //    (e.g. "GoogleLAB" => "google_lab")
+            // 4) Followed by a lowercase: "...ABc..." => "...a_bc..."
+            //    (e.g. "GBike" => "g_bike")
+            if (was_not_underscore &&                     //            case 1 out
+                (was_not_cap ||                           // case 2 in, case 3 out
+                (i + 1 < input.size() &&                 //            case 3 out
+                ::islower(input[i + 1])))) {  // case 4 in
+                // We add an underscore for case 2 and case 4.
+                result.push_back('_');
+            }
+            result.push_back(::tolower(input[i]));
+            was_not_underscore = true;
+            was_not_cap = false;
+        } else {
+            result.push_back(input[i]);
+            was_not_underscore = input[i] != '_';
+            was_not_cap = true;
+        }
+    }
+    return result;
+}
+
 }

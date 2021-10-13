@@ -486,6 +486,8 @@ void Slice(std::vector<std::vector<T> >& dst, const std::vector<T>& src, size_t 
     }
 }
 
+std::string ToCamelString(const std::string& str, bool first_upper = true);
+std::string ToSnakeString(const std::string& str);
 
 }
 

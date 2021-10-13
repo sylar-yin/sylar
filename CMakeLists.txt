@@ -142,6 +142,7 @@ set(LIB_SRC
     sylar/util/crypto_util.cc
     sylar/util/json_util.cc
     sylar/util/hash_util.cc
+    sylar/util/pb_dynamic_message.cc
     sylar/util/trace.cc
     sylar/util/tracker.cc
     sylar/worker.cc
@@ -338,6 +339,11 @@ set(TOOLS_GRPC_LIB
     )
 sylar_add_executable(protoc_sylar "${TOOLS_GRPC_SRC}" sylar "${TOOLS_GRPC_LIB}")
 set_target_properties(protoc_sylar PROPERTIES OUTPUT_NAME "protoc-sylar")
+
+set(PB_DYNAMIC_MESSAGE_SRC
+    tests/test_pb_dynamic_message.cc
+    )
+sylar_add_executable(test_pb_dynamic_message "${PB_DYNAMIC_MESSAGE_SRC}" sylar "${LIBS}")
 
 
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/orm_out)
