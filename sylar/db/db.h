@@ -19,6 +19,7 @@ public:
     virtual int getColumnBytes(int idx) = 0;
     virtual int getColumnType(int idx) = 0;
     virtual std::string getColumnName(int idx) = 0;
+    virtual int getColumnIndex(const std::string& name) = 0;
 
     virtual bool isNull(int idx) = 0;
     virtual int8_t getInt8(int idx) = 0;
@@ -35,6 +36,21 @@ public:
     virtual std::string getBlob(int idx) = 0;
     virtual time_t getTime(int idx) = 0;
     virtual bool next() = 0;
+
+    bool isNull(const std::string& name);
+    int8_t getInt8(const std::string& name);
+    uint8_t getUint8(const std::string& name);
+    int16_t getInt16(const std::string& name);
+    uint16_t getUint16(const std::string& name);
+    int32_t getInt32(const std::string& name);
+    uint32_t getUint32(const std::string& name);
+    int64_t getInt64(const std::string& name);
+    uint64_t getUint64(const std::string& name);
+    float getFloat(const std::string& name);
+    double getDouble(const std::string& name);
+    std::string getString(const std::string& name);
+    std::string getBlob(const std::string& name);
+    time_t getTime(const std::string& name);
 };
 
 class ISQLUpdate {

@@ -1,0 +1,8 @@
+mysql:
+    dbs:
+        test:
+            user: test
+            passwd: test
+            host: 10.104.26.35
+            dbname: test
+            pool: 2

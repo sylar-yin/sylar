@@ -65,6 +65,7 @@ set(LIB_SRC
     sylar/config.cc
     sylar/dns.cc
     sylar/db/fox_thread.cc
+    sylar/db/db.cc
     sylar/db/mysql.cc
     sylar/db/redis.cc
     sylar/ds/bitmap.cc
@@ -344,6 +345,23 @@ set(PB_DYNAMIC_MESSAGE_SRC
     tests/test_pb_dynamic_message.cc
     )
 sylar_add_executable(test_pb_dynamic_message "${PB_DYNAMIC_MESSAGE_SRC}" sylar "${LIBS}")
+
+set(TOOLS_MYSQL_SRC
+        tools/mysql/main.cc
+        tools/mysql/util.cc
+    )
+
+protobufmaker(tools/mysql/schema.proto TOOLS_MYSQL_SRC ${CMAKE_CURRENT_SOURCE_DIR})
+
+set(TOOLS_MYSQL_LIB
+    protoc
+    protobuf
+    pthread
+    ${LIBS}
+    )
+sylar_add_executable(mysql_tools "${TOOLS_MYSQL_SRC}" sylar "${TOOLS_MYSQL_LIB}")
+set_target_properties(mysql_tools PROPERTIES OUTPUT_NAME "mysql_tools")
+
 
 
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/orm_out)

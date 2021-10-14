@@ -349,6 +349,18 @@ std::string SQLite3Data::getColumnName(int idx) {
     return "";
 }
 
+int SQLite3Data::getColumnIndex(const std::string& name) {
+    if(!m_name2IndexInited) {
+        auto count = sqlite3_column_count(m_stmt->m_stmt);
+        for(int i = 0; i < count; ++i) {
+            m_name2index[sqlite3_column_name(m_stmt->m_stmt, i)] = i;
+        }
+        m_name2IndexInited = true;
+    }
+    auto it = m_name2index.find(name);
+    return it == m_name2index.end() ? -1 : it->second;
+}
+
 bool SQLite3Data::isNull(int idx) {
     return false;
 }

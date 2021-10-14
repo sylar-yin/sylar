@@ -90,7 +90,8 @@ public:
     int getColumnBytes(int idx);
     int getColumnType(int idx);
 
-    std::string getColumnName(int idx);
+    std::string getColumnName(int idx) override;
+    int getColumnIndex(const std::string& name) override;
 
     bool isNull(int idx) override;
     int8_t getInt8(int idx) override;
@@ -113,6 +114,8 @@ private:
     bool m_first;
     std::string m_errstr;
     std::shared_ptr<SQLite3Stmt> m_stmt;
+    std::map<std::string, int> m_name2index;
+    bool m_name2IndexInited = false;
 };
 
 class SQLite3Stmt : public IStmt

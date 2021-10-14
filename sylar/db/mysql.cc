@@ -530,6 +530,23 @@ int MySQLRes::getColumnCount() {
     return mysql_num_fields(m_data.get());
 }
 
+static void InitMySQLName2Index(MYSQL_RES* res, std::map<std::string, int>& name2index) {
+    int num = mysql_num_fields(res);
+    MYSQL_FIELD* fields = mysql_fetch_fields(res);
+    for(int i = 0; i < num; ++i) {
+        name2index[std::string(fields[i].name, fields[i].name_length)] = i;
+    }
+}
+
+int MySQLRes::getColumnIndex(const std::string& name) {
+    if(!m_name2indexInited) {
+        m_name2indexInited = true;
+        InitMySQLName2Index(m_data.get(), m_name2index);
+    }
+    auto it = m_name2index.find(name);
+    return it == m_name2index.end() ? -1 : it->second;
+}
+
 int MySQLRes::getColumnBytes(int idx) {
     return m_curLength[idx];
 }
@@ -631,6 +648,9 @@ MySQLStmtRes::ptr MySQLStmtRes::Create(std::shared_ptr<MySQLStmt> stmt) {
     rt->m_datas.resize(num);
 
     for(int i = 0; i < num; ++i) {
+        std::string name(fields[i].name, fields[i].name_length);
+        rt->m_names.push_back(name);
+        rt->m_name2index[name] = i;
         rt->m_datas[i].type = fields[i].type;
         switch(fields[i].type) {
 #define XX(m, t) \
@@ -693,7 +713,15 @@ int MySQLStmtRes::getColumnType(int idx) {
 }
 
 std::string MySQLStmtRes::getColumnName(int idx) {
+    if(idx >= 0 && idx < (int)m_names.size()) {
+        return m_names[idx];
+    }
     return "";
+}
+
+int MySQLStmtRes::getColumnIndex(const std::string& name) {
+    auto it = m_name2index.find(name);
+    return it == m_name2index.end() ? -1 : it->second;
 }
 
 bool MySQLStmtRes::isNull(int idx) {
@@ -813,6 +841,8 @@ ISQLData::ptr MySQL::query(const char* format, va_list ap) {
     MYSQL_RES* res = my_mysql_query(m_mysql.get(), m_cmd.c_str());
     if(!res) {
         m_hasError = true;
+        //SYLAR_LOG_ERROR(g_logger) << "query: " << m_cmd << " fail, errno="
+        //    << getErrno() << " errstr=" << getErrStr();
         return nullptr;
     }
     m_hasError = false;
@@ -1157,6 +1187,7 @@ ISQLData::ptr MySQLUtil::Query(const std::string& name, const char* format, ...)
 ISQLData::ptr MySQLUtil::Query(const std::string& name, const char* format,va_list ap) {
     auto m = MySQLMgr::GetInstance()->get(name);
     if(!m) {
+        SYLAR_LOG_ERROR(g_logger) << "mysql name=" << name << " not exists";
         return nullptr;
     }
     return m->query(format, ap);

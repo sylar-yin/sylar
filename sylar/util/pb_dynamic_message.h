@@ -13,6 +13,9 @@
 
 namespace sylar {
 
+std::string ProtoToJson(const google::protobuf::Message& m);
+bool JsonToProto(const std::string& json, google::protobuf::Message& m);
+
 class PbDynamicMessage {
 public:
     typedef std::shared_ptr<PbDynamicMessage> ptr;
