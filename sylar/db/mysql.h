@@ -54,6 +54,7 @@ public:
     int getColumnBytes(int idx) override;
     int getColumnType(int idx) override;
     std::string getColumnName(int idx) override;
+    int getColumnIndex(const std::string& name) override;
 
     bool isNull(int idx) override;
     int8_t getInt8(int idx) override;
@@ -76,6 +77,9 @@ private:
     MYSQL_ROW m_cur;
     unsigned long* m_curLength;
     std::shared_ptr<MYSQL_RES> m_data;
+
+    std::map<std::string, int> m_name2index;
+    bool m_name2indexInited = false;
 };
 
 class MySQLStmtRes : public ISQLData {
@@ -93,6 +97,7 @@ public:
     int getColumnBytes(int idx) override;
     int getColumnType(int idx) override;
     std::string getColumnName(int idx) override;
+    int getColumnIndex(const std::string& name) override;
 
     bool isNull(int idx) override;
     int8_t getInt8(int idx) override;
@@ -130,6 +135,8 @@ private:
     std::shared_ptr<MySQLStmt> m_stmt;
     std::vector<MYSQL_BIND> m_binds;
     std::vector<Data> m_datas;
+    std::map<std::string, int> m_name2index;
+    std::vector<std::string> m_names;
 };
 
 class MySQLManager;

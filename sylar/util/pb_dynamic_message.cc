@@ -7,6 +7,22 @@ namespace sylar {
 
 static sylar::Logger::ptr g_logger = SYLAR_LOG_NAME("system");
 
+std::string ProtoToJson(const google::protobuf::Message& m) {
+    std::string out;
+    google::protobuf::util::JsonPrintOptions options;
+    //options.add_whitespace = true;
+    //options.always_print_primitive_fields = true;
+    options.preserve_proto_field_names = true;
+    google::protobuf::util::MessageToJsonString(m, &out, options);
+    return out;
+}
+
+bool JsonToProto(const std::string& json, google::protobuf::Message& m) {
+    google::protobuf::util::JsonParseOptions options;
+    options.ignore_unknown_fields = true;
+    return google::protobuf::util::JsonStringToMessage(json, &m, options).ok();
+}
+
 PbDynamicMessage::PbDynamicMessage(std::shared_ptr<google::protobuf::Message> data)
     :m_data(data) {
     m_reflection = m_data->GetReflection();

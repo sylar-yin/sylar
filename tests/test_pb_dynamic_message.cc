@@ -72,8 +72,13 @@ void testPool() {
 
     st->MapPath("", "");
     st->MapPath("", "tests");
+
     //google::protobuf::compiler::Importer importer(st, nullptr);
-    //std::cout << importer.Import("tests/test.proto") << std::endl;
+    //auto pb = importer.Import("tests/test.proto");
+    //SYLAR_LOG_INFO(g_logger) << "==== pb=" << pb << (pb ? pb->DebugString() : "");
+    //sleep(20);
+    //pb = importer.Import("tests/test.proto");
+    //SYLAR_LOG_INFO(g_logger) << "==== pb=" << pb << (pb ? pb->DebugString() : "");
 
     //pool->Import("tests/test.proto");
     //auto pb = importer.pool()->FindFileByName("tests/test.proto");
@@ -217,8 +222,8 @@ int main(int argc, char** argv) {
     SYLAR_LOG_INFO(g_logger) << file.DebugString();
 
     testPool();
-    testSource();
-    test_pb_dynamic_message();
-    test_pb_dynamic_proto();
+    //testSource();
+    //test_pb_dynamic_message();
+    //test_pb_dynamic_proto();
     return 0;
 }

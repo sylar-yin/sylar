@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package sylar.schema;
+
+message Field {
+    string name = 1;
+    string type = 2;
+    int32 length = 3;
+    string default_value = 4;
+    bool nullable = 5;
+    bool auto_increment = 6;
+    string comment = 7;
+};
+
+message Index {
+    string name = 1;
+    repeated string fields = 2;
+    int32 type = 3;
+    string comment = 4;
+};
+
+message Table {
+    string name = 1;
+    repeated Field fields = 2;
+    repeated Index indexs = 3;
+    string comment = 4;
+};
