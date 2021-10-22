@@ -530,19 +530,17 @@ int MySQLRes::getColumnCount() {
     return mysql_num_fields(m_data.get());
 }
 
-static void InitMySQLName2Index(MYSQL_RES* res, std::map<std::string, int>& name2index) {
+static MYSQL_FIELD* InitMySQLName2Index(MYSQL_RES* res, std::map<std::string, int>& name2index) {
     int num = mysql_num_fields(res);
     MYSQL_FIELD* fields = mysql_fetch_fields(res);
     for(int i = 0; i < num; ++i) {
         name2index[std::string(fields[i].name, fields[i].name_length)] = i;
     }
+    return fields;
 }
 
 int MySQLRes::getColumnIndex(const std::string& name) {
-    if(!m_name2indexInited) {
-        m_name2indexInited = true;
-        InitMySQLName2Index(m_data.get(), m_name2index);
-    }
+    initFields();
     auto it = m_name2index.find(name);
     return it == m_name2index.end() ? -1 : it->second;
 }
@@ -552,11 +550,19 @@ int MySQLRes::getColumnBytes(int idx) {
 }
 
 int MySQLRes::getColumnType(int idx) {
-    return 0;
+    initFields();
+    return m_fields[idx].type;
+}
+
+void MySQLRes::initFields() {
+    if(m_fields == nullptr) {
+        m_fields = InitMySQLName2Index(m_data.get(), m_name2index);
+    }
 }
 
 std::string MySQLRes::getColumnName(int idx) {
-    return "";
+    initFields();
+    return m_fields[idx].name;
 }
 
 bool MySQLRes::isNull(int idx) {

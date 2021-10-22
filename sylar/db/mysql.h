@@ -72,6 +72,8 @@ public:
     time_t getTime(int idx) override;
     bool next() override;
 private:
+    void initFields();
+private:
     int m_errno;
     std::string m_errstr;
     MYSQL_ROW m_cur;
@@ -79,7 +81,9 @@ private:
     std::shared_ptr<MYSQL_RES> m_data;
 
     std::map<std::string, int> m_name2index;
-    bool m_name2indexInited = false;
+    MYSQL_FIELD* m_fields = nullptr;
+    //std::vector<uint32_t> m_types;
+    //bool m_name2indexInited = false;
 };
 
 class MySQLStmtRes : public ISQLData {
