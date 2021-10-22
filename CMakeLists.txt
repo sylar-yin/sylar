@@ -144,6 +144,7 @@ set(LIB_SRC
     sylar/util/json_util.cc
     sylar/util/hash_util.cc
     sylar/util/pb_dynamic_message.cc
+    sylar/util/parquet.cc
     sylar/util/trace.cc
     sylar/util/tracker.cc
     sylar/worker.cc
@@ -199,6 +200,8 @@ set(LIBS
         "-Wl,--whole-archive"
         sylar
         "-Wl,--no-whole-archive"
+        arrow
+        parquet
         dl
         pthread
         tbb
@@ -285,7 +288,6 @@ sylar_add_executable(test_nameserver "tests/test_nameserver.cc" sylar "${LIBS}")
 sylar_add_executable(test_bitmap "tests/test_bitmap.cc" sylar "${LIBS}")
 sylar_add_executable(test_zkclient "tests/test_zookeeper.cc" sylar "${LIBS}")
 sylar_add_executable(test_service_discovery "tests/test_service_discovery.cc" sylar "${LIBS}")
-endif()
 
 sylar_add_executable(test_lru "tests/test_lru.cc" sylar "${LIBS}")
 sylar_add_executable(test_http2client "tests/http2_client.cc" sylar "${LIBS}")
@@ -308,6 +310,29 @@ set(GRPC_SERVER_SRCS
 protobufmaker(tests/test.proto GRPC_SERVER_SRCS ${CMAKE_CURRENT_SOURCE_DIR})
 sylar_add_executable(test_grpcserver "${GRPC_SERVER_SRCS}" sylar "${LIBS}")
 
+set(TOOLS_GRPC_SRC
+        tools/grpc/main.cc
+        tools/grpc/sylar_generator.cc
+    )
+set(TOOLS_GRPC_LIB
+    protoc
+    protobuf
+    pthread
+    ${LIBS}
+    )
+sylar_add_executable(protoc_sylar "${TOOLS_GRPC_SRC}" sylar "${TOOLS_GRPC_LIB}")
+set_target_properties(protoc_sylar PROPERTIES OUTPUT_NAME "protoc-sylar")
+endif()
+
+set(PARQUET_TEST
+        tests/test_parquet.cc
+    )
+set(PARQUET_LIB
+    arrow
+    parquet
+    ${LIBS}
+    )
+sylar_add_executable(test_parquet "${PARQUET_TEST}" sylar "${PARQUET_LIB}")
 
 #set(ORM_SRCS
 #    sylar/orm/table.cc

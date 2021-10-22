@@ -423,7 +423,7 @@ std::shared_ptr<google::protobuf::Message> PbDynamicMessageFactory::createMessag
     if(!type) {
         return nullptr;
     }
-    SYLAR_LOG_INFO(g_logger) << "type.name=" << type->name() << " - " << type->full_name();
+    //SYLAR_LOG_INFO(g_logger) << "type.name=" << type->name() << " - " << type->full_name();
     return std::shared_ptr<google::protobuf::Message>(m_factory->GetPrototype(type)->New(),
             DeleteWithData<google::protobuf::Message, ptr>(shared_from_this()));
 }
@@ -456,6 +456,8 @@ std::vector<const google::protobuf::FileDescriptor*> PbDynamicMessageFactory::lo
 const google::protobuf::FileDescriptor* PbDynamicMessageFactory::addPbDynamicProto(PbDynamicMessageProto::ptr proto, const std::string& filename, const std::vector<std::string>& imports) {
     google::protobuf::FileDescriptorProto file;
 
+    file.set_package(proto->getPackage());
+
     file.set_syntax("proto3");
     auto f = file.add_message_type();
     *f = proto->getData();
@@ -471,6 +473,23 @@ const google::protobuf::FileDescriptor* PbDynamicMessageFactory::addPbDynamicPro
         full_name = proto->getPackage().empty() ? proto->getName() : proto->getPackage() + "." + proto->getName() + ".proto";
     }
     file.set_name(full_name);
+    return m_pool->BuildFile(file);
+}
+
+const google::protobuf::FileDescriptor* PbDynamicMessageFactory::addPbDynamicProto(const std::vector<PbDynamicMessageProto::ptr>& protos, const std::string& filename, const std::vector<std::string>& imports) {
+    google::protobuf::FileDescriptorProto file;
+
+    file.set_syntax("proto3");
+    for(auto& i : imports) {
+        file.add_dependency(i);
+    }
+
+    for(auto& i : protos) {
+        file.set_package(i->getPackage());
+        *file.add_message_type() = i->getData();
+    }
+
+    file.set_name(filename);
     return m_pool->BuildFile(file);
 }
 

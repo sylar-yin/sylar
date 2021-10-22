@@ -277,6 +277,7 @@ public:
     PbDynamicMessage::ptr createDynamicEmptyMessage();
 
     const google::protobuf::FileDescriptor* addPbDynamicProto(PbDynamicMessageProto::ptr proto, const std::string& filename = "", const std::vector<std::string>& imports = {});
+    const google::protobuf::FileDescriptor* addPbDynamicProto(const std::vector<PbDynamicMessageProto::ptr>& protos, const std::string& filename, const std::vector<std::string>& imports = {});
 private:
     std::shared_ptr<google::protobuf::compiler::DiskSourceTree> m_sourceTree;
     std::shared_ptr<google::protobuf::compiler::SourceTreeDescriptorDatabase> m_database;
