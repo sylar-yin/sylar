@@ -387,7 +387,18 @@ set(TOOLS_MYSQL_LIB
 sylar_add_executable(mysql_tools "${TOOLS_MYSQL_SRC}" sylar "${TOOLS_MYSQL_LIB}")
 set_target_properties(mysql_tools PROPERTIES OUTPUT_NAME "mysql_tools")
 
+set(SRC_TEST_PACK
+        tests/test_pack.cc
+    )
 
+set(LIB_TEST_PACK
+    protoc
+    protobuf
+    pthread
+    ${LIBS}
+    )
+sylar_add_executable(test_pack "${SRC_TEST_PACK}" sylar "${LIB_TEST_PACK}")
+set_target_properties(test_pack PROPERTIES OUTPUT_NAME "test_pack")
 
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/orm_out)
 #set(OLIBS ${LIBS} orm_data)
