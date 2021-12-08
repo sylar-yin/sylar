@@ -259,7 +259,6 @@ sylar_add_executable(test_dict "tests/test_dict.cc" sylar "${LIBS}")
 sylar_add_executable(test_array "tests/test_array.cc" sylar "${LIBS}")
 sylar_add_executable(test_tair "tests/test_tair.cc" sylar "${LIBS}")
 sylar_add_executable(test1 "tests/test.cc" sylar "${LIBS}")
-sylar_add_executable(test_config "tests/test_config.cc" sylar "${LIBS}")
 sylar_add_executable(test_thread "tests/test_thread.cc" sylar "${LIBS}")
 sylar_add_executable(test_fiber "tests/test_fiber.cc" sylar "${LIBS}")
 sylar_add_executable(test_scheduler "tests/test_scheduler.cc" sylar "${LIBS}")
@@ -343,6 +342,8 @@ set(PARQUET_LIB
     ${LIBS}
     )
 sylar_add_executable(test_parquet "${PARQUET_TEST}" sylar "${PARQUET_LIB}")
+
+sylar_add_executable(test_config "tests/test_config.cc" sylar "${LIBS}")
 
 #set(ORM_SRCS
 #    sylar/orm/table.cc

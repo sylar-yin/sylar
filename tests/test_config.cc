@@ -32,6 +32,35 @@ sylar::ConfigVar<std::map<std::string, int> >::ptr g_str_int_map_value_config =
 sylar::ConfigVar<std::unordered_map<std::string, int> >::ptr g_str_int_umap_value_config =
     sylar::Config::Lookup("system.str_int_umap", std::unordered_map<std::string, int>{{"k",2}}, "system str int map");
 
+struct XConf {
+    typedef std::shared_ptr<XConf> ptr;
+    int32_t id = 0;
+    std::string name = "";
+
+    bool operator==(const XConf& o) const {
+        return id == o.id
+            && name == o.name;
+    }
+
+    SYLAR_PACK(O(id, name));
+};
+struct TConf {
+    typedef std::shared_ptr<TConf> ptr;
+    int32_t id = 0;
+    std::string name = "";
+    std::vector<XConf::ptr> confs;
+
+//    bool operator==(const XConf& o) const {
+//        return id == o.id
+//            && name == o.name;
+//    }
+
+
+    SYLAR_PACK(O(id, name, confs));
+};
+
+SYLAR_DEFINE_CONFIG(TConf::ptr, g_tconf, "tconf", nullptr, "tconf desc");
+
 void print_yaml(const YAML::Node& node, int level) {
     if(node.IsScalar()) {
         SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << std::string(level * 4, ' ')
@@ -229,10 +258,15 @@ int main(int argc, char** argv) {
     //test_class();
     //test_log();
     sylar::EnvMgr::GetInstance()->init(argc, argv);
+    std::cout << g_tconf->toString() << std::endl;
     test_loadconf();
     std::cout << " ==== " << std::endl;
-    sleep(10);
+    sleep(3);
     test_loadconf();
+    std::cout << g_tconf->toString() << std::endl;
+    //auto tmp = sylar::Config::Lookup<TConf, sylar::PackDecodeCast<TConf>, sylar::PackEncodeCast<TConf>>("tconf");
+    //std::cout << tmp->toString() << std::endl;
+    //std::cout << SYLAR_GET_CONFIG(TConf, "tconf")->toString() << std::endl;
     return 0;
     sylar::Config::Visit([](sylar::ConfigVarBase::ptr var) {
         SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "name=" << var->getName()
