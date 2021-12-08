@@ -6,6 +6,8 @@
 #include "sylar/pack/yaml_encoder.h"
 #include "sylar/pack/rapidjson_encoder.h"
 #include "sylar/pack/rapidjson_decoder.h"
+#include "sylar/pack/bytearray_encoder.h"
+#include "sylar/pack/bytearray_decoder.h"
 #include <gperftools/profiler.h>
 #include <gperftools/heap-profiler.h>
 
@@ -226,6 +228,24 @@ void test_rapid() {
     std::cout << "test_rapid: " << sylar::pack::EncodeToRapidJsonString(m2, 0) << std::endl;
 }
 
+void test_bytearray() {
+    std::vector<Men> m, m2;
+    m.resize(2);
+    m[0].id = 101;
+    m[1].id = 102;
+    m[0].name = "你好";
+    m[1].name = "世界";
+    //std::map<std::string, std::string> m;
+    //m["id"] = "\"";
+    //m["age"] = "[";
+    //m["name"] = "你好";
+    auto ba = sylar::pack::EncodeToByteArray(m, 0);
+    ba->setPosition(0);
+    std::cout << "test_bytearray: " << sylar::pack::EncodeToRapidJsonString(m, 0) << std::endl;
+    sylar::pack::DecodeFromByteArray(ba, m2, 0);
+    std::cout << "test_bytearray: " << sylar::pack::EncodeToRapidJsonString(m2, 0) << std::endl;
+}
+
 void test_shared() {
     std::shared_ptr<Men> m = std::make_shared<Men>();
     std::shared_ptr<Men> m2;
@@ -265,6 +285,7 @@ int main(int argc, char** argv) {
     test_map2();
     test_rapid();
     test_shared();
+    test_bytearray();
     //ProfilerStop();
     HeapProfilerStop();
     return 0;
