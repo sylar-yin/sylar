@@ -1,0 +1,8 @@
+tconf:
+    id: 101
+    name: sylar
+    confs:
+        - id: 200
+          name: sylar-200
+        - id: 300
+          name: sylar-300

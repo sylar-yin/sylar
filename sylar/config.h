@@ -22,6 +22,9 @@
 #include <unordered_set>
 #include <functional>
 
+#include "sylar/pack/yaml_decoder.h"
+#include "sylar/pack/yaml_encoder.h"
+
 #include "thread.h"
 #include "log.h"
 #include "util.h"
@@ -318,6 +321,31 @@ public:
     }
 };
 
+template<class T>
+class PackDecodeCast {
+public:
+    T operator()(const std::string& str) {
+        T t;
+        sylar::pack::DecodeFromYamlString(str, t, 0);
+        return t;
+    }
+};
+
+template<class T>
+class PackEncodeCast {
+public:
+    std::string operator()(const T& v) {
+        return sylar::pack::EncodeToYamlString(v, 0);
+    }
+};
+
+#define SYLAR_DEFINE_CONFIG(type, name, attr, def, desc) \
+    static sylar::ConfigVar<type, sylar::PackDecodeCast<type>, \
+        sylar::PackEncodeCast<type> >::ptr name = sylar::Config::Lookup \
+        <type, sylar::PackDecodeCast<type>, sylar::PackEncodeCast<type>>(attr, (type)def, desc);
+
+#define SYLAR_GET_CONFIG(type, attr) \
+        sylar::Config::Lookup<type, sylar::PackDecodeCast<type>, sylar::PackEncodeCast<type>>(attr)
 
 /**
  * @brief 配置参数模板子类,保存对应类型的参数值
@@ -476,13 +504,13 @@ public:
      * @return 返回对应的配置参数,如果参数名存在但是类型不匹配则返回nullptr
      * @exception 如果参数名包含非法字符[^0-9a-z_.] 抛出异常 std::invalid_argument
      */
-    template<class T>
-    static typename ConfigVar<T>::ptr Lookup(const std::string& name,
+    template<class T, class... Args>
+    static typename ConfigVar<T, Args...>::ptr Lookup(const std::string& name,
             const T& default_value, const std::string& description = "") {
         RWMutexType::WriteLock lock(GetMutex());
         auto it = GetDatas().find(name);
         if(it != GetDatas().end()) {
-            auto tmp = std::dynamic_pointer_cast<ConfigVar<T> >(it->second);
+            auto tmp = std::dynamic_pointer_cast<ConfigVar<T, Args...> >(it->second);
             if(tmp) {
                 SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "Lookup name=" << name << " exists";
                 return tmp;
@@ -500,7 +528,7 @@ public:
             throw std::invalid_argument(name);
         }
 
-        typename ConfigVar<T>::ptr v(new ConfigVar<T>(name, default_value, description));
+        typename ConfigVar<T, Args...>::ptr v(new ConfigVar<T, Args...>(name, default_value, description));
         GetDatas()[name] = v;
         return v;
     }
@@ -510,14 +538,14 @@ public:
      * @param[in] name 配置参数名称
      * @return 返回配置参数名为name的配置参数
      */
-    template<class T>
-    static typename ConfigVar<T>::ptr Lookup(const std::string& name) {
+    template<class T, class... Args>
+    static typename ConfigVar<T, Args...>::ptr Lookup(const std::string& name) {
         RWMutexType::ReadLock lock(GetMutex());
         auto it = GetDatas().find(name);
         if(it == GetDatas().end()) {
             return nullptr;
         }
-        return std::dynamic_pointer_cast<ConfigVar<T> >(it->second);
+        return std::dynamic_pointer_cast<ConfigVar<T, Args...> >(it->second);
     }
 
     /**
