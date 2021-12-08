@@ -39,14 +39,15 @@ static thread_local bool t_hook_enable = false;
     XX(getsockopt) \
     XX(setsockopt)
 
-void hook_init() {
+bool hook_init() {
     static bool is_inited = false;
     if(is_inited) {
-        return;
+        return true;
     }
 #define XX(name) name ## _f = (name ## _fun)dlsym(RTLD_NEXT, #name);
     HOOK_FUN(XX);
 #undef XX
+    return true;
 }
 
 static uint64_t s_connect_timeout = -1;
@@ -295,6 +296,8 @@ int accept(int s, struct sockaddr *addr, socklen_t *addrlen) {
 }
 
 ssize_t read(int fd, void *buf, size_t count) {
+    static const bool _sylar_hook_init_ = sylar::hook_init();
+    (void)_sylar_hook_init_;
     return do_io(fd, read_f, "read", sylar::IOManager::READ, SO_RCVTIMEO, buf, count);
 }
 

@@ -105,8 +105,8 @@ public:
     }
 
 #define XX_ENCODE(arr) \
-    template<class T> \
-    bool encode(const std::string& name, const arr<T>& v, const PackFlag& flag) { \
+    template<class T, class... Args> \
+    bool encode(const std::string& name, const arr<T, Args...>& v, const PackFlag& flag) { \
         m_writer.Key(name.c_str()); \
         m_writer.StartArray(); \
         for(auto& i : v) { \
@@ -115,8 +115,8 @@ public:
         m_writer.EndArray(); \
         return true; \
     } \
-    template<class T> \
-    bool encode(const arr<T>& v, const PackFlag& flag) { \
+    template<class T, class... Args> \
+    bool encode(const arr<T, Args...>& v, const PackFlag& flag) { \
         m_writer.StartArray(); \
         for(auto& i : v) { \
             encode(i, flag); \
@@ -131,8 +131,8 @@ public:
 #undef XX_ENCODE
 
 #define XX_ENCODE(m) \
-    template<class T> \
-    bool encode(const std::string& name, const m<std::string, T>& v, const PackFlag& flag) { \
+    template<class T, class... Args> \
+    bool encode(const std::string& name, const m<std::string, T, Args...>& v, const PackFlag& flag) { \
         m_writer.Key(name.c_str()); \
         m_writer.StartObject(); \
         for(auto& i : v) { \
@@ -141,8 +141,8 @@ public:
         m_writer.EndObject(); \
         return true; \
     } \
-    template<class T> \
-    bool encode(const m<std::string, T>& v, const PackFlag& flag) { \
+    template<class T, class... Args> \
+    bool encode(const m<std::string, T, Args...>& v, const PackFlag& flag) { \
         m_writer.StartObject(); \
         for(auto& i : v) { \
             encode(i.first, i.second, flag); \
@@ -153,6 +153,32 @@ public:
     XX_ENCODE(std::map);
     XX_ENCODE(std::unordered_map);
 #undef XX_ENCODE
+
+#define XX_ENCODE(type, ...) \
+    template<class T, class... Args> \
+    bool encode(const std::string& name, const type<T, Args...>& v, const PackFlag& flag) { \
+        if(v __VA_ARGS__) { \
+            return encode(name, *v, flag); \
+        } else { \
+            /*//TODO null*/ \
+        } \
+        return true; \
+    } \
+    template<class T, class... Args> \
+    bool encode(const type<T, Args...>& v, const PackFlag& flag) { \
+        if(v __VA_ARGS__) { \
+            return encode(*v, flag); \
+        } else { \
+            /*//TODO null*/ \
+        } \
+        return true; \
+    }
+
+    XX_ENCODE(std::shared_ptr);
+    XX_ENCODE(std::unique_ptr);
+    XX_ENCODE(std::weak_ptr, && v.lock());
+#undef XX_ENCODE
+
     std::string getValue() { return m_buffer.GetString();}
 private:
     rapidjson::StringBuffer m_buffer;

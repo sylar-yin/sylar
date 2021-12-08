@@ -6,6 +6,8 @@
 #include "sylar/pack/yaml_encoder.h"
 #include "sylar/pack/rapidjson_encoder.h"
 #include "sylar/pack/rapidjson_decoder.h"
+#include <gperftools/profiler.h>
+#include <gperftools/heap-profiler.h>
 
 struct Person {
     int id;
@@ -224,9 +226,24 @@ void test_rapid() {
     std::cout << "test_rapid: " << sylar::pack::EncodeToRapidJsonString(m2, 0) << std::endl;
 }
 
+void test_shared() {
+    std::shared_ptr<Men> m = std::make_shared<Men>();
+    std::shared_ptr<Men> m2;
+    m->id = 101;
+    m->name = "哈哈";
+
+    std::string str = sylar::pack::EncodeToRapidJsonString(m, 0);
+    std::cout << "test_shared_rapid: " << str << std::endl;
+
+    sylar::pack::DecodeFromRapidJsonString(str, m2, 0);
+    std::cout << "test_shared_rapid: " << sylar::pack::EncodeToRapidJsonString(m2, 0) << std::endl;
+}
+
 int main(int argc, char** argv) {
     //std::cout << SYLAR_STRING(SYLAR_PACK_OUT(A, A("id", id, "_name", name), O(sex,age))) << std::endl;
     //std::cout << SYLAR_STRING(SYLAR_PACK(A("id", id, "_name", name), O(sex,age))) << std::endl;
+    //ProfilerStart("test.prof");
+    HeapProfilerStart("test.heap");
     test();
     std::cout << sizeof(long double) << std::endl;
     std::cout << sizeof(long long) << std::endl;
@@ -247,5 +264,8 @@ int main(int argc, char** argv) {
     test_map();
     test_map2();
     test_rapid();
+    test_shared();
+    //ProfilerStop();
+    HeapProfilerStop();
     return 0;
 }

@@ -1,6 +1,8 @@
 #include "http_server.h"
 #include "sylar/log.h"
 #include "sylar/http/servlets/config_servlet.h"
+#include "sylar/http/servlets/metrics_servlet.h"
+#include "sylar/http/servlets/profiler_servlet.h"
 #include "sylar/http/servlets/status_servlet.h"
 
 namespace sylar {
@@ -19,6 +21,8 @@ HttpServer::HttpServer(bool keepalive
     m_type = "http";
     m_dispatch->addServlet("/_/status", std::make_shared<StatusServlet>());
     m_dispatch->addServlet("/_/config", std::make_shared<ConfigServlet>());
+    m_dispatch->addServlet("/metrics", std::make_shared<MetricsServlet>());
+    m_dispatch->addGlobServlet("/profiler/*", std::make_shared<ProfilerServlet>());
 }
 
 void HttpServer::setName(const std::string& v) {

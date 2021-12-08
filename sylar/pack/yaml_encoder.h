@@ -68,8 +68,8 @@ public:
     }
 
 #define XX_ENCODE(arr) \
-    template<class T> \
-    bool encode(const std::string& name, const arr<T>& v, const PackFlag& flag) { \
+    template<class T, class... Args> \
+    bool encode(const std::string& name, const arr<T, Args...>& v, const PackFlag& flag) { \
         auto cur = m_cur; \
         auto mm = cur[name]; \
         for(auto& i : v) { \
@@ -80,8 +80,8 @@ public:
         m_cur.reset(cur); \
         return true; \
     } \
-    template<class T> \
-    bool encode(const arr<T>& v, const PackFlag& flag) { \
+    template<class T, class... Args> \
+    bool encode(const arr<T, Args...>& v, const PackFlag& flag) { \
         auto cur = m_cur; \
         for(auto& i : v) { \
             m_cur.reset(); \
@@ -98,8 +98,8 @@ public:
 #undef XX_ENCODE
 
 #define XX_ENCODE(m) \
-    template<class T> \
-    bool encode(const std::string& name, const m<std::string, T>& v, const PackFlag& flag) { \
+    template<class T, class... Args> \
+    bool encode(const std::string& name, const m<std::string, T, Args...>& v, const PackFlag& flag) { \
         auto cur = m_cur; \
         auto mm = cur[name]; \
         for(auto& i : v) { \
@@ -110,8 +110,8 @@ public:
         m_cur.reset(cur); \
         return true; \
     } \
-    template<class T> \
-    bool encode(const m<std::string, T>& v, const PackFlag& flag) { \
+    template<class T, class... Args> \
+    bool encode(const m<std::string, T, Args...>& v, const PackFlag& flag) { \
         auto cur = m_cur; \
         for(auto& i : v) { \
             m_cur.reset(); \
@@ -123,6 +123,31 @@ public:
     }
     XX_ENCODE(std::map);
     XX_ENCODE(std::unordered_map);
+#undef XX_ENCODE
+
+#define XX_ENCODE(type, ...) \
+    template<class T, class... Args> \
+    bool encode(const std::string& name, const type<T, Args...>& v, const PackFlag& flag) { \
+        if(v __VA_ARGS__) { \
+            return encode(name, *v, flag); \
+        } else { \
+            /*//TODO null*/ \
+        } \
+        return true; \
+    } \
+    template<class T, class... Args> \
+    bool encode(const type<T, Args...>& v, const PackFlag& flag) { \
+        if(v __VA_ARGS__) { \
+            return encode(*v, flag); \
+        } else { \
+            /*//TODO null*/ \
+        } \
+        return true; \
+    }
+
+    XX_ENCODE(std::shared_ptr);
+    XX_ENCODE(std::unique_ptr);
+    XX_ENCODE(std::weak_ptr, && v.lock());
 #undef XX_ENCODE
 
     const YAML::Node& getValue() const { return m_value;}

@@ -10,7 +10,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include (cmake/utils.cmake)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
-set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O0 -fPIC -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations -Wno-class-memaccess")
+set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O0 -fPIC -ggdb -std=c++14 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations -Wno-class-memaccess")
 set(CMAKE_C_FLAGS "$ENV{CXXFLAGS} -rdynamic -O0 -fPIC -ggdb -std=c11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated-declarations")
 #set(CMAKE_CXX_FLAGS "-static ${CMAKE_CXX_FLAGS}")
 
@@ -97,6 +97,8 @@ set(LIB_SRC
     sylar/http/http_server.cc
     sylar/http/servlet.cc
     sylar/http/servlets/config_servlet.cc
+    sylar/http/servlets/metrics_servlet.cc
+    sylar/http/servlets/profiler_servlet.cc
     sylar/http/servlets/status_servlet.cc
     sylar/http/session_data.cc
     sylar/http/ws_connection.cc
@@ -203,6 +205,9 @@ set(LIBS
         snappy
         rdkafka
         rdkafka++
+        prometheus-cpp-core
+        profiler
+        tcmalloc_and_profiler
         )
 sylar_add_executable(echo_server "examples/echo_server.cc" sylar "${LIBS}")
 if(BUILD_TEST)
