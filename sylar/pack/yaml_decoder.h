@@ -118,8 +118,8 @@ public:
     }
 
 #define XX_DECODE(arr, fun) \
-    template<class T> \
-    bool decode(const std::string& name, arr<T>& v, const PackFlag& flag) { \
+    template<class T, class... Args> \
+    bool decode(const std::string& name, arr<T, Args...>& v, const PackFlag& flag) { \
         v.clear(); \
         auto n = m_cur[name]; \
         if(n.IsNull()) { \
@@ -139,8 +139,8 @@ public:
         } \
         return true; \
     } \
-    template<class T> \
-    bool decode(arr<T>& v, const PackFlag& flag) { \
+    template<class T, class... Args> \
+    bool decode(arr<T, Args...>& v, const PackFlag& flag) { \
         v.clear(); \
         if(m_cur.IsSequence()) { \
             auto cur = m_cur; \
@@ -163,8 +163,8 @@ public:
 #undef XX_DECODE
 
 #define XX_DECODE(m) \
-    template<class T> \
-    bool decode(const std::string& name, m<std::string, T>& v, const PackFlag& flag) { \
+    template<class T, class... Args> \
+    bool decode(const std::string& name, m<std::string, T, Args...>& v, const PackFlag& flag) { \
         v.clear(); \
         auto n = m_cur[name]; \
         if(n.IsNull()) { \
@@ -184,8 +184,8 @@ public:
         } \
         return true; \
     } \
-    template<class T> \
-    bool decode(m<std::string, T>& v, const PackFlag& flag) { \
+    template<class T, class... Args> \
+    bool decode(m<std::string, T, Args...>& v, const PackFlag& flag) { \
         v.clear(); \
         if(m_cur.IsMap()) { \
             auto cur = m_cur; \
@@ -205,6 +205,21 @@ public:
     XX_DECODE(std::unordered_map);
 #undef XX_DECODE
 
+#define XX_DECODE(type, fun) \
+    template<class T, class... Args> \
+    bool decode(const std::string& name, type<T, Args...>& v, const PackFlag& flag) { \
+        v = fun(); \
+        return decode(name, *v, flag); \
+    } \
+    template<class T, class... Args> \
+    bool decode(type<T, Args...>& v, const PackFlag& flag) { \
+        v = fun(); \
+        return decode(*v, flag); \
+    }
+
+    XX_DECODE(std::shared_ptr, std::make_shared<T>);
+    XX_DECODE(std::unique_ptr, std::make_unique<T>);
+#undef XX_DECODE
 
     YAML::Node& getValue() { return m_value;}
 private:
