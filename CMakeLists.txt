@@ -30,6 +30,7 @@ link_directories(/apps/sylar/lib64)
 link_directories(/apps/sylar/tair/lib)
 
 option(BUILD_TEST "ON for complile test" OFF)
+option(ENABLE_PROFILER "ON for enable profiler" OFF)
 
 find_package(Boost REQUIRED)
 if(Boost_FOUND)
@@ -98,7 +99,6 @@ set(LIB_SRC
     sylar/http/servlet.cc
     sylar/http/servlets/config_servlet.cc
     sylar/http/servlets/metrics_servlet.cc
-    sylar/http/servlets/profiler_servlet.cc
     sylar/http/servlets/status_servlet.cc
     sylar/http/session_data.cc
     sylar/http/ws_connection.cc
@@ -144,14 +144,21 @@ set(LIB_SRC
     sylar/util/crypto_util.cc
     sylar/util/json_util.cc
     sylar/util/hash_util.cc
-    sylar/util/pb_dynamic_message.cc
     sylar/util/parquet.cc
+    sylar/util/pb_dynamic_message.cc
+    sylar/util/prometheus.cc
     sylar/util/trace.cc
     sylar/util/tracker.cc
     sylar/worker.cc
     sylar/application.cc
     sylar/zk_client.cc
     )
+
+if(ENABLE_PROFILER)
+    set(LIB_SRC ${LIB_SRC} sylar/http/servlets/profiler_servlet.cc)
+    set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-DSYLAR_ENABLE_PROFILER")
+    set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} "-DSYLAR_ENABLE_PROFILER")
+endif()
 
 ragelmaker(sylar/http/http11_parser.rl LIB_SRC ${CMAKE_CURRENT_SOURCE_DIR}/sylar/http)
 ragelmaker(sylar/http/httpclient_parser.rl LIB_SRC ${CMAKE_CURRENT_SOURCE_DIR}/sylar/http)
@@ -206,9 +213,12 @@ set(LIBS
         rdkafka
         rdkafka++
         prometheus-cpp-core
-        profiler
-        tcmalloc_and_profiler
         )
+if(ENABLE_PROFILER) 
+    set(LIBS ${LIBS} profiler)
+    set(LIBS ${LIBS} tcmalloc_and_profiler)
+endif()
+
 sylar_add_executable(echo_server "examples/echo_server.cc" sylar "${LIBS}")
 if(BUILD_TEST)
 sylar_add_executable(test_util "tests/test_util.cc" sylar "${LIBS}")
@@ -303,6 +313,7 @@ set(PARQUET_LIB
 sylar_add_executable(test_parquet "${PARQUET_TEST}" sylar "${PARQUET_LIB}")
 
 sylar_add_executable(test_config "tests/test_config.cc" sylar "${LIBS}")
+sylar_add_executable(test_prometheus "tests/test_prometheus.cc" sylar "${LIBS}")
 
 #set(ORM_SRCS
 #    sylar/orm/table.cc

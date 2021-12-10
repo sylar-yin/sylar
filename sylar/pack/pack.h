@@ -2,6 +2,8 @@
 #define __SYLAR_PACK_PACK_H__
 
 #include "macro.h"
+#include <stdint.h>
+#include <type_traits>
 
 namespace sylar {
 namespace pack {
