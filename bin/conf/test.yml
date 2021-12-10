@@ -6,3 +6,11 @@ tconf:
           name: sylar-200
         - id: 300
           name: sylar-300
+prometheus_client:
+    interval: 3
+    host: 127.0.0.1
+    port: 1221
+    labels:
+        instance: localhost
+        env: dev
+    job: sylar

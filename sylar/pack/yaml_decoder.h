@@ -73,6 +73,16 @@ public:
         return true;
     }
 
+    bool decode(std::string& v, const PackFlag& flag) {
+        if(m_cur.IsNull()) {
+            return true;
+        }
+        if(m_cur.IsScalar()) {
+            v = m_cur.Scalar();
+        }
+        return true;
+    }
+
     template<class T>
     SYLAR_IS_PACK(T, bool) decode(const std::string& name, T& v, const PackFlag& flag) {
         auto n = m_cur[name];

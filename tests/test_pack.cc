@@ -263,7 +263,7 @@ int main(int argc, char** argv) {
     //std::cout << SYLAR_STRING(SYLAR_PACK_OUT(A, A("id", id, "_name", name), O(sex,age))) << std::endl;
     //std::cout << SYLAR_STRING(SYLAR_PACK(A("id", id, "_name", name), O(sex,age))) << std::endl;
     //ProfilerStart("test.prof");
-    HeapProfilerStart("test.heap");
+    //HeapProfilerStart("test.heap");
     test();
     std::cout << sizeof(long double) << std::endl;
     std::cout << sizeof(long long) << std::endl;
@@ -287,6 +287,6 @@ int main(int argc, char** argv) {
     test_shared();
     test_bytearray();
     //ProfilerStop();
-    HeapProfilerStop();
+    //HeapProfilerStop();
     return 0;
 }

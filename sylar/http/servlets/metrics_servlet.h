@@ -2,8 +2,7 @@
 #define __SYLAR_HTTP_SERVLETS_METRICS_SERVLET_H__
 
 #include "sylar/http/servlet.h"
-#include <prometheus/registry.h>
-#include <prometheus/counter.h>
+#include "sylar/util/prometheus.h"
 
 namespace sylar {
 namespace http {
@@ -16,7 +15,7 @@ public:
                    , sylar::SocketStream::ptr session) override;
 };
 
-std::shared_ptr<prometheus::Registry> GetPrometheusRegistry();
+PrometheusRegistry::ptr GetPrometheusRegistry();
 
 }
 }

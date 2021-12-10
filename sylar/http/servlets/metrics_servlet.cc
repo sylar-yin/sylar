@@ -15,15 +15,12 @@ int32_t MetricsServlet::handle(sylar::http::HttpRequest::ptr request
     //auto& counter = prometheus::BuildCounter().Name("sylar_test_counter")
     //                    .Help("Number of counter").Register(*registry);
     //counter.Add({{"url", request->getPath()}}).Increment();
-    prometheus::TextSerializer ts;
-    std::stringstream ss;
-    ts.Serialize(ss, registry->Collect());
-    response->setBody(ss.str());
+    response->setBody(registry->toString());
     return 0;
 }
 
-std::shared_ptr<prometheus::Registry> GetPrometheusRegistry() {
-    static std::shared_ptr<prometheus::Registry> s_instance = std::make_shared<prometheus::Registry>();
+PrometheusRegistry::ptr GetPrometheusRegistry() {
+    static PrometheusRegistry::ptr s_instance = std::make_shared<PrometheusRegistry>();
     return s_instance;
 }
 
