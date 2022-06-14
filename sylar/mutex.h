@@ -453,7 +453,8 @@ public:
      * @brief 上读锁
      */
     void rdlock() {
-        m_lock.lock_read();
+        m_lock.lock_shared();
+        m_isRead = true;
     }
 
     /**
@@ -461,17 +462,23 @@ public:
      */
     void wrlock() {
         m_lock.lock();
+        m_isRead = false;
     }
 
     /**
      * @brief 解锁
      */
     void unlock() {
-        m_lock.unlock();
+        if(m_isRead) {
+            m_lock.unlock_shared();
+        } else {
+            m_lock.unlock();
+        }
     }
 private:
     /// 读写锁
     tbb::spin_rw_mutex m_lock;
+    bool m_isRead = false;
 };
 
 

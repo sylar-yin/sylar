@@ -8,8 +8,11 @@
 #include <string>
 #include "sylar/mutex.h"
 #include "sylar/iomanager.h"
-#include "sylar/zk_client.h"
 #include "sylar/util.h"
+
+#if WITH_ZK_CLIENT
+#include "sylar/zk_client.h"
+#endif
 
 namespace sylar {
 
@@ -99,6 +102,7 @@ protected:
     std::map<std::string, std::string> m_params;
 };
 
+#if WITH_ZK_CLIENT
 class ZKServiceDiscovery : public IServiceDiscovery
                           ,public std::enable_shared_from_this<ZKServiceDiscovery> {
 public:
@@ -131,6 +135,7 @@ private:
     sylar::Timer::ptr m_timer;
     bool m_isOnTimer = false;
 };
+#endif
 
 class RedisServiceDiscovery : public IServiceDiscovery
                              ,public std::enable_shared_from_this<RedisServiceDiscovery> {

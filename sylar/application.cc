@@ -35,10 +35,12 @@ static sylar::ConfigVar<std::string>::ptr g_server_pid_file =
             ,std::string("sylar.pid")
             , "server pid file");
 
+#if WITH_ZK_CLIENT
 static sylar::ConfigVar<std::string>::ptr g_service_discovery_zk =
     sylar::Config::Lookup("service_discovery.zk"
             ,std::string("")
             , "service discovery zookeeper");
+#endif
 
 static sylar::ConfigVar<std::string>::ptr g_service_discovery_redis =
     sylar::Config::Lookup("service_discovery.redis.name"
@@ -178,7 +180,9 @@ int Application::run_fiber() {
     FoxThreadMgr::GetInstance()->init();
     FoxThreadMgr::GetInstance()->start();
     RedisMgr::GetInstance();
+#if WITH_TAIR
     TairMgr::GetInstance();
+#endif
     DnsMgr::GetInstance()->init();
     DnsMgr::GetInstance()->start();
 
@@ -314,11 +318,14 @@ int Application::run_fiber() {
         svrs.push_back(server);
     }
 
+#if WITH_ZK_CLIENT
     if(!g_service_discovery_zk->getValue().empty()) {
         m_serviceDiscovery = std::make_shared<ZKServiceDiscovery>(g_service_discovery_zk->getValue());
         m_rockSDLoadBalance = std::make_shared<RockSDLoadBalance>(m_serviceDiscovery);
         m_grpcSDLoadBalance = std::make_shared<grpc::GrpcSDLoadBalance>(m_serviceDiscovery);
-    } else if(!g_service_discovery_redis->getValue().empty()) {
+    }
+#endif
+    if(!g_service_discovery_redis->getValue().empty()) {
         m_serviceDiscovery = std::make_shared<RedisServiceDiscovery>(g_service_discovery_redis->getValue());
         m_rockSDLoadBalance = std::make_shared<RockSDLoadBalance>(m_serviceDiscovery);
         m_grpcSDLoadBalance = std::make_shared<grpc::GrpcSDLoadBalance>(m_serviceDiscovery);
@@ -375,14 +382,19 @@ void Application::initEnv() {
     FoxThreadMgr::GetInstance()->init();
     FoxThreadMgr::GetInstance()->start();
     RedisMgr::GetInstance();
+#if WITH_TAIR
     TairMgr::GetInstance();
+#endif
     DnsMgr::GetInstance()->init();
     DnsMgr::GetInstance()->start();
 
+#if WITH_ZK_CLIENT
     if(!g_service_discovery_zk->getValue().empty()) {
         m_serviceDiscovery = std::make_shared<ZKServiceDiscovery>(g_service_discovery_zk->getValue());
         m_rockSDLoadBalance = std::make_shared<RockSDLoadBalance>(m_serviceDiscovery);
-    } else if(!g_service_discovery_redis->getValue().empty()) {
+    }
+#endif
+    if(!g_service_discovery_redis->getValue().empty()) {
         m_serviceDiscovery = std::make_shared<RedisServiceDiscovery>(g_service_discovery_redis->getValue());
         m_rockSDLoadBalance = std::make_shared<RockSDLoadBalance>(m_serviceDiscovery);
     }

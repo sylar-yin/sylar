@@ -30,6 +30,10 @@ link_directories(/apps/sylar/lib64)
 link_directories(/apps/sylar/tair/lib)
 
 option(BUILD_TEST "ON for complile test" OFF)
+option(WITH_ZK_CLIENT "ON for complile with zkclient" OFF)
+option(WITH_KAFKA "ON for complile with kafkaclient" ON)
+option(WITH_TAIR "ON for complile with tair_client" OFF)
+option(WITH_SQLITE3 "ON for complile with sqlite3" OFF)
 
 find_package(Boost REQUIRED)
 if(Boost_FOUND)
@@ -63,8 +67,6 @@ set(LIB_SRC
     sylar/db/fox_thread.cc
     sylar/db/mysql.cc
     sylar/db/redis.cc
-    sylar/db/tair.cc
-    sylar/db/sqlite3.cc
     sylar/ds/bitmap.cc
     sylar/ds/roaring_bitmap.cc
     sylar/ds/roaring.c
@@ -114,7 +116,6 @@ set(LIB_SRC
     sylar/http2/huffman.cc
     sylar/hook.cc
     sylar/iomanager.cc
-    sylar/kafka_client.cc
     sylar/library.cc
     sylar/log.cc
     sylar/module.cc
@@ -145,8 +146,27 @@ set(LIB_SRC
     sylar/util/tracker.cc
     sylar/worker.cc
     sylar/application.cc
-    sylar/zk_client.cc
     )
+
+if(WITH_ZK_CLIENT)
+    list(APPEND LIB_SRC "sylar/zk_client.cc")
+    add_definitions(-DWITH_ZK_CLIENT)
+endif()
+
+if(WITH_KAFKA)
+    list(APPEND LIB_SRC "sylar/kafka_client.cc")
+    add_definitions(-DWITH_KAFKA)
+endif()
+
+if(WITH_TAIR)
+    list(APPEND LIB_SRC "sylar/tair.cc")
+    add_definitions(-DWITH_TAIR)
+endif()
+
+if(WITH_SQLITE3)
+    list(APPEND LIB_SRC "sylar/sqlite3.cc")
+    add_definitions(-DWITH_SQLITE3)
+endif()
 
 ragelmaker(sylar/http/http11_parser.rl LIB_SRC ${CMAKE_CURRENT_SOURCE_DIR}/sylar/http)
 ragelmaker(sylar/http/httpclient_parser.rl LIB_SRC ${CMAKE_CURRENT_SOURCE_DIR}/sylar/http)
@@ -189,16 +209,32 @@ set(LIBS
         hiredis
         hiredis_cluster
         mysqlclient_r
-        zookeeper_mt
-        sqlite3
         tinyxml2
         jemalloc
-        tairclientapi
-        tbsys
-        snappy
-        rdkafka
-        rdkafka++
         )
+
+    #snappy
+
+if(WITH_ZK_CLIENT)
+    list(APPEND LIBS "zookeeper_mt")
+endif()
+
+if(WITH_KAFKA)
+    list(APPEND LIBS "rdkafka rdkafka++")
+    add_definitions(-DWITH_KAFKA)
+endif()
+
+if(WITH_TAIR)
+    list(APPEND LIBS "tairclientapi tbsys")
+    add_definitions(-DWITH_TAIR)
+endif()
+
+if(WITH_SQLITE3)
+    list(APPEND LIBS "sqlite3")
+    add_definitions(-DWITH_SQLITE3)
+endif()
+
+
 sylar_add_executable(echo_server "examples/echo_server.cc" sylar "${LIBS}")
 if(BUILD_TEST)
 sylar_add_executable(test_util "tests/test_util.cc" sylar "${LIBS}")

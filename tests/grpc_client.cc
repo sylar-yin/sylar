@@ -201,7 +201,7 @@ void testStreamBidi2(sylar::grpc::GrpcConnection::ptr conn) {
 }
 
 void run() {
-    sylar::Address::ptr addr = sylar::Address::LookupAnyIPAddress("10.104.26.23:8099");
+    sylar::Address::ptr addr = sylar::Address::LookupAnyIPAddress("127.0.0.1:8092");
     sylar::grpc::GrpcConnection::ptr conn(new sylar::grpc::GrpcConnection);
 
     if(!conn->connect(addr, false)) {

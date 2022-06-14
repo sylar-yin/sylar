@@ -171,6 +171,7 @@ std::string IServiceDiscovery::toString() {
     return ss.str();
 }
 
+#if WITH_ZK_CLIENT
 ZKServiceDiscovery::ZKServiceDiscovery(const std::string& hosts)
     :m_hosts(hosts) {
 }
@@ -475,6 +476,7 @@ void ZKServiceDiscovery::onWatch(int type, int stat, const std::string& path, ZK
         << " type=" << type << " stat=" << stat
         << " path=" << path << " client=" << client;
 }
+#endif
 
 RedisServiceDiscovery::RedisServiceDiscovery(const std::string& name)
     :m_name(name) {

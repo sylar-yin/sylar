@@ -22,7 +22,9 @@
 #include "file_manager.h"
 #include "hook.h"
 #include "iomanager.h"
+#if WITH_KAFKA
 #include "kafka_client.h"
+#endif
 #include "library.h"
 #include "log.h"
 #include "macro.h"
@@ -43,7 +45,9 @@
 
 #include "db/db.h"
 #include "db/mysql.h"
+#if WITH_SQLITE3
 #include "db/sqlite3.h"
+#endif
 #include "db/redis.h"
 #include "db/tair.h"
 
