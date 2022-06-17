@@ -172,7 +172,7 @@ struct ScopeTest {
 };
 
 AsyncSocketStream::Ctx::ptr Http2SocketStream::doRecv() {
-    ScopeTest xxx;
+    //ScopeTest xxx;
     //SYLAR_LOG_INFO(g_logger) << "=========== DoRecv ===========";
     auto frame = m_codec->parseFrom(shared_from_this());
     if(!frame) {

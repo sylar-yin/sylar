@@ -34,6 +34,10 @@ public:
     float getWeight(float rate = 1.0f);
 
     std::string toString();
+
+    void add(const HolderStats& hs);
+
+    uint64_t getWeight(const HolderStats& hs, uint64_t join_time);
 private:
     uint32_t m_usedTime = 0;
     uint32_t m_total = 0;
@@ -50,7 +54,7 @@ public:
 
     float getWeight(const uint32_t& now = time(0));
 
-    HolderStats getTotal();
+    HolderStats getTotal() const;
 private:
     void init(const uint32_t& now);
 private:
@@ -70,6 +74,7 @@ public:
     uint64_t getId() const { return m_id;}
 
     HolderStats& get(const uint32_t& now = time(0));
+    const HolderStatsSet& getStatsSet() const { return m_stats;}
 
     template<class T>
     std::shared_ptr<T> getStreamAs() {
@@ -83,16 +88,20 @@ public:
     void close();
 
     std::string toString();
+
+    uint64_t getDiscoveryTime() const { return m_discoveryTime;}
 protected:
     uint64_t m_id = 0;
     SocketStream::ptr m_stream;
-    int32_t m_weight = 0;
     HolderStatsSet m_stats;
+    int32_t m_weight = 0;
+    uint64_t m_discoveryTime = time(0);
 };
 
 class ILoadBalance {
 public:
     enum Type {
+        UNKNOW = 0,
         ROUNDROBIN = 1,
         WEIGHT = 2,
         FAIR = 3
@@ -141,49 +150,37 @@ protected:
     std::vector<LoadBalanceItem::ptr> m_items;
 };
 
-//class FairLoadBalance;
-class FairLoadBalanceItem : public LoadBalanceItem {
-//friend class FairLoadBalance;
-public:
-    typedef std::shared_ptr<FairLoadBalanceItem> ptr;
-
-    void clear();
-    virtual int32_t getWeight();
-};
+////class FairLoadBalance;
+//class FairLoadBalanceItem : public LoadBalanceItem {
+////friend class FairLoadBalance;
+//public:
+//    typedef std::shared_ptr<FairLoadBalanceItem> ptr;
+//
+//    void clear();
+//    virtual int32_t getWeight();
+//};
 
 class WeightLoadBalance : public LoadBalance {
 public:
     typedef std::shared_ptr<WeightLoadBalance> ptr;
     virtual LoadBalanceItem::ptr get(uint64_t v = -1) override;
-
-    FairLoadBalanceItem::ptr getAsFair();
 protected:
     virtual void initNolock();
 private:
     int32_t getIdx(uint64_t v = -1);
 protected:
     std::vector<LoadBalanceItem::ptr> m_items;
-private:
     std::vector<int64_t> m_weights;
 };
 
 
 
-//class FairLoadBalance : public LoadBalance {
-//public:
-//    typedef std::shared_ptr<FairLoadBalance> ptr;
-//    virtual LoadBalanceItem::ptr get() override;
-//    FairLoadBalanceItem::ptr getAsFair();
-//
-//protected:
-//    virtual void initNolock();
-//private:
-//    int32_t getIdx();
-//protected:
-//    std::vector<LoadBalanceItem::ptr> m_items;
-//private:
-//    std::vector<int32_t> m_weights;
-//};
+class FairLoadBalance : public WeightLoadBalance {
+public:
+    typedef std::shared_ptr<FairLoadBalance> ptr;
+protected:
+    virtual void initNolock();
+};
 
 class SDLoadBalance {
 public:
@@ -238,7 +235,7 @@ protected:
     //domain -> [ service -> [ LoadBalance ] ]
     std::unordered_map<std::string, std::unordered_map<std::string, LoadBalance::ptr> > m_datas;
     std::unordered_map<std::string, std::unordered_map<std::string, ILoadBalance::Type> > m_types;
-    ILoadBalance::Type m_defaultType = ILoadBalance::FAIR;
+    //ILoadBalance::Type m_defaultType = ILoadBalance::FAIR;
     stream_callback m_cb;
 
     sylar::Timer::ptr m_timer;

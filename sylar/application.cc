@@ -20,6 +20,7 @@
 #include "sylar/dns.h"
 #include "sylar/http2/http2_server.h"
 #include "sylar/grpc/grpc_server.h"
+#include "sylar/pack/json_encoder.h"
 
 namespace sylar {
 
@@ -46,6 +47,14 @@ static sylar::ConfigVar<std::string>::ptr g_service_discovery_redis =
     sylar::Config::Lookup("service_discovery.redis.name"
             ,std::string("")
             , "service discovery redis name");
+
+static sylar::ConfigVar<std::string>::ptr g_service_discovery_consul =
+    sylar::Config::Lookup("service_discovery.consul"
+            ,std::string("")
+            , "service discovery consul");
+
+
+SYLAR_DEFINE_CONFIG(sylar::ConsulRegisterInfo::ptr, g_consul_register_info, "consul.register_info", nullptr, "consul register info");
 
 static sylar::ConfigVar<std::vector<TcpServerConf> >::ptr g_servers_conf
     = sylar::Config::Lookup("servers", std::vector<TcpServerConf>(), "http server config");
@@ -327,6 +336,24 @@ int Application::run_fiber() {
 #endif
     if(!g_service_discovery_redis->getValue().empty()) {
         m_serviceDiscovery = std::make_shared<RedisServiceDiscovery>(g_service_discovery_redis->getValue());
+        m_rockSDLoadBalance = std::make_shared<RockSDLoadBalance>(m_serviceDiscovery);
+        m_grpcSDLoadBalance = std::make_shared<grpc::GrpcSDLoadBalance>(m_serviceDiscovery);
+    }
+    if(!g_service_discovery_consul->getValue().empty()) {
+        if(!g_consul_register_info->getValue()) {
+            SYLAR_LOG_ERROR(g_logger) << "consul info invalid " << g_consul_register_info->getName();
+            return false;
+        }
+        auto regInfo = g_consul_register_info->getValue();
+        regInfo->id = sylar::GetConsulUniqID(regInfo->port);
+        regInfo->address = sylar::GetIPv4();
+        regInfo->check->http = "http://" + sylar::GetIPv4() + ":" + std::to_string(regInfo->port)
+            + regInfo->check->http;
+        SYLAR_LOG_INFO(g_logger) << sylar::pack::EncodeToJsonString(regInfo, 0);
+        sylar::ConsulClient::ptr client = std::make_shared<sylar::ConsulClient>();
+        client->setUrl(g_service_discovery_consul->getValue());
+        m_serviceDiscovery = std::make_shared<ConsulServiceDiscovery>(g_service_discovery_consul->getValue(),
+                client, regInfo);
         m_rockSDLoadBalance = std::make_shared<RockSDLoadBalance>(m_serviceDiscovery);
         m_grpcSDLoadBalance = std::make_shared<grpc::GrpcSDLoadBalance>(m_serviceDiscovery);
     }

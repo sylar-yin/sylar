@@ -152,6 +152,7 @@ set(LIB_SRC
     sylar/util/tracker.cc
     sylar/worker.cc
     sylar/application.cc
+    sylar/consul_client.cc
     )
 
 if(WITH_ZK_CLIENT)
@@ -225,8 +226,6 @@ set(LIBS
         mysqlclient_r
         tinyxml2
         jemalloc
-        tairclientapi
-        tbsys
         snappy
         rdkafka
         rdkafka++
@@ -419,6 +418,8 @@ set(LIB_TEST_PACK
     )
 sylar_add_executable(test_pack "${SRC_TEST_PACK}" sylar "${LIB_TEST_PACK}")
 set_target_properties(test_pack PROPERTIES OUTPUT_NAME "test_pack")
+
+sylar_add_executable(test_consul "tests/test_consul.cc" sylar "${LIB_TEST_PACK}")
 
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/orm_out)
 #set(OLIBS ${LIBS} orm_data)

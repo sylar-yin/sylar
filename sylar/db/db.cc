@@ -1,4 +1,5 @@
 #include "db.h"
+#include <stdexcept>
 
 namespace sylar {
 

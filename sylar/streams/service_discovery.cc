@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include "sylar/pack/json_encoder.h"
 
 namespace sylar {
 
@@ -14,6 +15,8 @@ static sylar::ConfigVar<uint32_t>::ptr g_service_discover_redis_ttl =
     sylar::Config::Lookup("service_discovery.redis.ttl", (uint32_t)10, "service discovery redis ttl");
 static sylar::ConfigVar<uint32_t>::ptr g_service_discover_redis_check =
     sylar::Config::Lookup("service_discovery.redis.check_interval", (uint32_t)3, "service discovery redis check interval");
+static sylar::ConfigVar<uint32_t>::ptr g_service_discover_consul_check =
+    sylar::Config::Lookup("service_discovery.consul.check_interval", (uint32_t)15, "service discovery consul check interval");
 
 static std::string MapToStr(const std::map<std::string, std::string>& m) {
     std::stringstream ss;
@@ -613,6 +616,87 @@ void RedisServiceDiscovery::stop() {
         m_timer->cancel();
         m_timer = nullptr;
     }
+}
+
+ConsulServiceDiscovery::ConsulServiceDiscovery(const std::string& name, sylar::ConsulClient::ptr client, sylar::ConsulRegisterInfo::ptr regInfo)
+    :m_name(name)
+    ,m_client(client)
+    ,m_regInfo(regInfo) {
+}
+
+void ConsulServiceDiscovery::start() {
+    queryInfo();
+
+    if(!m_timer) {
+        m_timer = sylar::IOManager::GetThis()->addTimer(g_service_discover_consul_check->getValue() * 1000, [this](){
+            if(m_startRegister) {
+                registerSelf();
+            }
+            queryInfo();
+        }, true);
+    }
+}
+
+void ConsulServiceDiscovery::stop() {
+    if(m_timer) {
+        m_timer->cancel();
+        m_timer = nullptr;
+    }
+}
+
+bool ConsulServiceDiscovery::doRegister() {
+    m_startRegister = true;
+    return registerSelf();
+}
+
+bool ConsulServiceDiscovery::doQuery() {
+    return queryInfo();
+}
+
+bool ConsulServiceDiscovery::registerSelf() {
+    bool v = m_client->serviceRegister(m_regInfo);
+    if(!v) {
+        SYLAR_LOG_ERROR(g_logger) << "consul register fail, "
+            << sylar::pack::EncodeToJsonString(m_regInfo, 0);
+    }
+    return v;
+}
+
+bool ConsulServiceDiscovery::queryInfo() {
+    sylar::RWMutex::ReadLock lock(m_mutex);
+    auto infos = m_queryInfos;
+    lock.unlock();
+
+    for(auto& i : infos) {
+        std::map<std::string, std::list<ConsulServiceInfo::ptr> > cinfos;
+        if(!m_client->serviceQuery(i.second, cinfos)) {
+            SYLAR_LOG_ERROR(g_logger) << "consul query service fail, " << sylar::Join(i.second.begin(), i.second.end(), ",");
+            return false;
+        }
+        std::unordered_map<uint64_t, ServiceItemInfo::ptr> sinfos;
+        for(auto& it : cinfos) {
+            for(auto& v : it.second) {
+                auto info = ServiceItemInfo::Create(v->ip + ":" + std::to_string(v->port),
+                        sylar::MapJoin(v->tags.begin(), v->tags.end()));
+                if(!info) {
+                    SYLAR_LOG_ERROR(g_logger) << "invalid data format " << it.first
+                        << " : " << sylar::pack::EncodeToJsonString(v, 0);
+                    continue;
+                }
+                sinfos[info->getId()] = info;
+            }
+            auto new_vals = sinfos;
+            sylar::RWMutex::WriteLock lock(m_mutex);
+            m_datas[i.first][it.first].swap(sinfos);
+            auto cbs = m_cbs;
+            lock.unlock();
+
+            for(auto& cb : cbs) {
+                cb(i.first, it.first, sinfos, new_vals);
+            }
+        }
+    }
+    return true;
 }
 
 }

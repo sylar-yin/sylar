@@ -29,7 +29,12 @@ static SocketStream::ptr create_grpc_stream(const std::string& domain, const std
         SYLAR_LOG_ERROR(g_logger) << "invalid service info: " << info->toString();
         return nullptr;
     }
-    addr->setPort(info->getPort());
+    auto port = info->getDataAs<uint16_t>("gRPC.port");
+    if(port) {
+        addr->setPort(port);
+    } else {
+        addr->setPort(info->getPort());
+    }
     GrpcConnection::ptr conn = std::make_shared<GrpcConnection>();
 
     sylar::WorkerMgr::GetInstance()->schedule("service_io", [conn, addr, domain, service](){

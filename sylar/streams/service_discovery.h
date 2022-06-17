@@ -14,6 +14,8 @@
 #include "sylar/zk_client.h"
 #endif
 
+#include "sylar/consul_client.h"
+
 namespace sylar {
 
 class ServiceItemInfo {
@@ -35,6 +37,7 @@ public:
     T getDataAs(const std::string& key, const T& def = T()) const {
         return sylar::GetParamValue(m_datas, key, def);
     }
+    void setData(const std::map<std::string, std::string>& v) { m_datas = v;}
 private:
     uint64_t m_id;
     uint16_t m_port;
@@ -155,6 +158,28 @@ private:
     std::string m_name;
     bool m_startRegister = false;
     sylar::Timer::ptr m_timer;
+};
+
+class ConsulServiceDiscovery : public IServiceDiscovery
+                             ,public std::enable_shared_from_this<ConsulServiceDiscovery> {
+public:
+    typedef std::shared_ptr<ConsulServiceDiscovery> ptr;
+    ConsulServiceDiscovery(const std::string& name, sylar::ConsulClient::ptr client, sylar::ConsulRegisterInfo::ptr regInfo);
+
+    virtual void start();
+    virtual void stop();
+
+    virtual bool doRegister();
+    virtual bool doQuery();
+private:
+    bool registerSelf();
+    bool queryInfo();
+private:
+    std::string m_name;
+    bool m_startRegister = false;
+    sylar::Timer::ptr m_timer;
+    sylar::ConsulClient::ptr m_client;
+    sylar::ConsulRegisterInfo::ptr m_regInfo;
 };
 
 }

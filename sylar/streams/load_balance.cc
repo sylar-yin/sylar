@@ -8,7 +8,7 @@ namespace sylar {
 
 static sylar::Logger::ptr g_logger = SYLAR_LOG_NAME("system");
 
-HolderStats HolderStatsSet::getTotal() {
+HolderStats HolderStatsSet::getTotal() const {
     HolderStats rt;
     for(auto& i : m_stats) {
 #define XX(f) rt.f += i.f
@@ -55,7 +55,8 @@ bool LoadBalanceItem::isValid() {
 std::string LoadBalanceItem::toString() {
     std::stringstream ss;
     ss << "[Item id=" << m_id
-       << " weight=" << getWeight();
+       << " weight=" << getWeight()
+       << " discovery_time=" << sylar::Time2Str(m_discoveryTime);
     if(!m_stream) {
         ss << " stream=null";
     } else {
@@ -175,13 +176,13 @@ LoadBalanceItem::ptr RoundRobinLoadBalance::get(uint64_t v) {
     return nullptr;
 }
 
-FairLoadBalanceItem::ptr WeightLoadBalance::getAsFair() {
-    auto item = get();
-    if(item) {
-        return std::static_pointer_cast<FairLoadBalanceItem>(item);
-    }
-    return nullptr;
-}
+//FairLoadBalanceItem::ptr WeightLoadBalance::getAsFair() {
+//    auto item = get();
+//    if(item) {
+//        return std::static_pointer_cast<FairLoadBalanceItem>(item);
+//    }
+//    return nullptr;
+//}
 
 LoadBalanceItem::ptr WeightLoadBalance::get(uint64_t v) {
     //checkInit();
@@ -239,6 +240,42 @@ void HolderStats::clear() {
     m_errs = 0;
 }
 
+void HolderStats::add(const HolderStats& hs) {
+    this->m_usedTime += hs.m_usedTime;
+    this->m_total += hs.m_total;
+    this->m_doing += hs.m_doing;
+    this->m_timeouts += hs.m_timeouts;
+    this->m_oks += hs.m_oks;
+    this->m_errs += hs.m_errs;
+}
+
+uint64_t HolderStats::getWeight(const HolderStats& hs, uint64_t join_time) {
+    if(hs.m_total <= 0) {
+        return 100;
+    }
+
+    float all_avg_cost = hs.m_usedTime * 1.0 / hs.m_total;
+    float cost_weight = 1.0;
+    float err_weight = 1.0;
+    float timeout_weight = 1.0;
+    float doing_weight = 1.0;
+
+    float time_weight = 1.0;
+    int64_t time_diff = time(0) - join_time;
+    if(time_diff < 180) {
+        time_weight = std::min(0.1, time_diff / 180.0);
+    }
+
+    if(m_total > 10) {
+        cost_weight = 2 - std::min(1.9, (m_usedTime * 1.0 / m_total) / all_avg_cost);
+        err_weight = 1 - std::min(0.9, m_errs * 5.0 / m_total);
+        timeout_weight = 1 - std::min(0.9, m_timeouts * 2.5 / m_total);
+        doing_weight = 1 - std::min(0.9, m_doing * 1.0 / m_total);
+    }
+
+    return std::min(1, (int)(200 * cost_weight * err_weight * timeout_weight * doing_weight * time_weight));
+}
+
 float HolderStats::getWeight(float rate) {
     //if(m_total == 0) {
     //    return 0.1;
@@ -287,16 +324,44 @@ float HolderStatsSet::getWeight(const uint32_t& now) {
     //return getTotal().getWeight(1.0);
 }
 
-int32_t FairLoadBalanceItem::getWeight() {
-    int32_t v = m_weight * m_stats.getWeight();
-    if(m_stream->isConnected()) {
-        return v > 1 ? v : 1;
-    }
-    return 1;
-}
+//int32_t FairLoadBalanceItem::getWeight() {
+//    int32_t v = m_weight * m_stats.getWeight();
+//    if(m_stream->isConnected()) {
+//        return v > 1 ? v : 1;
+//    }
+//    return 1;
+//}
 
 HolderStats& LoadBalanceItem::get(const uint32_t& now) {
     return m_stats.get(now);
+}
+
+void FairLoadBalance::initNolock() {
+    decltype(m_items) items;
+    for(auto& i : m_datas){
+        if(i.second->isValid()) {
+            items.push_back(i.second);
+        }
+    }
+    items.swap(m_items);
+
+    int64_t total = 0;
+    m_weights.resize(m_items.size());
+
+    HolderStats total_stats;
+    std::vector<HolderStats> stats;
+    stats.resize(m_items.size());
+    for(size_t i = 0; i < m_items.size(); ++i) {
+        stats[i] = m_items[i]->getStatsSet().getTotal();
+        total_stats.add(stats[i]);
+    }
+
+    for(size_t i = 0; i < stats.size(); ++i) {
+        auto w = stats[i].getWeight(total_stats, m_items[i]->getDiscoveryTime());
+        m_items[i]->setWeight(w);
+        total += w;
+        m_weights[i] = total;
+    }
 }
 
 //LoadBalanceItem::ptr FairLoadBalance::get() {
@@ -382,7 +447,7 @@ ILoadBalance::Type SDLoadBalance::getType(const std::string& domain, const std::
     RWMutexType::ReadLock lock(m_mutex);
     auto it = m_types.find(domain);
     if(it == m_types.end()) {
-        return m_defaultType;
+        return ILoadBalance::UNKNOW;
     }
     auto iit = it->second.find(service);
     if(iit == it->second.end()) {
@@ -390,7 +455,7 @@ ILoadBalance::Type SDLoadBalance::getType(const std::string& domain, const std::
         if(iit != it->second.end()) {
             return iit->second;
         }
-        return m_defaultType;
+        return ILoadBalance::UNKNOW;
     }
     return iit->second;
 }
@@ -401,7 +466,7 @@ LoadBalance::ptr SDLoadBalance::createLoadBalance(ILoadBalance::Type type) {
     } else if(type == ILoadBalance::WEIGHT) {
         return std::make_shared<WeightLoadBalance>();
     } else if(type == ILoadBalance::FAIR) {
-        return std::make_shared<WeightLoadBalance>();
+        return std::make_shared<FairLoadBalance>();
     }
     return nullptr;
 }
@@ -413,7 +478,7 @@ LoadBalanceItem::ptr SDLoadBalance::createLoadBalanceItem(ILoadBalance::Type typ
     } else if(type == ILoadBalance::WEIGHT) {
         item = std::make_shared<LoadBalanceItem>();
     } else if(type == ILoadBalance::FAIR) {
-        item = std::make_shared<FairLoadBalanceItem>();
+        item = std::make_shared<LoadBalanceItem>();
     }
     return item;
 }
@@ -423,34 +488,36 @@ void SDLoadBalance::onServiceChange(const std::string& domain, const std::string
                             ,const std::unordered_map<uint64_t, ServiceItemInfo::ptr>& new_value) {
     //SYLAR_LOG_INFO(g_logger) << "onServiceChange domain=" << domain
     //                         << " service=" << service;
+    auto type = getType(domain, service);
+    if(type == ILoadBalance::UNKNOW) {
+        return;
+    }
+
     std::unordered_map<uint64_t, ServiceItemInfo::ptr> add_values;
     std::unordered_map<uint64_t, LoadBalanceItem::ptr> del_infos;
 
     for(auto& i : old_value) {
-        if(i.second->getType() != m_type) {
-            continue;
-        }
+        //if(i.second->getType() != m_type) {
+        //    continue;
+        //}
         if(new_value.find(i.first) == new_value.end()) {
             del_infos[i.first];
         }
     }
     for(auto& i : new_value) {
-        if(i.second->getType() != m_type) {
-            continue;
-        }
+        //if(i.second->getType() != m_type) {
+        //    continue;
+        //}
         if(old_value.find(i.first) == old_value.end()) {
             add_values.insert(i);
         }
     }
-    //TODO update
-
-    auto type = getType(domain, service);
     std::unordered_map<uint64_t, LoadBalanceItem::ptr> add_infos;
     for(auto& i : add_values) {
         //SYLAR_LOG_INFO(g_logger) << "*** " << i.second->getType();
-        if(i.second->getType() != m_type) {
-            continue;
-        }
+        //if(i.second->getType() != m_type) {
+        //    continue;
+        //}
         auto stream = m_cb(domain, service, i.second);
         if(!stream) {
             SYLAR_LOG_ERROR(g_logger) << "create stream fail, " << i.second->toString();
