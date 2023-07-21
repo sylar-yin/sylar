@@ -1,3 +1,4 @@
+syntax = "proto2";
 package sylar.ns;
 
 message Node {

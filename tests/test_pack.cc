@@ -8,8 +8,6 @@
 #include "sylar/pack/rapidjson_decoder.h"
 #include "sylar/pack/bytearray_encoder.h"
 #include "sylar/pack/bytearray_decoder.h"
-#include <gperftools/profiler.h>
-#include <gperftools/heap-profiler.h>
 
 struct Person {
     int id;

@@ -44,12 +44,19 @@
 #include "worker.h"
 
 #include "db/db.h"
+#if WITH_MYSQL
 #include "db/mysql.h"
+#endif
 #if WITH_SQLITE3
 #include "db/sqlite3.h"
 #endif
+#if WITH_REDIS
 #include "db/redis.h"
+#endif
+
+#if WITH_TAIR
 #include "db/tair.h"
+#endif
 
 #include "ds/bitmap.h"
 #include "ds/roaring_bitmap.h"

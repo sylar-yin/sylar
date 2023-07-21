@@ -62,24 +62,25 @@ int32_t CryptoUtil::Crypto(const EVP_CIPHER* cipher, bool enc
                            ,void* out, int32_t* out_len) {
     int tmp_len = 0;
     bool has_error = false;
-    EVP_CIPHER_CTX ctx;
+
+    std::shared_ptr<EVP_CIPHER_CTX> ctx(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
     do {
         //static CryptoInit s_crypto_init;
-        EVP_CIPHER_CTX_init(&ctx);
-        EVP_CipherInit_ex(&ctx, cipher, nullptr, (const uint8_t*)key
+        EVP_CIPHER_CTX_init(ctx.get());
+        EVP_CipherInit_ex(ctx.get(), cipher, nullptr, (const uint8_t*)key
                 ,(const uint8_t*)iv, enc);
-        if(EVP_CipherUpdate(&ctx, (uint8_t*)out, &tmp_len, (const uint8_t*)in, in_len) != 1) {
+        if(EVP_CipherUpdate(ctx.get(), (uint8_t*)out, &tmp_len, (const uint8_t*)in, in_len) != 1) {
             has_error = true;
             break;
         }
         *out_len = tmp_len;
-        if(EVP_CipherFinal_ex(&ctx, (uint8_t*)out + tmp_len, &tmp_len) != 1) {
+        if(EVP_CipherFinal_ex(ctx.get(), (uint8_t*)out + tmp_len, &tmp_len) != 1) {
             has_error = true;
             break;
         }
         *out_len += tmp_len;
     } while(0);
-    EVP_CIPHER_CTX_cleanup(&ctx);
+    EVP_CIPHER_CTX_cleanup(ctx.get());
     if(has_error) {
         return -1;
     }

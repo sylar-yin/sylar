@@ -31,24 +31,38 @@ link_directories(/apps/sylar/tair/lib)
 
 option(BUILD_TEST "ON for complile test" OFF)
 option(WITH_ZK_CLIENT "ON for complile with zkclient" OFF)
-option(WITH_KAFKA "ON for complile with kafkaclient" ON)
 option(WITH_TAIR "ON for complile with tair_client" OFF)
 option(WITH_SQLITE3 "ON for complile with sqlite3" OFF)
+option(WITH_PARQUET "ON for complie with parquet" OFF)
+option(WITH_KAFKA "ON for complile with kafkaclient" OFF)
+option(WITH_PROMETHEUS "ON for complile with prometheus" OFF)
+option(WITH_MYSQL "ON for complile with mysql" OFF)
+option(WITH_REDIS "ON for complile with redis" OFF)
+option(WITH_RAPIDJSON "ON for complile with rapidjson" OFF)
 option(ENABLE_PROFILER "ON for enable profiler" OFF)
+
+message("****WITH_ZK_CLIENT : ${WITH_ZK_CLIENT} ****")
+message("****WITH_KAFKA : ${WITH_KAFKA} ****")
+message("****WITH_TAIR : ${WITH_TAIR} ****")
+message("****WITH_SQLITE3 : ${WITH_SQLITE3} ****")
+message("****WITH_PARQUET : ${WITH_PARQUET} ****")
+message("****ENABLE_PROFILER : ${ENABLE_PROFILER} ****")
 
 find_package(Boost REQUIRED)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
 endif()
 
+if(WITH_MYSQL)
 find_package(MySQL REQUIRED)
 if(MYSQL_FOUND)
     include_directories(${MYSQL_INCLUDE_DIR})
 endif()
+endif()
 
-find_package(Protobuf)
-if(Protobuf_FOUND)
-    include_directories(${Protobuf_INCLUDE_DIRS})
+find_package(protobuf)
+if(protobuf_FOUND)
+    include_directories(${protobuf_INCLUDE_DIRS})
 endif()
 find_package(OpenSSL REQUIRED)
 if(OPENSSL_FOUND)
@@ -67,8 +81,6 @@ set(LIB_SRC
     sylar/dns.cc
     sylar/db/fox_thread.cc
     sylar/db/db.cc
-    sylar/db/mysql.cc
-    sylar/db/redis.cc
     sylar/ds/bitmap.cc
     sylar/ds/roaring_bitmap.cc
     sylar/ds/roaring.c
@@ -100,7 +112,6 @@ set(LIB_SRC
     sylar/http/http_server.cc
     sylar/http/servlet.cc
     sylar/http/servlets/config_servlet.cc
-    sylar/http/servlets/metrics_servlet.cc
     sylar/http/servlets/status_servlet.cc
     sylar/http/session_data.cc
     sylar/http/ws_connection.cc
@@ -145,9 +156,7 @@ set(LIB_SRC
     sylar/util/crypto_util.cc
     sylar/util/json_util.cc
     sylar/util/hash_util.cc
-    sylar/util/parquet.cc
     sylar/util/pb_dynamic_message.cc
-    sylar/util/prometheus.cc
     sylar/util/trace.cc
     sylar/util/tracker.cc
     sylar/worker.cc
@@ -158,6 +167,27 @@ set(LIB_SRC
 if(WITH_ZK_CLIENT)
     list(APPEND LIB_SRC "sylar/zk_client.cc")
     add_definitions(-DWITH_ZK_CLIENT)
+endif()
+
+if(WITH_REDIS)
+    list(APPEND LIB_SRC "sylar/db/redis.cc")
+    add_definitions(-DWITH_REDIS)
+endif()
+
+if(WITH_MYSQL)
+    list(APPEND LIB_SRC "sylar/db/mysql.cc")
+    add_definitions(-DWITH_MYSQL)
+endif()
+
+if(WITH_PROMETHEUS)
+    list(APPEND LIB_SRC "sylar/util/prometheus.cc")
+    list(APPEND LIB_SRC "sylar/http/servlets/metrics_servlet.cc")
+    add_definitions(-DWITH_PROMETHEUS)
+endif()
+
+if(WITH_PARQUET)
+    list(APPEND LIB_SRC "sylar/util/parquet.cc")
+    add_definitions(-DWITH_PARQUET)
 endif()
 
 if(WITH_KAFKA)
@@ -210,8 +240,6 @@ set(LIBS
         "-Wl,--whole-archive"
         sylar
         "-Wl,--no-whole-archive"
-        arrow
-        parquet
         dl
         pthread
         tbb
@@ -219,31 +247,47 @@ set(LIBS
         jsoncpp
         ${ZLIB_LIBRARIES}
         ${OPENSSL_LIBRARIES}
-        ${PROTOBUF_LIBRARIES}
+        protobuf
         event
-        hiredis
-        hiredis_cluster
-        mysqlclient_r
-        tinyxml2
-        jemalloc
-        snappy
-        rdkafka
-        rdkafka++
-        prometheus-cpp-core
         )
+    #tinyxml2
+    #snappy
+    #jemalloc
     #snappy
 
 if(WITH_ZK_CLIENT)
     list(APPEND LIBS "zookeeper_mt")
 endif()
 
+if(WITH_PROMETHEUS)
+    list(APPEND LIBS "prometheus-cpp-core")
+endif()
+
+if(WITH_MYSQL)
+    list(APPEND LIBS "mysqlclient_r")
+endif()
+
+if(WITH_MYSQL)
+    list(APPEND LIBS "hiredis")
+    list(APPEND LIBS "hiredis_cluster")
+endif()
+
+if(WITH_PARQUET)
+    list(APPEND LIBS "arrow")
+    list(APPEND LIBS "parquet")
+endif()
+
+
 if(WITH_KAFKA)
-    list(APPEND LIBS "rdkafka rdkafka++")
+    message("===================WITH_KAFKA=${WITH_KAFKA}=============")
+    list(APPEND LIBS "rdkafka")
+    list(APPEND LIBS "rdkafka++")
     add_definitions(-DWITH_KAFKA)
 endif()
 
 if(WITH_TAIR)
-    list(APPEND LIBS "tairclientapi tbsys")
+    list(APPEND LIBS "tairclientapi")
+    list(APPEND LIBS "tbsys")
     add_definitions(-DWITH_TAIR)
 endif()
 
@@ -338,8 +382,8 @@ set(TOOLS_GRPC_LIB
     )
 sylar_add_executable(protoc_sylar "${TOOLS_GRPC_SRC}" sylar "${TOOLS_GRPC_LIB}")
 set_target_properties(protoc_sylar PROPERTIES OUTPUT_NAME "protoc-sylar")
-endif()
 
+if(WITH_PARQUET)
 set(PARQUET_TEST
         tests/test_parquet.cc
     )
@@ -349,9 +393,13 @@ set(PARQUET_LIB
     ${LIBS}
     )
 sylar_add_executable(test_parquet "${PARQUET_TEST}" sylar "${PARQUET_LIB}")
+endif()
 
+message("****LIBS: ${LIBS} ****")
 sylar_add_executable(test_config "tests/test_config.cc" sylar "${LIBS}")
+if(WITH_PROMETHEUS)
 sylar_add_executable(test_prometheus "tests/test_prometheus.cc" sylar "${LIBS}")
+endif()
 
 #set(ORM_SRCS
 #    sylar/orm/table.cc
@@ -369,8 +417,6 @@ set(TEST_MODULE
 protobufmaker(tests/test.proto TEST_MODULE ${CMAKE_CURRENT_SOURCE_DIR})
 add_library(test_module SHARED "${TEST_MODULE}")
 
-sylar_add_executable(bin_sylar "sylar/main.cc" sylar "${LIBS}")
-set_target_properties(bin_sylar PROPERTIES OUTPUT_NAME "sylar")
 
 set(TOOLS_GRPC_SRC
         tools/grpc/main.cc
@@ -420,10 +466,14 @@ sylar_add_executable(test_pack "${SRC_TEST_PACK}" sylar "${LIB_TEST_PACK}")
 set_target_properties(test_pack PROPERTIES OUTPUT_NAME "test_pack")
 
 sylar_add_executable(test_consul "tests/test_consul.cc" sylar "${LIB_TEST_PACK}")
+endif()
 
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/orm_out)
 #set(OLIBS ${LIBS} orm_data)
 #sylar_add_executable(test_orm "tests/test_orm.cc" orm_data "${OLIBS}")
+
+sylar_add_executable(bin_sylar "sylar/main.cc" sylar "${LIBS}")
+set_target_properties(bin_sylar PROPERTIES OUTPUT_NAME "sylar")
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

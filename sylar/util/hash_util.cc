@@ -404,12 +404,12 @@ std::string md5sum(const std::string &data) {
 }
 
 std::string sha0sum(const void *data, size_t len) {
-    SHA_CTX ctx;
-    SHA_Init(&ctx);
-    SHA_Update(&ctx, data, len);
+    //SHA_CTX ctx;
+    //SHA_Init(&ctx);
+    //SHA_Update(&ctx, data, len);
     std::string result;
-    result.resize(SHA_DIGEST_LENGTH);
-    SHA_Final((unsigned char*)&result[0], &ctx);
+    //result.resize(SHA_DIGEST_LENGTH);
+    //SHA_Final((unsigned char*)&result[0], &ctx);
     return result;
 }
 

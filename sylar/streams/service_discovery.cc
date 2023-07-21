@@ -1,7 +1,9 @@
 #include "service_discovery.h"
 #include "sylar/config.h"
 #include "sylar/log.h"
+#if WITH_REDIS
 #include "sylar/db/redis.h"
+#endif
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -481,6 +483,7 @@ void ZKServiceDiscovery::onWatch(int type, int stat, const std::string& path, ZK
 }
 #endif
 
+#if WITH_REDIS
 RedisServiceDiscovery::RedisServiceDiscovery(const std::string& name)
     :m_name(name) {
 }
@@ -617,6 +620,8 @@ void RedisServiceDiscovery::stop() {
         m_timer = nullptr;
     }
 }
+
+#endif
 
 ConsulServiceDiscovery::ConsulServiceDiscovery(const std::string& name, sylar::ConsulClient::ptr client, sylar::ConsulRegisterInfo::ptr regInfo)
     :m_name(name)

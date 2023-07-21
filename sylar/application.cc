@@ -15,8 +15,12 @@
 #include "sylar/rock/rock_server.h"
 #include "sylar/ns/name_server_module.h"
 #include "sylar/db/fox_thread.h"
+#if WITH_REDIS
 #include "sylar/db/redis.h"
+#endif
+#if WITH_TAIR
 #include "sylar/db/tair.h"
+#endif
 #include "sylar/dns.h"
 #include "sylar/http2/http2_server.h"
 #include "sylar/grpc/grpc_server.h"
@@ -188,7 +192,9 @@ int Application::run_fiber() {
     sylar::WorkerMgr::GetInstance()->init();
     FoxThreadMgr::GetInstance()->init();
     FoxThreadMgr::GetInstance()->start();
+#if WITH_REDIS
     RedisMgr::GetInstance();
+#endif
 #if WITH_TAIR
     TairMgr::GetInstance();
 #endif
@@ -334,11 +340,13 @@ int Application::run_fiber() {
         m_grpcSDLoadBalance = std::make_shared<grpc::GrpcSDLoadBalance>(m_serviceDiscovery);
     }
 #endif
+#if WITH_REDIS
     if(!g_service_discovery_redis->getValue().empty()) {
         m_serviceDiscovery = std::make_shared<RedisServiceDiscovery>(g_service_discovery_redis->getValue());
         m_rockSDLoadBalance = std::make_shared<RockSDLoadBalance>(m_serviceDiscovery);
         m_grpcSDLoadBalance = std::make_shared<grpc::GrpcSDLoadBalance>(m_serviceDiscovery);
     }
+#endif
     if(!g_service_discovery_consul->getValue().empty()) {
         if(!g_consul_register_info->getValue()) {
             SYLAR_LOG_ERROR(g_logger) << "consul info invalid " << g_consul_register_info->getName();
@@ -408,7 +416,9 @@ void Application::initEnv() {
     sylar::WorkerMgr::GetInstance()->init();
     FoxThreadMgr::GetInstance()->init();
     FoxThreadMgr::GetInstance()->start();
+#if WITH_REDIS
     RedisMgr::GetInstance();
+#endif
 #if WITH_TAIR
     TairMgr::GetInstance();
 #endif
@@ -421,10 +431,12 @@ void Application::initEnv() {
         m_rockSDLoadBalance = std::make_shared<RockSDLoadBalance>(m_serviceDiscovery);
     }
 #endif
+#if WITH_REDIS
     if(!g_service_discovery_redis->getValue().empty()) {
         m_serviceDiscovery = std::make_shared<RedisServiceDiscovery>(g_service_discovery_redis->getValue());
         m_rockSDLoadBalance = std::make_shared<RockSDLoadBalance>(m_serviceDiscovery);
     }
+#endif
 
     if(m_rockSDLoadBalance) {
         m_rockSDLoadBalance->start();

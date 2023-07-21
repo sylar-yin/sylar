@@ -140,6 +140,7 @@ private:
 };
 #endif
 
+#if WITH_REDIS
 class RedisServiceDiscovery : public IServiceDiscovery
                              ,public std::enable_shared_from_this<RedisServiceDiscovery> {
 public:
@@ -159,6 +160,7 @@ private:
     bool m_startRegister = false;
     sylar::Timer::ptr m_timer;
 };
+#endif
 
 class ConsulServiceDiscovery : public IServiceDiscovery
                              ,public std::enable_shared_from_this<ConsulServiceDiscovery> {

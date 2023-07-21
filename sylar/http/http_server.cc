@@ -1,7 +1,9 @@
 #include "http_server.h"
 #include "sylar/log.h"
 #include "sylar/http/servlets/config_servlet.h"
+#ifdef WITH_PROMETHEUS
 #include "sylar/http/servlets/metrics_servlet.h"
+#endif
 #ifdef SYLAR_ENABLE_PROFILER
 #include "sylar/http/servlets/profiler_servlet.h"
 #endif
@@ -23,7 +25,9 @@ HttpServer::HttpServer(bool keepalive
     m_type = "http";
     m_dispatch->addServlet("/_/status", std::make_shared<StatusServlet>());
     m_dispatch->addServlet("/_/config", std::make_shared<ConfigServlet>());
+#ifdef WITH_PROMETHEUS
     m_dispatch->addServlet("/metrics", std::make_shared<MetricsServlet>());
+#endif
 #ifdef SYLAR_ENABLE_PROFILER
     m_dispatch->addGlobServlet("/profiler/*", std::make_shared<ProfilerServlet>());
 #endif
