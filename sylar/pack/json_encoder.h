@@ -18,17 +18,98 @@ public:
         :m_cur(&m_value) {
     }
 
-    template<class T>
-    SYLAR_NOT_PACK(T, bool) encode(const std::string& name, const T& v, const PackFlag& flag) {
+    //template<class T>
+    //SYLAR_NOT_PACK(T, bool) encode(const std::string& name, const T& v, const PackFlag& flag) {
+    //    (*m_cur)[name] = v;
+    //    return true;
+    //}
+
+    //template<class T>
+    //SYLAR_NOT_PACK(T, bool) encode(const T& v, const PackFlag& flag) {
+    //    (*m_cur) = v;
+    //    return true;
+    //}
+#define XX_ENCODE(type) \
+    bool encode(const std::string& name, const type& v, const PackFlag& flag) { \
+        (*m_cur)[name] = v; \
+        return true; \
+    } \
+    bool encode(const type& v, const PackFlag& flag) { \
+        (*m_cur) = v; \
+        return true; \
+    }
+
+    XX_ENCODE(bool);
+    XX_ENCODE(int8_t);
+    XX_ENCODE(int16_t);
+    XX_ENCODE(int32_t);
+    XX_ENCODE(int64_t);
+    XX_ENCODE(uint8_t);
+    XX_ENCODE(uint16_t);
+    XX_ENCODE(uint32_t);
+    XX_ENCODE(uint64_t);
+    XX_ENCODE(double);
+    XX_ENCODE(float);
+    XX_ENCODE(std::string);
+#undef XX_ENCODE
+
+    template<class T, int N>
+    bool encode(const std::string& name, const T (&v)[N], const PackFlag& flag) {
+        auto cur = m_cur;
+        auto& mm = (*cur)[name];
+        for(int i = 0; i < N; ++i) {
+            Json::Value t;
+            m_cur = &t;
+            encode(v[i], flag);
+            mm.append(t);
+        }
+        m_cur = cur;
+        return true;
+    }
+
+    template<class T, int N>
+    bool encode(const T (&v)[N], const PackFlag& flag) {
+        auto cur = m_cur;
+        for(auto& i : v) {
+            Json::Value t;
+            m_cur = &t;
+            encode(i, flag);
+            (*cur).append(t);
+        }
+        m_cur = cur;
+        return true;
+    }
+
+    bool encode(const std::string& name, const char* v, const PackFlag& flag) {
         (*m_cur)[name] = v;
         return true;
     }
 
-    template<class T>
-    SYLAR_NOT_PACK(T, bool) encode(const T& v, const PackFlag& flag) {
+    bool encode(const char* v, const PackFlag& flag) {
         (*m_cur) = v;
         return true;
     }
+    
+    bool encode(const std::string& name, const long long& v, const PackFlag& flag) {
+        (*m_cur)[name] = (int64_t)v;
+        return true;
+    }
+
+    bool encode(const long long& v, const PackFlag& flag) {
+        (*m_cur) = (int64_t)v;
+        return true;
+    }
+
+    bool encode(const std::string& name, const unsigned long long& v, const PackFlag& flag) {
+        (*m_cur)[name] = (uint64_t)v;
+        return true;
+    }
+
+    bool encode(const unsigned long long& v, const PackFlag& flag) {
+        (*m_cur) = (uint64_t)v;
+        return true;
+    }
+
 
     template<class T>
     SYLAR_IS_PACK(T, bool) encode(const std::string& name, const T& v, const PackFlag& flag) {
@@ -43,6 +124,16 @@ public:
     SYLAR_IS_PACK(T, bool) encode(const T& v, const PackFlag& flag) {
         v.__sylar_encode__(*this, flag);
         return true;
+    }
+
+    template<class T>
+    SYLAR_IS_PACK(T, bool) encode(const std::string& name, const T* v, const PackFlag& flag) {
+        return encode(name, *v, flag);
+    }
+
+    template<class T>
+    SYLAR_IS_PACK(T, bool) encode(const T* v, const PackFlag& flag) {
+        return encode(*v, flag);
     }
 
     template<class T>
@@ -65,6 +156,17 @@ public:
         __sylar_encode__(*this, v, flag);
         return true;
     }
+
+    template<class T>
+    SYLAR_IS_PACK_OUT(T, bool) encode(const std::string& name, const T* v, const PackFlag& flag) {
+        return encode(name, *v, flag);
+    }
+
+    template<class T>
+    SYLAR_IS_PACK_OUT(T, bool) encode(const T* v, const PackFlag& flag) {
+        return encode(*v, flag);
+    }
+
 
 #define XX_ENCODE(arr) \
     template<class T, class... Args> \

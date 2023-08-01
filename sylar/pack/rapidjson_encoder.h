@@ -5,6 +5,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include "pack.h"
+#include <string.h>
 #include <list>
 #include <set>
 #include <map>
@@ -45,10 +46,12 @@ public:
     XX_ENCODE(int8_t,   Int);
     XX_ENCODE(int16_t,  Int);
     XX_ENCODE(int32_t,  Int);
+    XX_ENCODE(long long,  Int64);
     XX_ENCODE(int64_t,  Int64);
     XX_ENCODE(uint8_t,  Uint);
     XX_ENCODE(uint16_t, Uint);
     XX_ENCODE(uint32_t, Uint);
+    XX_ENCODE(unsigned long long, Uint64);
     XX_ENCODE(uint64_t, Uint64);
     XX_ENCODE(double,   Double);
     XX_ENCODE(float,    Double);
@@ -63,6 +66,38 @@ public:
         m_writer.String(v.c_str(), v.size());
         return true;
     }
+
+    template<class T, int N>
+    bool encode(const std::string& name, const T (&v)[N], const PackFlag& flag) {
+        m_writer.Key(name.c_str());
+        m_writer.StartArray();
+        for(size_t i = 0; i < N; ++i) {
+            encode(v[i], flag);
+        }
+        m_writer.EndArray();
+        return true;
+    }
+
+    template<class T, int N>
+    bool encode(const T (&v)[N], const PackFlag& flag) {
+        m_writer.StartArray();
+        for(size_t i = 0; i < N; ++i) {
+            encode(v[i], flag);
+        }
+        m_writer.EndArray();
+        return true;
+    }
+
+    bool encode(const std::string& name, const char* v, const PackFlag& flag) {
+        m_writer.Key(name.c_str());
+        m_writer.String(v, strlen(v));
+        return true;
+    }
+    bool encode(const char* v, const PackFlag& flag) {
+        m_writer.String(v, strlen(v));
+        return true;
+    }
+
 
     template<class T>
     SYLAR_IS_PACK(T, bool) encode(const std::string& name, const T& v, const PackFlag& flag) {
@@ -80,6 +115,17 @@ public:
         m_writer.EndObject();
         return true;
     }
+
+    template<class T>
+    SYLAR_IS_PACK(T, bool) encode(const std::string& name, const T* v, const PackFlag& flag) {
+        return encode(name, *v, flag);
+    }
+
+    template<class T>
+    SYLAR_IS_PACK(T, bool) encode(const T* v, const PackFlag& flag) {
+        return encode(*v, flag);
+    }
+
 
     template<class T>
     SYLAR_IS_PACK(T, bool) encode_inherit(const T& v, const PackFlag& flag) {
@@ -103,6 +149,17 @@ public:
         m_writer.EndObject();
         return true;
     }
+
+    template<class T>
+    SYLAR_IS_PACK_OUT(T, bool) encode(const std::string& name, const T* v, const PackFlag& flag) {
+        return encode(name, *v, flag);
+    }
+
+    template<class T>
+    SYLAR_IS_PACK_OUT(T, bool) encode(const T* v, const PackFlag& flag) {
+        return encode(*v, flag);
+    }
+
 
 #define XX_ENCODE(arr) \
     template<class T, class... Args> \

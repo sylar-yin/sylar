@@ -3,6 +3,7 @@
 
 #include <json/json.h>
 #include "pack.h"
+#include <string.h>
 #include <list>
 #include <set>
 #include <map>
@@ -53,10 +54,12 @@ public:
     XX_DECODE(int8_t,  Int);
     XX_DECODE(int16_t, Int);
     XX_DECODE(int32_t, Int);
+    XX_DECODE(long long, Int64);
     XX_DECODE(int64_t, Int64);
     XX_DECODE(uint8_t,  UInt);
     XX_DECODE(uint16_t, UInt);
     XX_DECODE(uint32_t, UInt);
+    XX_DECODE(unsigned long long, UInt64);
     XX_DECODE(uint64_t, UInt64);
     XX_DECODE(float,    Double);
     XX_DECODE(double,   Double);
@@ -113,6 +116,46 @@ public:
             v = m_cur->asString();
         } else {
             //TODO
+        }
+        return true;
+    }
+
+    template<class T, int N>
+    bool decode(const std::string& name, T (&v)[N], const PackFlag& flag) {
+        memset(v, 0, sizeof(T) * N);
+        if(!m_cur->isMember(name)) {
+            return true;
+        }
+        auto& tmp = (*m_cur)[name];
+        if(tmp.isArray()) {
+            auto cur = m_cur;
+            int idx = 0;
+            for(auto& x : tmp) {
+                m_cur = &x;
+                decode(v[idx], flag);
+                ++idx;
+            }
+            m_cur = cur;
+        } else {
+        }
+        return true;
+    }
+
+    template<class T, int N>
+    bool decode(T (&v)[N], const PackFlag& flag) {
+        memset(v, 0, sizeof(T) * N);
+        auto& tmp = *m_cur;
+        if(tmp.isArray()) {
+            auto cur = m_cur;
+            int idx = 0;
+            for(auto& x : tmp) {
+                m_cur = &x;
+                decode(v[idx], flag);
+                ++idx;
+            }
+            m_cur = cur;
+        } else {
+            /*//TODO */
         }
         return true;
     }
