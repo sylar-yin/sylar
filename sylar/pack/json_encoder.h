@@ -228,8 +228,8 @@ public:
 #undef XX_ENCODE
 
 #define XX_ENCODE(type, ...) \
-    template<class T, class... Args> \
-    bool encode(const std::string& name, const type<T, Args...>& v, const PackFlag& flag) { \
+    template<class T> \
+    bool encode(const std::string& name, const type<T>& v, const PackFlag& flag) { \
         if(v __VA_ARGS__) { \
             return encode(name, *v, flag); \
         } else { \
@@ -237,8 +237,8 @@ public:
         } \
         return true; \
     } \
-    template<class T, class... Args> \
-    bool encode(const type<T, Args...>& v, const PackFlag& flag) { \
+    template<class T> \
+    bool encode(const type<T>& v, const PackFlag& flag) { \
         if(v __VA_ARGS__) { \
             return encode(*v, flag); \
         } else { \

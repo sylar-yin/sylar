@@ -314,19 +314,20 @@ public:
 #undef XX_DECODE
 
 #define XX_DECODE(type, fun) \
-    template<class T, class... Args> \
-    bool decode(const std::string& name, type<T, Args...>& v, const PackFlag& flag) { \
+    template<class T> \
+    bool decode(const std::string& name, type<T>& v, const PackFlag& flag) { \
         v = fun(); \
         return decode(name, *v, flag); \
     } \
-    template<class T, class... Args> \
-    bool decode(type<T, Args...>& v, const PackFlag& flag) { \
+    template<class T> \
+    bool decode(type<T>& v, const PackFlag& flag) { \
         v = fun(); \
         return decode(*v, flag); \
     }
 
     XX_DECODE(std::shared_ptr, std::make_shared<T>);
-    XX_DECODE(std::unique_ptr, std::make_unique<T>);
+    //XX_DECODE(std::unique_ptr, std::make_unique<T>);
+    XX_DECODE(std::unique_ptr, std::unique_ptr<T>(new T));
 #undef XX_DECODE
 
     Json::Value& getValue() { return m_value;}
