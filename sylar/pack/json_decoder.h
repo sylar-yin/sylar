@@ -95,6 +95,18 @@ public:
         return true;
     }
 
+    bool decode(const std::string& name, char* v, const PackFlag& flag) {
+        if(!m_cur->isMember(name)) {
+            return true;
+        }
+        auto& tmp = (*m_cur)[name];
+        if(tmp.isString()) {
+            auto t = tmp.asString();
+            strncpy(v, t.data(), t.size());
+        }
+        return true;
+    }
+
     bool decode(bool& v, const PackFlag& flag) {
         if(m_cur->isBool()) {
             v = m_cur->asBool();
@@ -114,6 +126,16 @@ public:
     bool decode(std::string& v, const PackFlag& flag) {
         if(m_cur->isString()) {
             v = m_cur->asString();
+        } else {
+            //TODO
+        }
+        return true;
+    }
+
+    bool decode(char* v, const PackFlag& flag) {
+        if(m_cur->isString()) {
+            auto t = m_cur->asString();
+            strncpy(v, t.data(), t.size());
         } else {
             //TODO
         }

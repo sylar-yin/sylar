@@ -96,7 +96,7 @@ public:
         if(tmp == nullptr) {
             return true;
         }
-        strncpy(v, tmp->GetString(), tmp->GetStringString());
+        strncpy(v, tmp->GetString(), tmp->GetStringLength());
         return true;
     }
 
@@ -115,7 +115,7 @@ public:
     }
 
     bool decode(char* v, const PackFlag& flag) {
-        strncpy(v, tmp->GetString(), tmp->GetStringString());
+        strncpy(v, m_cur->GetString(), m_cur->GetStringLength());
         return true;
     }
 

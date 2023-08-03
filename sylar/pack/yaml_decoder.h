@@ -4,6 +4,7 @@
 #include <yaml-cpp/yaml.h>
 #include "pack.h"
 #include <vector>
+#include <string.h>
 #include <list>
 #include <set>
 #include <map>
@@ -53,10 +54,12 @@ public:
     XX_DECODE(int8_t);
     XX_DECODE(int16_t);
     XX_DECODE(int32_t);
+    XX_DECODE(long long);
     XX_DECODE(int64_t);
     XX_DECODE(uint8_t);
     XX_DECODE(uint16_t);
     XX_DECODE(uint32_t);
+    XX_DECODE(unsigned long long);
     XX_DECODE(uint64_t);
     XX_DECODE(float);
     XX_DECODE(double);
@@ -83,6 +86,68 @@ public:
         return true;
     }
 
+    bool decode(const std::string& name, char* v, const PackFlag& flag) {
+        auto n = m_cur[name];
+        if(n.IsNull()) {
+            return true;
+        }
+        if(n.IsScalar()) {
+            auto t = n.Scalar();
+            strncpy(v, t.data(), t.size());
+        }
+        return true;
+    }
+
+    bool decode(char* v, const PackFlag& flag) {
+        if(m_cur.IsNull()) {
+            return true;
+        }
+        if(m_cur.IsScalar()) {
+            auto t = m_cur.Scalar();
+            strncpy(v, t.data(), t.size());
+        }
+        return true;
+    }
+
+    template<class T, int N>
+    bool decode(const std::string& name, T (&v)[N], const PackFlag& flag) {
+        memset(v, 0, sizeof(T) * N);
+        auto n = m_cur[name];
+        if(n.IsNull()) {
+            return true;
+        }
+        if(n.IsSequence()) {
+            auto cur = m_cur;
+            int idx = 0;
+            for(auto it = n.begin(); it != n.end(); ++it) {
+                m_cur.reset(*it);
+                decode(v[idx], flag);
+                ++idx;
+            }
+            m_cur.reset(cur);
+        } else {
+            /*//TODO*/
+        }
+        return true;
+    }
+    template<class T, int N>
+    bool decode(T (&v)[N], const PackFlag& flag) {
+        memset(v, 0, sizeof(T) * N);
+        if(m_cur.IsSequence()) {
+            auto cur = m_cur;
+            int idx = 0;
+            for(auto it = cur.begin(); it != cur.end(); ++it) {
+                m_cur.reset(*it);
+                decode(v[idx], flag);
+                ++idx;
+            }
+            m_cur.reset(cur);
+        } else {
+            /*//TODO*/
+        }
+        return true;
+    }
+
     template<class T>
     SYLAR_IS_PACK(T, bool) decode(const std::string& name, T& v, const PackFlag& flag) {
         auto n = m_cur[name];
@@ -100,6 +165,16 @@ public:
     SYLAR_IS_PACK(T, bool) decode(T& v, const PackFlag& flag) {
         v.__sylar_decode__(*this, flag);
         return true;
+    }
+
+    template<class T>
+    SYLAR_IS_PACK(T, bool) decode(const std::string& name, T* v, const PackFlag& flag) {
+        return decode(name, *v, flag);
+    }
+
+    template<class T>
+    SYLAR_IS_PACK(T, bool) decode(T* v, const PackFlag& flag) {
+        return decode(*v, flag);
     }
 
     template<class T>
@@ -126,6 +201,17 @@ public:
         __sylar_decode__(*this, v, flag);
         return true;
     }
+
+    template<class T>
+    SYLAR_IS_PACK_OUT(T, bool) decode(const std::string& name, T* v, const PackFlag& flag) {
+        return decode(name, *v, flag);
+    }
+
+    template<class T>
+    SYLAR_IS_PACK_OUT(T, bool) decode(T* v, const PackFlag& flag) {
+        return decode(*v, flag);
+    }
+
 
 #define XX_DECODE(arr, fun) \
     template<class T, class... Args> \
