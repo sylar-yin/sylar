@@ -11,6 +11,8 @@
 #include <map>
 #include <unordered_set>
 #include <unordered_map>
+#include <vector>
+#include <memory>
 
 namespace sylar {
 namespace pack {
@@ -118,12 +120,23 @@ public:
 
     template<class T>
     SYLAR_IS_PACK(T, bool) encode(const std::string& name, const T* v, const PackFlag& flag) {
-        return encode(name, *v, flag);
+        if(v) {
+            return encode(name, *v, flag);
+        } else {
+            m_writer.Key(name.c_str());
+            m_writer.Null();
+            return true;
+        }
     }
 
     template<class T>
     SYLAR_IS_PACK(T, bool) encode(const T* v, const PackFlag& flag) {
-        return encode(*v, flag);
+        if(v) {
+            return encode(*v, flag);
+        } else {
+            m_writer.Null();
+            return true;
+        }
     }
 
 
@@ -152,12 +165,23 @@ public:
 
     template<class T>
     SYLAR_IS_PACK_OUT(T, bool) encode(const std::string& name, const T* v, const PackFlag& flag) {
-        return encode(name, *v, flag);
+        if(v) {
+            return encode(name, *v, flag);
+        } else {
+            m_writer.Key(name.c_str());
+            m_writer.Null();
+            return true;
+        }
     }
 
     template<class T>
     SYLAR_IS_PACK_OUT(T, bool) encode(const T* v, const PackFlag& flag) {
-        return encode(*v, flag);
+        if(v) {
+            return encode(*v, flag);
+        } else {
+            m_writer.Null();
+            return true;
+        }
     }
 
 
@@ -212,8 +236,8 @@ public:
 #undef XX_ENCODE
 
 #define XX_ENCODE(type, ...) \
-    template<class T, class... Args> \
-    bool encode(const std::string& name, const type<T, Args...>& v, const PackFlag& flag) { \
+    template<class T> \
+    bool encode(const std::string& name, const type<T>& v, const PackFlag& flag) { \
         if(v __VA_ARGS__) { \
             return encode(name, *v, flag); \
         } else { \
@@ -221,8 +245,8 @@ public:
         } \
         return true; \
     } \
-    template<class T, class... Args> \
-    bool encode(const type<T, Args...>& v, const PackFlag& flag) { \
+    template<class T> \
+    bool encode(const type<T>& v, const PackFlag& flag) { \
         if(v __VA_ARGS__) { \
             return encode(*v, flag); \
         } else { \

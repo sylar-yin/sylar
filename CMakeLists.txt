@@ -48,11 +48,11 @@ message("****WITH_SQLITE3 : ${WITH_SQLITE3} ****")
 message("****WITH_PARQUET : ${WITH_PARQUET} ****")
 message("****ENABLE_PROFILER : ${ENABLE_PROFILER} ****")
 
-find_package(Boost REQUIRED)
-if(Boost_FOUND)
-    include_directories(${Boost_INCLUDE_DIRS})
-endif()
-
+#find_package(Boost REQUIRED)
+#if(Boost_FOUND)
+#    include_directories(${Boost_INCLUDE_DIRS})
+#endif()
+#
 if(WITH_MYSQL)
 find_package(MySQL REQUIRED)
 if(MYSQL_FOUND)

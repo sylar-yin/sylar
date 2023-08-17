@@ -9,6 +9,8 @@
 #include <map>
 #include <unordered_set>
 #include <unordered_map>
+#include <memory>
+
 
 namespace sylar {
 namespace pack {
@@ -109,12 +111,21 @@ public:
 
     template<class T>
     SYLAR_IS_PACK(T, bool) encode(const std::string& name, const T* v, const PackFlag& flag) {
-        return encode(name, *v, flag);
+        if(v) {
+            return encode(name, *v, flag);
+        } else {
+            m_cur[name];
+            return true;
+        }
     }
 
     template<class T>
     SYLAR_IS_PACK(T, bool) encode(const T* v, const PackFlag& flag) {
-        return encode(*v, flag);
+        if(v) {
+            return encode(*v, flag);
+        } else {
+            return true;
+        }
     }
 
     template<class T>
@@ -140,12 +151,21 @@ public:
 
     template<class T>
     SYLAR_IS_PACK_OUT(T, bool) encode(const std::string& name, const T* v, const PackFlag& flag) {
-        return encode(name, *v, flag);
+        if(v) {
+            return encode(name, *v, flag);
+        } else {
+            m_cur[name];
+            return true;
+        }
     }
 
     template<class T>
     SYLAR_IS_PACK_OUT(T, bool) encode(const T* v, const PackFlag& flag) {
-        return encode(*v, flag);
+        if(v) {
+            return encode(*v, flag);
+        } else {
+            return true;
+        }
     }
 
 #define XX_ENCODE(arr) \
