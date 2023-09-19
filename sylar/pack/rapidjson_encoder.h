@@ -64,10 +64,23 @@ public:
         m_writer.String(v.c_str(), v.size());
         return true;
     }
+
     bool encode(const std::string& v, const PackFlag& flag) {
         m_writer.String(v.c_str(), v.size());
         return true;
     }
+
+    bool encode(const std::string& name, char v, const PackFlag& flag) {
+        m_writer.Key(name.c_str());
+        m_writer.String(&v, 1);
+        return true;
+    }
+
+    bool encode(char v, const PackFlag& flag) {
+        m_writer.String(&v, 1);
+        return true;
+    }
+
 
     template<class T, int N>
     bool encode(const std::string& name, const T (&v)[N], const PackFlag& flag) {

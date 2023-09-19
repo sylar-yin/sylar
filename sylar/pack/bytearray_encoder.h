@@ -28,6 +28,7 @@ public:
         return true; \
     }
     XX_ENCODE(bool,     Int32);
+    XX_ENCODE(char,     Fint8);
     XX_ENCODE(int8_t,   Int32);
     XX_ENCODE(int16_t,  Int32);
     XX_ENCODE(int32_t,  Int32);

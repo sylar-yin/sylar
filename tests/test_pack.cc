@@ -14,10 +14,11 @@ struct Person {
     std::string name;
     bool sex;
     double money;
+    char cval = 'X';
 
     std::vector<int> arr_int = {1, 2, 3};
 
-    SYLAR_PACK(A("_id", id, "_sex", sex), O(name, money, arr_int));
+    SYLAR_PACK(A("_id", id, "_sex", sex), O(name, money, arr_int, cval));
 };
 
 struct PersonOut {
@@ -25,12 +26,14 @@ struct PersonOut {
     std::string name;
     int sex;
     double money;
+    char dval = 'D';
 };
 
 struct Men : public Person {
     int value = 0;
+    char mval = 'M';
     PersonOut po;
-    SYLAR_PACK(I(Person), O(value, po));
+    SYLAR_PACK(I(Person), O(value, po, mval));
 
     bool operator==(const Men& oth) const {
         return value == oth.value
@@ -41,7 +44,7 @@ struct Men : public Person {
     }
 };
 
-SYLAR_PACK_OUT(PersonOut, A("_id", id, "_sex", sex), O(name, money));
+SYLAR_PACK_OUT(PersonOut, A("_id", id, "_sex", sex), O(name, money, dval));
 
 void test() {
     Person p;

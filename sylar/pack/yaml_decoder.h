@@ -88,6 +88,18 @@ public:
         return true;
     }
 
+    bool decode(const std::string& name, char& v, const PackFlag& flag) {
+        auto n = m_cur[name];
+        v = n.Scalar()[0];
+        return true;
+    }
+
+    bool decode(char& v, const PackFlag& flag) {
+        v = m_cur.Scalar()[0];
+        return true;
+    }
+
+
     bool decode(const std::string& name, char* v, const PackFlag& flag) {
         auto n = m_cur[name];
         if(n.IsNull()) {

@@ -84,6 +84,17 @@ public:
         return true;
     }
 
+    bool decode(const std::string& name, char& v, const PackFlag& flag) {
+        auto tmp = get(name.c_str());
+        if(tmp == nullptr) {
+            v = false;
+            return true;
+        }
+        v = tmp->GetString()[0];
+        return true;
+    }
+
+
     bool decode(const std::string& name, std::string& v, const PackFlag& flag) {
         auto tmp = get(name.c_str());
         if(tmp == nullptr) {
@@ -110,6 +121,12 @@ public:
         }
         return true;
     }
+
+    bool decode(char& v, const PackFlag& flag) {
+        v = m_cur->GetString()[0];
+        return true;
+    }
+
 
     bool decode(std::string& v, const PackFlag& flag) {
         v = m_cur->GetString();
@@ -304,7 +321,8 @@ public:
     }
 
     XX_DECODE(std::shared_ptr, std::make_shared<T>);
-    XX_DECODE(std::unique_ptr, std::make_unique<T>);
+    //XX_DECODE(std::unique_ptr, std::make_unique<T>);
+    XX_DECODE(std::unique_ptr, std::unique_ptr<T>(new T));
 
 #undef XX_DECODE
     const rapidjson::Value* getValue() { return m_value;}

@@ -29,6 +29,7 @@ public:
     }
 
     XX_DECODE(bool,     Int32);
+    XX_DECODE(char,     Fint8);
     XX_DECODE(int8_t,   Int32);
     XX_DECODE(int16_t,  Int32);
     XX_DECODE(int32_t,  Int32);
@@ -146,7 +147,8 @@ public:
     }
 
     XX_DECODE(std::shared_ptr, std::make_shared<T>);
-    XX_DECODE(std::unique_ptr, std::make_unique<T>);
+    //XX_DECODE(std::unique_ptr, std::make_unique<T>);
+    XX_DECODE(std::unique_ptr, std::unique_ptr<T>(new T));
 
 #undef XX_DECODE
     ByteArray::ptr getValue() { return m_value;}

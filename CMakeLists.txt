@@ -17,17 +17,17 @@ set(CMAKE_C_FLAGS "$ENV{CXXFLAGS} -rdynamic -O0 -fPIC -ggdb -std=c11 -Wall -Wno-
 ENABLE_LANGUAGE(ASM)
 
 include_directories(.)
-include_directories(/home/ydj/apps/sylar/include)
-include_directories(/home/ydj/apps/sylar/tair/include)
+include_directories(/apps/sylar/include)
+include_directories(/apps/sylar/tair/include)
 #include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart)
 #include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/yaml-cpp/include)
 #include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/jsoncpp-1.8.4/include)
 #include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/sqlite-3.28.0)
 #include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdpart/tinyxml2-7.0.1)
 link_directories(/usr/lib64)
-link_directories(/home/ydj/apps/sylar/lib)
-link_directories(/home/ydj/apps/sylar/lib64)
-link_directories(/home/ydj/apps/sylar/tair/lib)
+link_directories(/apps/sylar/lib)
+link_directories(/apps/sylar/lib64)
+link_directories(/apps/sylar/tair/lib)
 
 option(BUILD_TEST "ON for complile test" OFF)
 option(WITH_ZK_CLIENT "ON for complile with zkclient" OFF)
@@ -452,6 +452,10 @@ set(TOOLS_MYSQL_LIB
 sylar_add_executable(mysql_tools "${TOOLS_MYSQL_SRC}" sylar "${TOOLS_MYSQL_LIB}")
 set_target_properties(mysql_tools PROPERTIES OUTPUT_NAME "mysql_tools")
 
+sylar_add_executable(test_consul "tests/test_consul.cc" sylar "${LIB_TEST_PACK}")
+endif()
+
+
 set(SRC_TEST_PACK
         tests/test_pack.cc
     )
@@ -464,9 +468,6 @@ set(LIB_TEST_PACK
     )
 sylar_add_executable(test_pack "${SRC_TEST_PACK}" sylar "${LIB_TEST_PACK}")
 set_target_properties(test_pack PROPERTIES OUTPUT_NAME "test_pack")
-
-sylar_add_executable(test_consul "tests/test_consul.cc" sylar "${LIB_TEST_PACK}")
-endif()
 
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/orm_out)
 #set(OLIBS ${LIBS} orm_data)

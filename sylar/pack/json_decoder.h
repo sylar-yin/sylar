@@ -86,6 +86,16 @@ public:
         return true;
     }
 
+    bool decode(const std::string& name, char& v, const PackFlag& flag) {
+        if(!m_cur->isMember(name)) {
+            return true;
+        }
+        auto& tmp = (*m_cur)[name];
+        v = tmp.asString()[0];
+        return true;
+    }
+
+
     bool decode(const std::string& name, std::string& v, const PackFlag& flag) {
         if(!m_cur->isMember(name)) {
             return true;
@@ -124,6 +134,12 @@ public:
         //TODO
         return true;
     }
+
+    bool decode(char& v, const PackFlag& flag) {
+        v = m_cur->asString()[0];
+        return true;
+    }
+
 
     bool decode(std::string& v, const PackFlag& flag) {
         if(m_cur->isString()) {
