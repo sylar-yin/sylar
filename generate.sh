@@ -19,9 +19,9 @@ namespace=$2
 
 command_error_exit mkdir $project_name
 command_error_exit cd $project_name
-command_error_exit git clone https://github.com/sylar-yin/sylar.git
+command_error_exit git clone git@github.com:sylar-yin/sylar.git
 command_error_exit cd sylar
-command_error_exit git checkout dev
+command_error_exit git checkout 2023
 command_error_exit cd ..
 command_error_exit cp sylar/Makefile .
 command_error_exit cp -rf sylar/template/* .

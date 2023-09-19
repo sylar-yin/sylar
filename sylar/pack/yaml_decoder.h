@@ -328,8 +328,7 @@ public:
     }
 
     XX_DECODE(std::shared_ptr, std::make_shared<T>);
-    //XX_DECODE(std::unique_ptr, std::make_unique<T>);
-    XX_DECODE(std::unique_ptr, std::unique_ptr<T>(new T));
+    XX_DECODE(std::unique_ptr, std::make_unique<T>);
 #undef XX_DECODE
 
     YAML::Node& getValue() { return m_value;}
