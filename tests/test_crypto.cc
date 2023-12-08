@@ -96,16 +96,16 @@ void test_one() {
     std::cout << " ==== " << std::endl;
 
     {
-        EVP_CIPHER_CTX ctx;
-        EVP_CIPHER_CTX_init(&ctx);
-        EVP_EncryptInit(&ctx, EVP_aes_256_cbc(), (const uint8_t*)key.c_str(), (const uint8_t*)iv.c_str());
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        EVP_CIPHER_CTX_init(ctx);
+        EVP_EncryptInit(ctx, EVP_aes_256_cbc(), (const uint8_t*)key.c_str(), (const uint8_t*)iv.c_str());
 
         std::string encode;
         encode.resize(str.size() + 30);
         int olen = 0;
-        EVP_EncryptUpdate(&ctx, (uint8_t*)&encode[0], &olen, (const uint8_t*)str.c_str(), str.length());
+        EVP_EncryptUpdate(ctx, (uint8_t*)&encode[0], &olen, (const uint8_t*)str.c_str(), str.length());
         int llen = 0;
-        EVP_EncryptFinal(&ctx, (uint8_t*)(&encode[0] + olen), &llen);
+        EVP_EncryptFinal(ctx, (uint8_t*)(&encode[0] + olen), &llen);
         encode.resize(olen + llen);
         std::cout << "encode: " << sylar::base64encode(encode) << " - len=" << encode.size() << std::endl;
         std::cout << "encode: " << to_hex(encode) << " - len=" << encode.size() << std::endl;

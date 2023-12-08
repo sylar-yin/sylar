@@ -18,15 +18,15 @@ const int ZKClient::EventType::NOWATCHING = ZOO_NOTWATCHING_EVENT;
 
 const int ZKClient::FlagsType::EPHEMERAL = ZOO_EPHEMERAL;
 const int ZKClient::FlagsType::SEQUENCE  = ZOO_SEQUENCE;
-const int ZKClient::FlagsType::CONTAINER = ZOO_CONTAINER;
+// const int ZKClient::FlagsType::CONTAINER = ZOO_CONTAINER;
 
 const int ZKClient::StateType::EXPIRED_SESSION = ZOO_EXPIRED_SESSION_STATE;
 const int ZKClient::StateType::AUTH_FAILED = ZOO_AUTH_FAILED_STATE;
 const int ZKClient::StateType::CONNECTING = ZOO_CONNECTING_STATE;
 const int ZKClient::StateType::ASSOCIATING = ZOO_ASSOCIATING_STATE;
 const int ZKClient::StateType::CONNECTED = ZOO_CONNECTED_STATE;
-const int ZKClient::StateType::READONLY = ZOO_READONLY_STATE;
-const int ZKClient::StateType::NOTCONNECTED = ZOO_NOTCONNECTED_STATE;
+// const int ZKClient::StateType::READONLY = ZOO_READONLY_STATE;
+// const int ZKClient::StateType::NOTCONNECTED = ZOO_NOTCONNECTED_STATE;
 
 
 ZKClient::ZKClient()
@@ -49,7 +49,8 @@ bool ZKClient::reconnect() {
     if(m_handle) {
         zookeeper_close(m_handle);
     }
-    m_handle = zookeeper_init2(m_hosts.c_str(), &ZKClient::OnWatcher, m_recvTimeout, nullptr, this, 0, m_logCb);
+    m_handle = zookeeper_init(m_hosts.c_str(), &ZKClient::OnWatcher, m_recvTimeout, nullptr, this, 0);
+    // m_handle = zookeeper_init(m_hosts.c_str(), &ZKClient::OnWatcher, m_recvTimeout, nullptr, this, 0, m_logCb);
     return m_handle != nullptr;
 }
 
@@ -64,16 +65,18 @@ bool ZKClient::init(const std::string& hosts, int recv_timeout, watcher_callback
                             std::placeholders::_3,
                             shared_from_this());
     m_logCb = lcb;
-    m_handle = zookeeper_init2(hosts.c_str(), &ZKClient::OnWatcher, m_recvTimeout, nullptr, this, 0, lcb);
+    // m_handle = zookeeper_init(hosts.c_str(), &ZKClient::OnWatcher, m_recvTimeout, nullptr, this, 0, lcb);
+    m_handle = zookeeper_init(hosts.c_str(), &ZKClient::OnWatcher, m_recvTimeout, nullptr, this, 0);
     return m_handle != nullptr;
 }
 
 int32_t ZKClient::setServers(const std::string& hosts) {
-    auto rt = zoo_set_servers(m_handle, hosts.c_str());
-    if(rt == 0) {
-        m_hosts = hosts;
-    }
-    return rt;
+    // auto rt = zoo_set_servers(m_handle, hosts.c_str());
+    // if(rt == 0) {
+    //     m_hosts = hosts;
+    // }
+    // return rt;
+    return 0;
 }
 
 int32_t ZKClient::create(const std::string& path, const std::string& val, std::string& new_path
@@ -100,7 +103,8 @@ int32_t ZKClient::get(const std::string& path, std::string& val, bool watch, Sta
 }
 
 int32_t ZKClient::getConfig(std::string& val, bool watch, Stat* stat) {
-    return get(ZOO_CONFIG_NODE, val, watch, stat);
+    // return get(ZOO_CONFIG_NODE, val, watch, stat);
+    return 0;
 }
 
 int32_t ZKClient::set(const std::string& path, const std::string& val, int version, Stat* stat) {
@@ -134,8 +138,9 @@ int32_t ZKClient::close() {
 }
 
 std::string  ZKClient::getCurrentServer() {
-    auto rt = zoo_get_current_server(m_handle);
-    return rt == nullptr ? "" : rt;
+    // auto rt = zoo_get_current_server(m_handle);
+    // return rt == nullptr ? "" : rt;
+    return "";
 }
 
 int32_t ZKClient::getState() {
